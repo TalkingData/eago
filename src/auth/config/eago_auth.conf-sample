@@ -1,0 +1,32 @@
+[main]
+service_name = eago-auth
+rpc_service_name = eago.srv.auth
+api_v1_service_name = eago.api.v1.auth
+secret_key = eago_default_secret_key
+token_ttl = 900
+
+[etcd]
+address = 127.0.0.1:2379
+username = root
+password = root
+
+[crowd]
+crowd_url = http://127.0.0.1/crowd
+app_name = eago
+app_pass = eago
+
+[mysql]
+address = 127.0.0.1:3306
+db_name = eago_auth
+user = root
+password = root
+max_open_connections = 5
+max_idle_connections = 20
+
+[redis]
+address = 127.0.0.1:6379
+password = redis
+db = 1
+
+[log]
+path = ./logs

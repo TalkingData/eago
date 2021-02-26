@@ -1,0 +1,78 @@
+syntax = "proto3";
+
+package auth;
+option go_package = "proto;auth";
+
+service Auth {
+
+    // Token
+    rpc VerifyToken(Token) returns (BoolResponse) {}
+    rpc GetTokenContent(Token) returns (TokenContent) {}
+
+    // User
+    rpc GetUsers(Ids) returns (Users) {}
+
+    // Product
+    rpc GetProducts(Ids) returns (Products) {}
+
+    // Group
+    rpc GetGroups(Ids) returns (Groups) {}
+}
+
+message Token {
+    string token = 1;
+}
+
+message TokenContent {
+    bool ok = 1;
+
+    int32 user_id = 2;
+    string username = 3;
+
+    bool is_superuser = 4;
+
+    repeated string roles = 5;
+    repeated Product products = 6;
+    repeated Product own_products = 7;
+    repeated Group groups = 8;
+    repeated Group own_groups = 9;
+}
+
+message BoolResponse {
+    bool ok = 1;
+}
+
+message Ids {
+    repeated int32 ids = 1;
+}
+
+message Users {
+    repeated User users = 1;
+}
+
+message Products {
+    repeated Product products = 1;
+}
+
+message Groups {
+    repeated Group groups = 1;
+}
+
+message User {
+    int32 id = 1;
+    string username = 2;
+    string email = 3;
+    string phone = 4;
+}
+
+message Product {
+    int32 id = 1;
+    string name = 2;
+    string alias = 3;
+    bool disabled = 4;
+}
+
+message Group {
+    int32 id = 1;
+    string name = 2;
+}
