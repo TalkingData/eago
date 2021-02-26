@@ -1,0 +1,27 @@
+# Compiled Object files, Static and Dynamic libs (Shared Objects)
+*.o
+*.a
+*.so
+
+# Redis db
+*.rdb
+
+# db
+*.db
+
+# CSV files
+*.csv
+
+# Configs
+*.conf
+
+# IDE files
+.idea
+.vscode/
+
+# Log files
+*.log
+
+# Others
+*.swp
+*.lock
