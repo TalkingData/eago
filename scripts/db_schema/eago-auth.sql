@@ -33,7 +33,7 @@ CREATE TABLE `departments` (
   UNIQUE KEY `departments_name_uindex` (`name`),
   KEY `departments_departments_id_fk` (`parent_id`),
   CONSTRAINT `departments_departments_id_fk` FOREIGN KEY (`parent_id`) REFERENCES `departments` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=9 DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -52,7 +52,7 @@ CREATE TABLE `groups` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `groups_id_uindex` (`id`),
   UNIQUE KEY `groups_name_uindex` (`name`)
-) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -74,7 +74,7 @@ CREATE TABLE `products` (
   UNIQUE KEY `products_id_uindex` (`id`),
   UNIQUE KEY `products_name_uindex` (`name`),
   UNIQUE KEY `products_alias_uindex` (`alias`)
-) ENGINE=InnoDB AUTO_INCREMENT=8 DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -90,7 +90,7 @@ CREATE TABLE `roles` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `roles_id_uindex` (`id`),
   UNIQUE KEY `roles_name_uindex` (`name`)
-) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -105,14 +105,14 @@ CREATE TABLE `user_departments` (
   `user_id` int(11) NOT NULL,
   `department_id` int(11) NOT NULL,
   `is_owner` tinyint(1) NOT NULL DEFAULT '0',
-  `created_at` datetime NOT NULL,
+  `joined_at` datetime NOT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `user_departments_id_uindex` (`id`),
   UNIQUE KEY `user_departments_user_id_uindex` (`user_id`),
   KEY `user_departments_department_id_index` (`department_id`),
   CONSTRAINT `user_departments_departments_id_fk` FOREIGN KEY (`department_id`) REFERENCES `departments` (`id`),
   CONSTRAINT `user_departments_users_id_fk` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=11 DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -127,7 +127,7 @@ CREATE TABLE `user_groups` (
   `user_id` int(11) NOT NULL,
   `group_id` int(11) NOT NULL,
   `is_owner` tinyint(1) NOT NULL DEFAULT '0',
-  `created_at` datetime NOT NULL,
+  `joined_at` datetime NOT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `user_groups_id_uindex` (`id`),
   UNIQUE KEY `user_groups_user_id_group_id_uindex` (`user_id`,`group_id`),
@@ -135,7 +135,7 @@ CREATE TABLE `user_groups` (
   KEY `user_groups_group_id_index` (`group_id`),
   CONSTRAINT `user_groups_groups_id_fk` FOREIGN KEY (`group_id`) REFERENCES `groups` (`id`),
   CONSTRAINT `user_groups_users_id_fk` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -150,7 +150,7 @@ CREATE TABLE `user_products` (
   `user_id` int(11) NOT NULL,
   `product_id` int(11) NOT NULL,
   `is_owner` tinyint(1) NOT NULL DEFAULT '0',
-  `created_at` datetime NOT NULL,
+  `joined_at` datetime NOT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `user_products_id_uindex` (`id`),
   UNIQUE KEY `user_products_user_id_product_id_uindex` (`user_id`,`product_id`),
@@ -158,7 +158,7 @@ CREATE TABLE `user_products` (
   KEY `user_products_product_id_index` (`product_id`),
   CONSTRAINT `user_products_products_id_fk` FOREIGN KEY (`product_id`) REFERENCES `products` (`id`),
   CONSTRAINT `user_products_users_id_fk` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=17 DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -172,14 +172,14 @@ CREATE TABLE `user_roles` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `user_id` int(11) NOT NULL,
   `role_id` int(11) NOT NULL,
-  `created_at` datetime NOT NULL,
+  `joined_at` datetime NOT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `user_roles_id_uindex` (`id`),
   UNIQUE KEY `user_roles_user_id_role_id_pk` (`user_id`,`role_id`),
   KEY `user_roles_roles_id_fk` (`role_id`),
   CONSTRAINT `user_roles_roles_id_fk` FOREIGN KEY (`role_id`) REFERENCES `roles` (`id`),
   CONSTRAINT `user_roles_users_id_fk` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -203,7 +203,7 @@ CREATE TABLE `users` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `users_id_uindex` (`id`),
   UNIQUE KEY `users_username_uindex` (`username`)
-) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
