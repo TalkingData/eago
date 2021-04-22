@@ -13,6 +13,7 @@ require (
 	github.com/itsjamie/gin-cors v0.0.0-20160420130702-97b4a9da7933
 	github.com/jda/go-crowd v0.0.0-20180225080536-9c6f17811dc6
 	github.com/micro/go-micro/v2 v2.9.1
+	github.com/sirupsen/logrus v1.7.0
 	github.com/smartystreets/goconvey v1.6.4 // indirect
 	github.com/swaggo/files v0.0.0-20190704085106-630677cd5c14
 	github.com/swaggo/gin-swagger v1.3.0

@@ -17,7 +17,7 @@ type UserDepartment struct {
 	UserId       int    `json:"user_id" binding:"required"`
 	DepartmentId int    `json:"department_id" swaggerignore:"true"`
 	IsOwner      *bool  `json:"is_owner" binding:"required"`
-	CreatedAt    MyTime `json:"created_at" swaggerignore:"true"`
+	JoinedAt     MyTime `json:"joined_at" gorm:"type:datetime;not null;autoCreateTime" swaggerignore:"true"`
 }
 
 type Department struct {
@@ -36,7 +36,7 @@ type DepartmentTree struct {
 	UpdatedAt     *MyTime           `json:"updated_at"`
 }
 
-// 新建部门
+// New 新建部门
 func (dm *departmentModel) New(name string, parentId *int) *Department {
 	var d = Department{
 		Name:     name,
@@ -55,21 +55,21 @@ func (dm *departmentModel) New(name string, parentId *int) *Department {
 	return &d
 }
 
-// 删除部门
-func (dm *departmentModel) Delete(deptId int) bool {
+// Remove 删除部门
+func (dm *departmentModel) Remove(deptId int) bool {
 	res := db.Delete(Department{}, "id=?", deptId)
 	if res.Error != nil {
 		log.ErrorWithFields(log.Fields{
 			"id":    deptId,
 			"error": res.Error.Error(),
-		}, "Error in departmentModel.Delete.")
+		}, "Error in departmentModel.Remove.")
 		return false
 	}
 
 	return true
 }
 
-// 更新部门
+// Set 更新部门
 func (dm *departmentModel) Set(id int, name string, parentId *int) (*Department, bool) {
 	var d = Department{}
 
@@ -93,7 +93,7 @@ func (dm *departmentModel) Set(id int, name string, parentId *int) (*Department,
 	return &d, true
 }
 
-// 查询单个部门
+// Get 查询单个部门
 func (dm *departmentModel) Get(query *Query) (*Department, bool) {
 	var (
 		dept = Department{}
@@ -121,7 +121,7 @@ func (dm *departmentModel) Get(query *Query) (*Department, bool) {
 	return &dept, true
 }
 
-// 查询部门
+// List 查询部门
 func (dm *departmentModel) List(query *Query) (*[]Department, bool) {
 	var d = db
 	ds := make([]Department, 0)
@@ -147,8 +147,8 @@ func (dm *departmentModel) List(query *Query) (*[]Department, bool) {
 	return &ds, true
 }
 
-// 查询部门-分页
-func (dm *departmentModel) PagedList(query *Query, page int, pageSize int, orderBy ...string) (*pagination.Paginator, bool) {
+// PagedList 查询部门-分页
+func (dm *departmentModel) PagedList(query *Query, page, pageSize int, orderBy ...string) (*pagination.Paginator, bool) {
 	var d = db.Model(&Department{})
 	ds := make([]Department, 0)
 
@@ -172,7 +172,7 @@ func (dm *departmentModel) PagedList(query *Query, page int, pageSize int, order
 	return pg, true
 }
 
-// 将根部门转化为树结构
+// Department2Tree 将根部门转化为树结构
 func (dm *departmentModel) Department2Tree(dept *Department) *DepartmentTree {
 	var deptTree DepartmentTree
 
@@ -185,7 +185,7 @@ func (dm *departmentModel) Department2Tree(dept *Department) *DepartmentTree {
 	return &deptTree
 }
 
-// 将部门列表转化为部门树
+// List2Tree 将部门列表转化为部门树
 func (dm *departmentModel) List2Tree(pNode *DepartmentTree, deptList *[]Department) {
 	// 部门列表为空时直接返回
 	if deptList == nil {
@@ -209,8 +209,8 @@ func (dm *departmentModel) List2Tree(pNode *DepartmentTree, deptList *[]Departme
 	return
 }
 
-// 关联表操作::添加用户至部门
-func (dm *departmentModel) AddUser(userId int, deptId int, isOwner bool) bool {
+// AddUser 关联表操作::添加用户至部门
+func (dm *departmentModel) AddUser(userId, deptId int, isOwner bool) bool {
 	var dp = UserDepartment{
 		UserId:       userId,
 		DepartmentId: deptId,
@@ -222,7 +222,7 @@ func (dm *departmentModel) AddUser(userId int, deptId int, isOwner bool) bool {
 			"user_id":       userId,
 			"department_id": deptId,
 			"is_owner":      isOwner,
-			"created_at":    dp.CreatedAt,
+			"joined_at":     dp.JoinedAt,
 			"error":         res.Error.Error(),
 		}, "Error in departmentModel.AddUser.")
 		return false
@@ -231,8 +231,8 @@ func (dm *departmentModel) AddUser(userId int, deptId int, isOwner bool) bool {
 	return true
 }
 
-// 关联表操作::移除部门中用户
-func (dm *departmentModel) RemoveUser(userId int, deptId int) bool {
+// RemoveUser 关联表操作::移除部门中用户
+func (dm *departmentModel) RemoveUser(userId, deptId int) bool {
 	res := db.Delete(UserDepartment{}, "user_id=? AND department_id=?", userId, deptId)
 	if res.Error != nil {
 		log.ErrorWithFields(log.Fields{
@@ -246,8 +246,8 @@ func (dm *departmentModel) RemoveUser(userId int, deptId int) bool {
 	return true
 }
 
-// 关联表操作::设置用户是否是部门Owner
-func (dm *departmentModel) SetUserIsOwner(userId int, deptId int, isOwner bool) bool {
+// SetUserIsOwner 关联表操作::设置用户是否是部门Owner
+func (dm *departmentModel) SetUserIsOwner(userId, deptId int, isOwner bool) bool {
 	res := db.Model(&UserDepartment{}).
 		Where("user_id=? AND department_id=?", userId, deptId).
 		Update("IsOwner", isOwner)
@@ -264,7 +264,7 @@ func (dm *departmentModel) SetUserIsOwner(userId int, deptId int, isOwner bool) 
 	return true
 }
 
-// 关联表操作::列出部门中所有用户
+// ListUsers 关联表操作::列出部门中所有用户
 func (dm *departmentModel) ListUsers(deptId int, query *Query) (*[]memberUser, bool) {
 	var d = db.Model(&User{})
 	mus := make([]memberUser, 0)
@@ -272,7 +272,7 @@ func (dm *departmentModel) ListUsers(deptId int, query *Query) (*[]memberUser, b
 	for k, v := range *query {
 		d = d.Where(k, v)
 	}
-	res := d.Select("users.id AS id, users.username AS username, ud.is_owner AS is_owner, ud.created_at AS created_at").
+	res := d.Select("users.id AS id, users.username AS username, ud.is_owner AS is_owner, ud.joined_at AS joined_at").
 		Joins("LEFT JOIN user_departments AS ud ON users.id = ud.user_id").
 		Where("department_id=?", deptId).
 		Find(&mus)

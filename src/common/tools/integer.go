@@ -1,13 +1,15 @@
 package tools
 
-func IntMax(a int, b int) int {
+// IntMax
+func IntMax(a, b int) int {
 	if a > b {
 		return a
 	}
 	return b
 }
 
-func IntMin(a int, b int) int {
+// IntMin
+func IntMin(a, b int) int {
 	if a > b {
 		return b
 	}

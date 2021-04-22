@@ -6,55 +6,56 @@ import (
 	"time"
 )
 
-const fixedPrefix = "eago"
+const prefix = "/eago"
 
-var (
-	Redis RedisTool
-
-	serviceName string
-	ctx         = context.Background()
-)
+var Redis *RedisTool
 
 type RedisTool struct {
-	Client *redis.Client
+	client      *redis.Client
+	serviceName string
 }
 
 // 初始化连接
-func InitRedis(address string, password string, db int, srvName string) error {
-	Redis.Client = redis.NewClient(&redis.Options{
-		Addr:     address,
-		Password: password,
-		DB:       db,
-	})
-
-	serviceName = srvName
-	return nil
+func InitRedis(address, password, srvName string, db int) {
+	Redis = &RedisTool{
+		client: redis.NewClient(&redis.Options{
+			Addr:     address,
+			Password: password,
+			DB:       db,
+		}),
+		serviceName: srvName,
+	}
 }
 
+// Set
 func (rt *RedisTool) Set(key string, value interface{}, expiration time.Duration) error {
-	return rt.Client.Set(ctx, rt.getFinalKey(key), value, expiration).Err()
+	return rt.client.Set(context.TODO(), rt.getFinalKey(key), value, expiration).Err()
 }
 
+// Del
 func (rt *RedisTool) Del(key string) error {
-	return rt.Client.Del(ctx, rt.getFinalKey(key)).Err()
+	return rt.client.Del(context.TODO(), rt.getFinalKey(key)).Err()
 }
 
+// Expire
 func (rt *RedisTool) Expire(key string, expiration time.Duration) error {
-	return rt.Client.PExpire(ctx, rt.getFinalKey(key), expiration).Err()
+	return rt.client.PExpire(context.TODO(), rt.getFinalKey(key), expiration).Err()
 }
 
+// Get
 func (rt *RedisTool) Get(key string) (string, error) {
-	return rt.Client.Get(ctx, rt.getFinalKey(key)).Result()
+	return rt.client.Get(context.TODO(), rt.getFinalKey(key)).Result()
 }
 
+// HasKey
 func (rt *RedisTool) HasKey(key string) bool {
-	if err := rt.Client.Get(ctx, rt.getFinalKey(key)).Err(); err == nil {
+	if err := rt.client.Get(context.TODO(), rt.getFinalKey(key)).Err(); err == nil {
 		return true
 	}
 	return false
 }
 
-// 生成
-func (rt RedisTool) getFinalKey(key string) string {
-	return fixedPrefix + "/" + serviceName + "/" + key
+// getFinalKey 生成KeyName
+func (rt *RedisTool) getFinalKey(key string) string {
+	return prefix + "/" + rt.serviceName + "/" + key
 }

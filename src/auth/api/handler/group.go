@@ -3,7 +3,7 @@ package handler
 import (
 	"database/sql"
 	"eago-auth/api/form"
-	"eago-auth/config/msg"
+	"eago-auth/conf/msg"
 	db "eago-auth/database"
 	"eago-common/log"
 	"eago-common/tools"
@@ -35,7 +35,7 @@ func NewGroup(c *gin.Context) {
 
 	group := db.GroupModel.New(gForm.Name, gForm.Description)
 	if group == nil {
-		m := msg.ErrDatabase.NewMsg("Error in db.GroupModel.NewProduct.")
+		m := msg.ErrDatabase.NewMsg("Error in db.GroupModel.New.")
 		log.Error(m.String())
 		c.JSON(http.StatusOK, m.GinH())
 		return
@@ -45,14 +45,14 @@ func NewGroup(c *gin.Context) {
 	c.JSON(http.StatusOK, m.GinH())
 }
 
-// DeleteGroup 删除组
+// RemoveGroup 删除组
 // @Summary 删除组
 // @Tags 组
 // @Param token header string true "Token"
 // @Param group_id path string true "组ID"
 // @Success 200 {string} string "{"code":0,"message":"Success"}"
 // @Router /groups/{group_id} [DELETE]
-func DeleteGroup(c *gin.Context) {
+func RemoveGroup(c *gin.Context) {
 	gId, err := strconv.Atoi(c.Param("group_id"))
 	if err != nil {
 		m := msg.WarnInvalidUri.NewMsg("Field 'group_id' required.")
@@ -63,8 +63,8 @@ func DeleteGroup(c *gin.Context) {
 		return
 	}
 
-	if suc := db.GroupModel.Delete(gId); !suc {
-		m := msg.ErrDatabase.NewMsg("Error in db.GroupModel.Delete.")
+	if suc := db.GroupModel.Remove(gId); !suc {
+		m := msg.ErrDatabase.NewMsg("Error in db.GroupModel.Remove.")
 		log.Error(m.String())
 		c.JSON(http.StatusOK, m.GinH())
 		return

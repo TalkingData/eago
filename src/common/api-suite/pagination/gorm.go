@@ -14,6 +14,7 @@ type GormParams struct {
 	OrderBy  []string
 }
 
+// GormPaging gorm分页处理
 func GormPaging(p *GormParams, result interface{}) (*Paginator, error) {
 	var (
 		paginator Paginator
@@ -55,7 +56,7 @@ func GormPaging(p *GormParams, result interface{}) (*Paginator, error) {
 		return nil, db.Error
 	}
 
-	// 分查询
+	// 分页查询
 	res = db.Limit(p.PageSize).Offset(offset).Find(result)
 	if res.Error != nil {
 		if errors.Is(res.Error, gorm.ErrRecordNotFound) {

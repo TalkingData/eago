@@ -15,6 +15,7 @@ type BaseMsg struct {
 	Message string
 }
 
+// NewMsg 新生成一条消息
 func (bm *BaseMsg) NewMsg(detail ...string) *Msg {
 	var m = Msg{}
 	m.Code = bm.Code
@@ -27,13 +28,13 @@ func (bm *BaseMsg) NewMsg(detail ...string) *Msg {
 	return &m
 }
 
-// 装载Payload
+// SetPayload 装载消息的Payload
 func (m *Msg) SetPayload(payload *gin.H) *Msg {
 	m.payload = payload
 	return m
 }
 
-// 装在分页过的Payload
+// SetPagedPayload 装载分页过的Payload
 func (m *Msg) SetPagedPayload(paged *pagination.Paginator, objRename string) *Msg {
 	m.payload = &gin.H{
 		"page":      paged.Page,
@@ -47,7 +48,7 @@ func (m *Msg) SetPagedPayload(paged *pagination.Paginator, objRename string) *Ms
 	return m
 }
 
-// 返回GinH
+// GinH 返回GinH
 func (m *Msg) GinH() *gin.H {
 	var h = gin.H{}
 	if m.payload != nil {
@@ -61,7 +62,7 @@ func (m *Msg) GinH() *gin.H {
 	return &h
 }
 
-// 返回字符串
+// String 返回消息的字符串
 func (m *Msg) String() string {
 	return m.Message
 }

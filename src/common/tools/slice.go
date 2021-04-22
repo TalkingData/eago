@@ -5,8 +5,8 @@ import (
 	"reflect"
 )
 
-// 判断needle是否是haystack中的一项
-func IsInSlice(haystack interface{}, needle interface{}) (bool, error) {
+// IsInSlice 判断needle是否是haystack中的一项
+func IsInSlice(haystack, needle interface{}) (bool, error) {
 	sVal := reflect.ValueOf(haystack)
 	kind := sVal.Kind()
 	if kind == reflect.Slice || kind == reflect.Array {

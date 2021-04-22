@@ -7,6 +7,7 @@ import (
 	"strings"
 )
 
+// ListPageHelper 分页助手中间件
 func ListPageHelper() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		page, err := strconv.Atoi(c.DefaultQuery("page", "1"))

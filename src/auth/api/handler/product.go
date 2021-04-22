@@ -3,7 +3,7 @@ package handler
 import (
 	"database/sql"
 	"eago-auth/api/form"
-	"eago-auth/config/msg"
+	"eago-auth/conf/msg"
 	db "eago-auth/database"
 	"eago-common/log"
 	"eago-common/tools"
@@ -33,9 +33,9 @@ func NewProduct(c *gin.Context) {
 		return
 	}
 
-	p := db.ProductModel.New(prod.Name, prod.Alias, *prod.Disabled, prod.Description)
+	p := db.ProductModel.New(prod.Name, prod.Alias, prod.Description, *prod.Disabled)
 	if p == nil {
-		m := msg.ErrDatabase.NewMsg("Error in db.ProductModel.NewProduct.")
+		m := msg.ErrDatabase.NewMsg("Error in db.ProductModel.New.")
 		log.Error(m.String())
 		c.JSON(http.StatusOK, m.GinH())
 		return
@@ -45,14 +45,14 @@ func NewProduct(c *gin.Context) {
 	c.JSON(http.StatusOK, m.GinH())
 }
 
-// DeleteProduct 删除产品线
+// RemoveProduct 删除产品线
 // @Summary 删除产品线
 // @Tags 产品线
 // @Param token header string true "Token"
 // @Param product_id path string true "产品线ID"
 // @Success 200 {string} string "{"code":0,"message":"Success"}"
 // @Router /products/{product_id} [DELETE]
-func DeleteProduct(c *gin.Context) {
+func RemoveProduct(c *gin.Context) {
 	prodId, err := strconv.Atoi(c.Param("product_id"))
 	if err != nil {
 		m := msg.WarnInvalidUri.NewMsg("Field 'product_id' required.")
@@ -63,8 +63,8 @@ func DeleteProduct(c *gin.Context) {
 		return
 	}
 
-	if suc := db.ProductModel.Delete(prodId); !suc {
-		m := msg.ErrDatabase.NewMsg("Error in db.ProductModel.Delete.")
+	if suc := db.ProductModel.Remove(prodId); !suc {
+		m := msg.ErrDatabase.NewMsg("Error in db.ProductModel.Remove.")
 		log.Error(m.String())
 		c.JSON(http.StatusOK, m.GinH())
 		return
@@ -105,7 +105,7 @@ func SetProduct(c *gin.Context) {
 		return
 	}
 
-	prod, suc := db.ProductModel.Set(prodId, prodFm.Name, prodFm.Alias, *prodFm.Disabled, prodFm.Description)
+	prod, suc := db.ProductModel.Set(prodId, prodFm.Name, prodFm.Alias, prodFm.Description, *prodFm.Disabled)
 	if !suc {
 		m := msg.ErrDatabase.NewMsg("Error in db.ProductModel.Set.")
 		log.Error(m.String())

@@ -17,7 +17,7 @@ type UserProduct struct {
 	UserId    int    `json:"user_id" binding:"required"`
 	ProductId int    `json:"product_id" swaggerignore:"true"`
 	IsOwner   *bool  `json:"is_owner" binding:"required"`
-	CreatedAt MyTime `json:"created_at" swaggerignore:"true"`
+	JoinedAt  MyTime `json:"joined_at" gorm:"type:datetime;not null;autoCreateTime" swaggerignore:"true"`
 }
 
 type Product struct {
@@ -30,8 +30,8 @@ type Product struct {
 	UpdatedAt   *MyTime `json:"updated_at" swaggerignore:"true"`
 }
 
-// 新建产品线
-func (pm *productModel) New(name string, alias string, disabled bool, description string) *Product {
+// New 新建产品线
+func (pm *productModel) New(name, alias, description string, disabled bool) *Product {
 	var prod = Product{
 		Name:        name,
 		Alias:       alias,
@@ -53,22 +53,22 @@ func (pm *productModel) New(name string, alias string, disabled bool, descriptio
 	return &prod
 }
 
-// 删除产品线
-func (pm *productModel) Delete(productId int) bool {
+// Remove 删除产品线
+func (pm *productModel) Remove(productId int) bool {
 	res := db.Delete(Product{}, "id=?", productId)
 	if res.Error != nil {
 		log.ErrorWithFields(log.Fields{
 			"id":    productId,
 			"error": res.Error.Error(),
-		}, "Error in productModel.Delete.")
+		}, "Error in productModel.Remove.")
 		return false
 	}
 
 	return true
 }
 
-// 更新产品线
-func (pm *productModel) Set(id int, name string, alias string, disabled bool, description string) (*Product, bool) {
+// Set 更新产品线
+func (pm *productModel) Set(id int, name, alias, description string, disabled bool) (*Product, bool) {
 	var p = Product{}
 
 	res := db.Model(&Product{}).
@@ -95,7 +95,7 @@ func (pm *productModel) Set(id int, name string, alias string, disabled bool, de
 	return &p, true
 }
 
-// 查询产品线
+// List 查询产品线
 func (pm *productModel) List(query *Query) (*[]Product, bool) {
 	var d = db
 	ps := make([]Product, 0)
@@ -121,8 +121,8 @@ func (pm *productModel) List(query *Query) (*[]Product, bool) {
 	return &ps, true
 }
 
-// 查询产品线-分页
-func (pm *productModel) PagedList(query *Query, page int, pageSize int, orderBy ...string) (*pagination.Paginator, bool) {
+// PagedList 查询产品线-分页
+func (pm *productModel) PagedList(query *Query, page, pageSize int, orderBy ...string) (*pagination.Paginator, bool) {
 	var d = db.Model(&Product{})
 	ps := make([]Product, 0)
 
@@ -146,8 +146,8 @@ func (pm *productModel) PagedList(query *Query, page int, pageSize int, orderBy 
 	return pg, true
 }
 
-// 关联表操作::添加用户至产品线
-func (pm *productModel) AddUser(userId int, productId int, isOwner bool) bool {
+// AddUser 关联表操作::添加用户至产品线
+func (pm *productModel) AddUser(userId, productId int, isOwner bool) bool {
 	var up = UserProduct{
 		UserId:    userId,
 		ProductId: productId,
@@ -159,7 +159,7 @@ func (pm *productModel) AddUser(userId int, productId int, isOwner bool) bool {
 			"user_id":    userId,
 			"product_id": productId,
 			"is_owner":   isOwner,
-			"created_at": up.CreatedAt,
+			"joined_at":  up.JoinedAt,
 			"error":      res.Error.Error(),
 		}, "Error in productModel.AddUser.")
 		return false
@@ -168,8 +168,8 @@ func (pm *productModel) AddUser(userId int, productId int, isOwner bool) bool {
 	return true
 }
 
-// 关联表操作::移除产品线中用户
-func (pm *productModel) RemoveUser(userId int, productId int) bool {
+// RemoveUser 关联表操作::移除产品线中用户
+func (pm *productModel) RemoveUser(userId, productId int) bool {
 	res := db.Delete(UserProduct{}, "user_id=? AND product_id=?", userId, productId)
 	if res.Error != nil {
 		log.ErrorWithFields(log.Fields{
@@ -184,7 +184,7 @@ func (pm *productModel) RemoveUser(userId int, productId int) bool {
 }
 
 // 关联表操作::设置用户是否是产品线Owner
-func (pm *productModel) SetUserIsOwner(userId int, productId int, isOwner bool) bool {
+func (pm *productModel) SetUserIsOwner(userId, productId int, isOwner bool) bool {
 	res := db.Model(&UserProduct{}).
 		Where("user_id=? AND product_id=?", userId, productId).
 		Update("IsOwner", isOwner)
@@ -201,7 +201,7 @@ func (pm *productModel) SetUserIsOwner(userId int, productId int, isOwner bool) 
 	return true
 }
 
-// 关联表操作::列出产品线中所有用户
+// ListUsers 关联表操作::列出产品线中所有用户
 func (pm *productModel) ListUsers(productId int, query *Query) (*[]memberUser, bool) {
 	var d = db.Model(&User{})
 	mus := make([]memberUser, 0)
@@ -209,7 +209,7 @@ func (pm *productModel) ListUsers(productId int, query *Query) (*[]memberUser, b
 	for k, v := range *query {
 		d = d.Where(k, v)
 	}
-	res := d.Select("users.id AS id, users.username AS username, up.is_owner AS is_owner, up.created_at AS created_at").
+	res := d.Select("users.id AS id, users.username AS username, up.is_owner AS is_owner, up.joined_at AS joined_at").
 		Joins("LEFT JOIN user_products AS up ON users.id = up.user_id").
 		Where("product_id=?", productId).
 		Find(&mus)

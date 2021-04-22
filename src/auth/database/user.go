@@ -14,10 +14,10 @@ var UserModel userModel
 type userModel struct{}
 
 type userMember struct {
-	Id        int    `json:"id"`
-	Name      string `json:"name"`
-	IsOwner   bool   `json:"is_owner"`
-	CreatedAt MyTime `json:"joined_at"`
+	Id       int    `json:"id"`
+	Name     string `json:"name"`
+	IsOwner  bool   `json:"is_owner"`
+	JoinedAt MyTime `json:"joined_at" gorm:"type:datetime;not null;autoCreateTime"`
 }
 
 type userProductMember struct {
@@ -28,10 +28,10 @@ type userProductMember struct {
 }
 
 type memberUser struct {
-	Id        int    `json:"id"`
-	Username  string `json:"username"`
-	IsOwner   bool   `json:"is_owner"`
-	CreatedAt MyTime `json:"joined_at"`
+	Id       int    `json:"id"`
+	Username string `json:"username"`
+	IsOwner  bool   `json:"is_owner"`
+	JoinedAt MyTime `json:"joined_at" gorm:"type:datetime;not null;autoCreateTime"`
 }
 
 type User struct {
@@ -47,8 +47,8 @@ type User struct {
 	UpdatedAt   *MyTime `json:"updated_at" swaggerignore:"true"`
 }
 
-// 新建用户
-func (um *userModel) New(username string, email string, login bool) *User {
+// New 新建用户
+func (um *userModel) New(username, email string, login bool) *User {
 	var u = User{}
 	u.Username = username
 	u.Email = email
@@ -73,21 +73,21 @@ func (um *userModel) New(username string, email string, login bool) *User {
 	return &u
 }
 
-// 删除用户
-func (um *userModel) Delete(userId int) bool {
+// Remove 删除用户
+func (um *userModel) Remove(userId int) bool {
 	res := db.Delete(User{}, "id=?", userId)
 	if res.Error != nil {
 		log.ErrorWithFields(log.Fields{
 			"id":    userId,
 			"error": res.Error.Error(),
-		}, "Error in userModel.Delete.")
+		}, "Error in userModel.Remove.")
 		return false
 	}
 
 	return true
 }
 
-// 更新最后登录时间
+// SetLastLogin 更新最后登录时间
 func (um *userModel) SetLastLogin(query *Query) bool {
 	var d = db.Model(&User{})
 
@@ -106,7 +106,7 @@ func (um *userModel) SetLastLogin(query *Query) bool {
 	return true
 }
 
-// 更新用户为禁用状态
+// SetDisabled 更新用户为禁用状态
 func (um *userModel) SetDisabled(id int) bool {
 	res := db.Model(&User{}).
 		Where("id=?", id).
@@ -122,8 +122,8 @@ func (um *userModel) SetDisabled(id int) bool {
 	return true
 }
 
-// 更新用户
-func (um *userModel) Set(id int, email string, phone string) (*User, bool) {
+// Set 更新用户
+func (um *userModel) Set(id int, email, phone string) (*User, bool) {
 	var u = User{}
 
 	res := db.Model(&User{}).
@@ -144,7 +144,7 @@ func (um *userModel) Set(id int, email string, phone string) (*User, bool) {
 	return &u, true
 }
 
-// 查询单个用户
+// Get 查询单个用户
 func (um *userModel) Get(query *Query) (*User, bool) {
 	var (
 		u = User{}
@@ -172,7 +172,7 @@ func (um *userModel) Get(query *Query) (*User, bool) {
 	return &u, true
 }
 
-// 查询用户
+// List 查询用户
 func (um *userModel) List(query *Query) (*[]User, bool) {
 	var d = db
 	us := make([]User, 0)
@@ -198,8 +198,8 @@ func (um *userModel) List(query *Query) (*[]User, bool) {
 	return &us, true
 }
 
-// 查询用户-分页
-func (um *userModel) PagedList(query *Query, page int, pageSize int, orderBy ...string) (*pagination.Paginator, bool) {
+// PagedList 查询用户-分页
+func (um *userModel) PagedList(query *Query, page, pageSize int, orderBy ...string) (*pagination.Paginator, bool) {
 	var d = db.Model(&User{})
 	us := make([]User, 0)
 
@@ -223,7 +223,7 @@ func (um *userModel) PagedList(query *Query, page int, pageSize int, orderBy ...
 	return pg, true
 }
 
-// 查询用户是否是Admin
+// IsSuperuser 查询用户是否是Admin
 func (um *userModel) IsSuperuser(userId int) bool {
 	var u = User{}
 
@@ -250,7 +250,7 @@ func (um *userModel) IsSuperuser(userId int) bool {
 	return false
 }
 
-// 关联表操作::列出用户所有角色
+// ListRoles 关联表操作::列出用户所有角色
 func (um *userModel) ListRoles(userId int) (*[]Role, bool) {
 	rs := make([]Role, 0)
 
@@ -274,12 +274,12 @@ func (um *userModel) ListRoles(userId int) (*[]Role, bool) {
 	return &rs, true
 }
 
-// 关联表操作::列出用户所有产品线
+// ListProducts 关联表操作::列出用户所有产品线
 func (um *userModel) ListProducts(userId int) (*[]userProductMember, bool) {
 	ups := make([]userProductMember, 0)
 
 	res := db.Model(&Product{}).
-		Select("products.id AS id, products.name AS name, products.alias, products.disabled, up.is_owner, up.created_at").
+		Select("products.id AS id, products.name AS name, products.alias, products.disabled, up.is_owner, up.joined_at").
 		Joins("LEFT JOIN user_products AS up ON products.id = up.product_id").
 		Where("user_id=?", userId).
 		Find(&ups)
@@ -299,12 +299,12 @@ func (um *userModel) ListProducts(userId int) (*[]userProductMember, bool) {
 	return &ups, true
 }
 
-// 关联表操作::列出用户所有组
+// ListGroups 关联表操作::列出用户所有组
 func (um *userModel) ListGroups(userId int) (*[]userMember, bool) {
 	ugs := make([]userMember, 0)
 
 	res := db.Model(&Group{}).
-		Select("groups.id AS id, groups.name AS name, ug.is_owner AS is_owner, ug.created_at AS created_at").
+		Select("groups.id AS id, groups.name AS name, ug.is_owner AS is_owner, ug.joined_at AS joined_at").
 		Joins("LEFT JOIN user_groups AS ug ON groups.id = ug.group_id").
 		Where("user_id=?", userId).
 		Find(&ugs)
@@ -324,12 +324,12 @@ func (um *userModel) ListGroups(userId int) (*[]userMember, bool) {
 	return &ugs, true
 }
 
-// 关联表操作::获得用户所在部门
+// GetDepartment 关联表操作::获得用户所在部门
 func (um *userModel) GetDepartment(userId int) (*userMember, bool) {
 	var uMember = userMember{}
 
 	res := db.Model(&Group{}).
-		Select("groups.id AS id, groups.name AS name, ug.is_owner AS is_owner, ug.created_at AS created_at").
+		Select("groups.id AS id, groups.name AS name, ug.is_owner AS is_owner, ug.joined_at AS joined_at").
 		Joins("LEFT JOIN user_groups AS ug ON groups.id = ug.group_id").
 		Where("user_id=?", userId).
 		First(&uMember)

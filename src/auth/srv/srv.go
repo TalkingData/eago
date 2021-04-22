@@ -1,24 +1,26 @@
 package srv
 
 import (
-	"eago-auth/config"
+	"eago-auth/conf"
 	"eago-auth/srv/proto"
 	"eago-common/etcd"
 	"eago-common/log"
 	"github.com/micro/go-micro/v2"
+	"sync"
 )
 
 type AuthService struct{}
 
-// 启动RPC服务
-func InitSrv() {
+// InitSrv 启动RPC服务
+func InitSrv(wg *sync.WaitGroup) {
+	defer wg.Done()
+
 	srv := micro.NewService(
-		micro.Name(config.Config.RpcServiceName),
-		micro.Registry(etcd.EtcdReg),
+		micro.Name(conf.RPC_SERVICE_NAME),
+		micro.Registry(etcd.EtcdRegistry),
 	)
 
-	srv.Init()
-	auth.RegisterAuthHandler(srv.Server(), &AuthService{})
+	_ = auth.RegisterAuthHandler(srv.Server(), &AuthService{})
 
 	if err := srv.Run(); err != nil {
 		log.Error(err.Error())

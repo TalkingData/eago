@@ -1,14 +1,16 @@
 [main]
-service_name = eago-auth
-rpc_service_name = eago.srv.auth
-api_v1_service_name = eago.api.v1.auth
+log_level = debug
 secret_key = eago_default_secret_key
 token_ttl = 900
+admin_role_name = auth_admin
 
 [etcd]
 address = 127.0.0.1:2379
 username = root
 password = root
+
+[iam]
+iam_url = https://127.0.0.1/auth
 
 [crowd]
 crowd_url = http://127.0.0.1/crowd

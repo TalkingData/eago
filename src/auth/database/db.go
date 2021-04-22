@@ -2,7 +2,7 @@ package database
 
 import (
 	"database/sql/driver"
-	"eago-auth/config"
+	"eago-auth/conf"
 	"fmt"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
@@ -13,15 +13,16 @@ var db *gorm.DB
 
 type Query map[string]interface{}
 
+// InitDb 初始化数据库
 func InitDb() error {
 	var err error
 
 	dsn := fmt.Sprintf(
-		"%s:%s@tcp(%s)/%s?charset=utf8&parseTime=True&loc=Local",
-		config.Config.MysqlUser,
-		config.Config.MysqlPassword,
-		config.Config.MysqlAddress,
-		config.Config.MysqlDbName,
+		"%s:%s@tcp(%s)/%s?charset=utf8mb4&parseTime=True&loc=Local",
+		conf.Config.MysqlUser,
+		conf.Config.MysqlPassword,
+		conf.Config.MysqlAddress,
+		conf.Config.MysqlDbName,
 	)
 
 	m := mysql.New(mysql.Config{
@@ -36,19 +37,18 @@ func InitDb() error {
 	}
 
 	return nil
-
 }
 
 type MyTime struct {
 	time.Time
 }
 
-func (t MyTime) MarshalJSON() ([]byte, error) {
-	formatted := fmt.Sprintf("\"%s\"", t.Format(config.DEFAULT_TIMESTAMP_FORMAT))
+func (t *MyTime) MarshalJSON() ([]byte, error) {
+	formatted := fmt.Sprintf("\"%s\"", t.Format(conf.TIMESTAMP_FORMAT))
 	return []byte(formatted), nil
 }
 
-func (t MyTime) Value() (driver.Value, error) {
+func (t *MyTime) Value() (driver.Value, error) {
 	var zeroTime time.Time
 	if t.Time.UnixNano() == zeroTime.UnixNano() {
 		return nil, nil

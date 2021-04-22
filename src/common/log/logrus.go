@@ -14,9 +14,9 @@ var logger *logrus.Logger
 
 type Fields logrus.Fields
 
-func InitLog(logPath string, srvName string) error {
+// InitLog 初始化log
+func InitLog(logPath, srvName, timestampFormatter string, lvl logrus.Level) error {
 	logger = logrus.New()
-	//logger.SetReportCaller(true)
 
 	logPathName := filepath.Join(logPath, srvName+".log")
 
@@ -28,14 +28,11 @@ func InitLog(logPath string, srvName string) error {
 	}
 	logger.SetOutput(io.MultiWriter(os.Stdout, fw))
 
-	// 保留调试用
-	//formatter := &logrus.TextFormatter{}
-
 	formatter := &logrus.JSONFormatter{}
-	formatter.TimestampFormat = "2006-01-02 15:04:05"
+	formatter.TimestampFormat = timestampFormatter
 	logger.SetFormatter(formatter)
 
-	logger.SetLevel(logrus.InfoLevel)
+	logger.SetLevel(lvl)
 	return nil
 }
 
@@ -48,7 +45,7 @@ func Debug(args ...interface{}) {
 	}
 }
 
-// 带有field的Debug
+// DebugWithFields
 func DebugWithFields(f Fields, args ...interface{}) {
 	if logger.Level >= logrus.DebugLevel {
 		entry := logger.WithFields(logrus.Fields(f))
@@ -66,7 +63,7 @@ func Info(args ...interface{}) {
 	}
 }
 
-// 带有field的Info
+// InfoWithFields
 func InfoWithFields(f Fields, args ...interface{}) {
 	if logger.Level >= logrus.InfoLevel {
 		entry := logger.WithFields(logrus.Fields(f))
@@ -84,7 +81,7 @@ func Warn(args ...interface{}) {
 	}
 }
 
-// 带有Field的Warn
+// WarnWithFields
 func WarnWithFields(f Fields, args ...interface{}) {
 	if logger.Level >= logrus.WarnLevel {
 		entry := logger.WithFields(logrus.Fields(f))
@@ -102,7 +99,7 @@ func Error(args ...interface{}) {
 	}
 }
 
-// 带有Fields的Error
+// ErrorWithFields
 func ErrorWithFields(f Fields, args ...interface{}) {
 	if logger.Level >= logrus.ErrorLevel {
 		entry := logger.WithFields(logrus.Fields(f))
@@ -120,7 +117,7 @@ func Fatal(args ...interface{}) {
 	}
 }
 
-// 带有Field的Fatal
+// FatalWithFields
 func FatalWithFields(f Fields, args ...interface{}) {
 	if logger.Level >= logrus.FatalLevel {
 		entry := logger.WithFields(logrus.Fields(f))

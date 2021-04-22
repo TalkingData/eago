@@ -5,6 +5,7 @@ import (
 	"net/http"
 )
 
+// PageNoFound 找不到页面时使用的Handler
 func PageNoFound(c *gin.Context) {
 	resp := gin.H{
 		"code":    http.StatusNotFound,

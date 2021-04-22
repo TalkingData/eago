@@ -2,7 +2,7 @@ package handler
 
 import (
 	"database/sql"
-	"eago-auth/config/msg"
+	"eago-auth/conf/msg"
 	db "eago-auth/database"
 	"eago-common/log"
 	"fmt"

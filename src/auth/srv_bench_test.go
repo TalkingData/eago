@@ -1,12 +1,13 @@
 package main
 
 import (
-	"eago-auth/config"
+	"eago-auth/conf"
 	db "eago-auth/database"
 	"eago-auth/srv"
 	"eago-common/log"
 	"eago-common/redis"
 	"fmt"
+	"github.com/sirupsen/logrus"
 	"runtime"
 	"testing"
 )
@@ -24,22 +25,28 @@ func Benchmark_NewToken(b *testing.B) {
 	b.StopTimer()
 
 	for _, t := range tokens {
-		srv.DeleteToken(t)
+		srv.RemoveToken(t)
 	}
-	db.UserModel.Delete(userObj.Id)
+	db.UserModel.Remove(userObj.Id)
 }
 
 func init() {
 	runtime.GOMAXPROCS(runtime.NumCPU())
 
 	// 加载配置文件
-	if err := config.InitConfig(); err != nil {
+	if err := conf.InitConfig(); err != nil {
 		fmt.Println("Failed to init config, error:", err.Error())
 		panic(err)
 	}
 
 	// 加载日志设置
-	if err := log.InitLog(config.Config.LogPath, config.SERVICE_NAME); err != nil {
+	err := log.InitLog(
+		conf.Config.LogPath,
+		conf.APP_NAME,
+		conf.TIMESTAMP_FORMAT,
+		logrus.DebugLevel,
+	)
+	if err != nil {
 		fmt.Println("Failed to init logging, error:", err.Error())
 		panic(err)
 	}
@@ -52,9 +59,9 @@ func init() {
 
 	// 初始化Redis
 	redis.InitRedis(
-		config.Config.RedisAddress,
-		config.Config.RedisPassword,
-		config.Config.RedisDb,
-		config.Config.ServiceName,
+		conf.Config.RedisAddress,
+		conf.Config.RedisPassword,
+		conf.APP_NAME,
+		conf.Config.RedisDb,
 	)
 }

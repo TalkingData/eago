@@ -1,15 +1,52 @@
 package handler
 
 import (
-	"eago-auth/config/msg"
+	"bytes"
+	"eago-auth/conf"
+	"eago-auth/conf/msg"
 	db "eago-auth/database"
 	"eago-auth/srv"
 	"eago-auth/util/sso"
 	"eago-common/log"
+	"eago-common/tools"
+	"fmt"
 	"github.com/gin-gonic/gin"
 	"net/http"
 	"strings"
 )
+
+// Login 登录
+// @Summary 登录
+// @Tags 登录
+// @Param data body form.LoginForm true "body"
+// @Success 200 {string} string "{"code":0,"message":"Success","token":"2acff1bc1de905d67c1312aa97699dd70c74ade1ad4efb831462ed5122e7d404"}"
+// @Router /login [POST]
+func Login() {
+	// 登录Handler见router.go
+	// 此处仅生成swag文档
+}
+
+// Logout 登出
+// @Summary 登出（销毁Token）
+// @Tags 登录
+// @Param token header string true "Token"
+// @Success 200 {string} string "{"code":0,"message":"Success"}"
+// @Router /logout [DELETE]
+func Logout(c *gin.Context) {
+	srv.RemoveToken(c.GetHeader("Token"))
+	c.JSON(http.StatusOK, msg.Success.NewMsg().GinH())
+}
+
+// Heartbeat 心跳
+// @Summary 心跳（续期Token）
+// @Tags 登录
+// @Param token header string true "Token"
+// @Success 200 {string} string "{"code":0,"message":"Success"}"
+// @Router /heartbeat [POST]
+func Heartbeat(c *gin.Context) {
+	srv.RenewalToken(c.GetHeader("Token"))
+	c.JSON(http.StatusOK, msg.Success.NewMsg().GinH())
+}
 
 // GetTokenContent 获得TokenContent
 // @Summary 获得TokenContent
@@ -34,29 +71,56 @@ func GetTokenContent(c *gin.Context) {
 	c.JSON(http.StatusOK, m.GinH())
 }
 
-// Heartbeat 心跳
-// @Summary 心跳（续期Token）
-// @Tags 登录
-// @Param token header string true "Token"
-// @Success 200 {string} string "{"code":0,"message":"Success"}"
-// @Router /heartbeat [POST]
-func Heartbeat(c *gin.Context) {
-	srv.RenewalToken(c.GetHeader("token"))
-	c.JSON(http.StatusOK, msg.Success.NewMsg().GinH())
+// IamLogin 从IAM登录处理
+func IamLogin(c *gin.Context) {
+	var (
+		err  error
+		resp *http.Response
+	)
+
+	log.Info("IamLogin called.")
+	defer log.Info("IamLogin end.")
+
+	loginUser := c.GetStringMapString("LoginUser")
+
+	log.InfoWithFields(log.Fields{
+		"username": loginUser["username"],
+	}, "CrowdLoginHandler called and got a user.")
+
+	data := []byte(fmt.Sprintf(`{"username":"%s","password":"%s"}`, loginUser["username"], loginUser["password"]))
+
+	resp, err = http.Post(conf.Config.IamAddress, "application/json", bytes.NewReader(data))
+	if err == nil {
+		defer func() {
+			_ = resp.Body.Close()
+		}()
+
+		log.DebugWithFields(log.Fields{
+			"response_status_code": resp.StatusCode,
+			"response_body":        resp.Body,
+		}, "Got iam response")
+
+		if resp.StatusCode == 200 {
+			log.Debug("Iam login success.")
+			c.AbortWithStatusJSON(
+				http.StatusOK,
+				updateOrCreateUserLastLogin(loginUser["username"]),
+			)
+			return
+		}
+	} else {
+		log.ErrorWithFields(log.Fields{
+			"error": err.Error(),
+		}, "Iam login failed.")
+		c.Next()
+		return
+	}
+
+	log.Error("Iam login failed.")
+	c.Next()
 }
 
-// Logout 登出
-// @Summary 登出（销毁Token）
-// @Tags 登录
-// @Param token header string true "Token"
-// @Success 200 {string} string "{"code":0,"message":"Success"}"
-// @Router /logout [DELETE]
-func Logout(c *gin.Context) {
-	srv.DeleteToken(c.GetHeader("token"))
-	c.JSON(http.StatusOK, msg.Success.NewMsg().GinH())
-}
-
-// 从Crowd登录处理
+// CrowdLogin 从Crowd登录处理
 func CrowdLogin(c *gin.Context) {
 	log.Info("CrowdLogin called.")
 	defer log.Info("CrowdLogin end.")
@@ -98,7 +162,7 @@ func CrowdLogin(c *gin.Context) {
 	c.Next()
 }
 
-// 从数据库登录处理
+// DatabaseLogin 从数据库登录处理
 func DatabaseLogin(c *gin.Context) {
 	log.Info("DatabaseLogin called.")
 	defer log.Info("DatabaseLogin end.")
@@ -152,7 +216,8 @@ func DatabaseLogin(c *gin.Context) {
 	}
 
 	// 判断账号密码是否匹配
-	if loginUser["username"] == user.Username && loginUser["password"] == user.Password {
+	saltedPasswd := tools.GenSha256HashCode(loginUser["password"] + conf.Config.SecretKey)
+	if loginUser["username"] == user.Username && saltedPasswd == user.Password {
 		db.UserModel.SetLastLogin(&db.Query{"id=?": user.Id})
 		// 登录成功并返回token
 		c.AbortWithStatusJSON(http.StatusOK, newTokenResponse(user))
@@ -162,14 +227,14 @@ func DatabaseLogin(c *gin.Context) {
 	c.Next()
 }
 
-// 返回登录失败
+// LoginFailed 返回登录失败
 func LoginFailed(c *gin.Context) {
 	m := msg.WarnLoginFailed.NewMsg("Check username and password.")
 	log.Warn(m.String())
 	c.JSON(http.StatusOK, m.GinH())
 }
 
-// 更新用户最近登录时间或创建用户并填入response
+// updateOrCreateUserLastLogin 更新用户最近登录时间或创建用户并填入response
 func updateOrCreateUserLastLogin(username string) *gin.H {
 	log.InfoWithFields(log.Fields{
 		"username": username,
@@ -220,7 +285,7 @@ func updateOrCreateUserLastLogin(username string) *gin.H {
 	return m.GinH()
 }
 
-// 生成Token并填入response
+// newTokenResponse 生成Token并填入response
 func newTokenResponse(userObj *db.User) *gin.H {
 	log.InfoWithFields(log.Fields{
 		"user_id":  userObj.Id,

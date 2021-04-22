@@ -1211,6 +1211,36 @@ var doc = `{
             }
         },
         "/roles/{role_id}/users": {
+            "get": {
+                "tags": [
+                    "角色"
+                ],
+                "summary": "列出角色所有用户",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Token",
+                        "name": "token",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "角色ID",
+                        "name": "role_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{\"code\":0,\"message\":\"Success\"}",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            },
             "post": {
                 "tags": [
                     "角色"

@@ -891,16 +891,36 @@ paths:
       tags:
       - 角色
   /roles/{role_id}/users:
+    get:
+      parameters:
+        - description: Token
+          in: header
+          name: token
+          required: true
+          type: string
+        - description: 角色ID
+          in: path
+          name: role_id
+          required: true
+          type: string
+      responses:
+        "200":
+          description: '{"code":0,"message":"Success"}'
+          schema:
+            type: string
+      summary: 列出角色所有用户
+      tags:
+        - 角色
     post:
       parameters:
-      - description: Token
-        in: header
-        name: token
-        required: true
-        type: string
-      - description: 角色ID
-        in: path
-        name: role_id
+        - description: Token
+          in: header
+          name: token
+          required: true
+          type: string
+        - description: 角色ID
+          in: path
+          name: role_id
         required: true
         type: string
       - description: body

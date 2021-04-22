@@ -3,31 +3,17 @@ package main
 import (
 	"eago-auth/api"
 	"eago-auth/cli"
-	"eago-auth/config"
+	"eago-auth/conf"
 	db "eago-auth/database"
 	"eago-auth/srv"
 	"eago-common/etcd"
 	"eago-common/log"
 	"eago-common/redis"
 	"fmt"
+	"github.com/sirupsen/logrus"
 	"runtime"
+	"sync"
 )
-
-func init() {
-	runtime.GOMAXPROCS(runtime.NumCPU())
-
-	// 加载配置文件
-	if err := config.InitConfig(); err != nil {
-		fmt.Println("Failed to init config, error:", err.Error())
-		panic(err)
-	}
-
-	// 加载日志设置
-	if err := log.InitLog(config.Config.LogPath, config.Config.ServiceName); err != nil {
-		fmt.Println("Failed to init logging, error:", err.Error())
-		panic(err)
-	}
-}
 
 func main() {
 	// 初始化关系型数据库
@@ -38,22 +24,54 @@ func main() {
 
 	// 初始化Redis
 	redis.InitRedis(
-		config.Config.RedisAddress,
-		config.Config.RedisPassword,
-		config.Config.RedisDb,
-		config.Config.ServiceName,
+		conf.Config.RedisAddress,
+		conf.Config.RedisPassword,
+		conf.APP_NAME,
+		conf.Config.RedisDb,
 	)
 
 	// 初始化Etcd
 	etcd.InitEtcd(
-		config.Config.EtcdAddress,
-		config.Config.EtcdUsername,
-		config.Config.EtcdPassword,
+		conf.Config.EtcdAddress,
+		conf.Config.EtcdUsername,
+		conf.Config.EtcdPassword,
 	)
 
-	go srv.InitSrv()
-	go cli.InitCli()
-	go api.InitApi()
+	wg := sync.WaitGroup{}
+	wg.Add(1)
+	go srv.InitSrv(&wg)
 
-	select {}
+	wg.Add(1)
+	go cli.InitCli(&wg)
+
+	wg.Add(1)
+	go api.InitApi(&wg)
+
+	wg.Wait()
+}
+
+func init() {
+	runtime.GOMAXPROCS(runtime.NumCPU())
+
+	// 加载配置文件
+	if err := conf.InitConfig(); err != nil {
+		fmt.Println("Failed to init config, error:", err.Error())
+		panic(err)
+	}
+
+	logLvl, err := logrus.ParseLevel(conf.Config.LogLevel)
+	if err != nil {
+		panic(err)
+	}
+	// 加载日志设置
+	err = log.InitLog(
+		conf.Config.LogPath,
+		conf.APP_NAME,
+		conf.TIMESTAMP_FORMAT,
+		logLvl,
+	)
+	if err != nil {
+		fmt.Println("Failed to init logging, error:", err.Error())
+		panic(err)
+	}
 }

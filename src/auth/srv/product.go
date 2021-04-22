@@ -2,14 +2,14 @@ package srv
 
 import (
 	"context"
-	"eago-auth/config/msg"
+	"eago-auth/conf/msg"
 	db "eago-auth/database"
 	"eago-auth/srv/proto"
 	"eago-common/log"
 	"errors"
 )
 
-// RPC服务::根据产品线Id获得产品线信息
+// GetProducts RPC服务::根据产品线Id获得产品线信息
 func (as *AuthService) GetProducts(ctx context.Context, req *auth.Ids, res *auth.Products) error {
 	var q = db.Query{"id IN (?)": req.Ids}
 

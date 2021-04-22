@@ -1,22 +1,23 @@
 package cli
 
 import (
-	"eago-auth/config"
+	"eago-auth/conf"
 	"eago-auth/srv/proto"
 	"eago-common/etcd"
 	"github.com/micro/go-micro/v2"
+	"sync"
 )
 
 var AuthClient auth.AuthService
 
-// 启动RPC客户端
-func InitCli() {
+// InitCli 启动RPC客户端
+func InitCli(wg *sync.WaitGroup) {
+	defer wg.Done()
+
 	cli := micro.NewService(
-		micro.Name(config.Config.RpcServiceName),
-		micro.Registry(etcd.EtcdReg),
+		micro.Name(conf.RPC_SERVICE_NAME),
+		micro.Registry(etcd.EtcdRegistry),
 	)
 
-	cli.Init()
-
-	AuthClient = auth.NewAuthService(config.Config.RpcServiceName, cli.Client())
+	AuthClient = auth.NewAuthService(conf.RPC_SERVICE_NAME, cli.Client())
 }

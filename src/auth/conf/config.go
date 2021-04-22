@@ -1,4 +1,4 @@
-package config
+package conf
 
 import (
 	"github.com/Unknwon/goconfig"
@@ -7,23 +7,22 @@ import (
 )
 
 const (
-	// 配置文件路径
-	configFilePathName = "./config/eago_auth.conf"
-
-	defaultServiceName      = "eago-auth"
-	defaultRpcServiceName   = "eago.srv.auth"
-	defaultApiV1ServiceName = "eago.api.v1.auth"
-	defaultSecretKey        = "eago_default_secret_key"
+	defaultLogLevel  = "debug"
+	defaultSecretKey = "eago_default_secret_key"
 	// Token生命周期默认配置，秒
-	defaultTokenTtl = 3600
+	defaultTokenTtl      = 900
+	defaultAdminRoleName = "auth_admin"
 
 	// Etcd默认配置
 	defaultEtcdAddress  = "127.0.0.1:2379"
 	defaultEtcdUsername = "root"
 	defaultEtcdPassword = "root"
 
+	// IAM默认配置
+	defaultIamAddress = "https://127.0.0.1/auth"
+
 	// Crowd默认配置
-	defaultCrowdAddress     = "127.0.0.1"
+	defaultCrowdAddress     = "http://127.0.0.1/crowd"
 	defaultCrowdAppName     = "eago"
 	defaultCrowdAppPassword = "eago"
 
@@ -47,15 +46,17 @@ var Config *Conf
 
 // Conf 配置
 type Conf struct {
-	ServiceName      string
-	RpcServiceName   string
-	ApiV1ServiceName string
-	SecretKey        string
-	TokenTtl         time.Duration
+	LogLevel  string
+	SecretKey string
+	TokenTtl  time.Duration
+
+	AdminRoleName string
 
 	EtcdAddress  string
 	EtcdUsername string
 	EtcdPassword string
+
+	IamAddress string
 
 	CrowdAddress     string
 	CrowdAppName     string
@@ -80,24 +81,26 @@ func (c *Conf) validateConfig() error {
 	return nil
 }
 
+// InitConfig 初始化配置文件
 func InitConfig() error {
-	cfg, err := goconfig.LoadConfigFile(configFilePathName)
+	cfg, err := goconfig.LoadConfigFile(CONFIG_FILE_PATHNAME)
 	if err != nil {
 		return err
 	}
 
 	Config = &Conf{
-		ServiceName:      cfg.MustValue("main", "service_name", defaultServiceName),
-		RpcServiceName:   cfg.MustValue("main", "rpc_service_name", defaultRpcServiceName),
-		ApiV1ServiceName: cfg.MustValue("main", "api_v1_service_name", defaultApiV1ServiceName),
-		SecretKey:        cfg.MustValue("main", "secret_key", defaultSecretKey),
-		TokenTtl:         time.Duration(cfg.MustInt64("main", "token_ttl", defaultTokenTtl)) * time.Second,
+		LogLevel:      cfg.MustValue("main", "log_level", defaultLogLevel),
+		SecretKey:     cfg.MustValue("main", "secret_key", defaultSecretKey),
+		TokenTtl:      time.Duration(cfg.MustInt64("main", "token_ttl", defaultTokenTtl)) * time.Second,
+		AdminRoleName: cfg.MustValue("main", "admin_role_name", defaultAdminRoleName),
 
 		EtcdAddress:  cfg.MustValue("etcd", "address", defaultEtcdAddress),
 		EtcdUsername: cfg.MustValue("etcd", "username", defaultEtcdUsername),
 		EtcdPassword: cfg.MustValue("etcd", "password", defaultEtcdPassword),
 
-		CrowdAddress:     cfg.MustValue("crowd", "crowd_url", defaultCrowdAddress),
+		IamAddress: cfg.MustValue("iam", "address", defaultIamAddress),
+
+		CrowdAddress:     cfg.MustValue("crowd", "address", defaultCrowdAddress),
 		CrowdAppName:     cfg.MustValue("crowd", "app_name", defaultCrowdAppName),
 		CrowdAppPassword: cfg.MustValue("crowd", "app_pass", defaultCrowdAppPassword),
 
@@ -115,7 +118,7 @@ func InitConfig() error {
 		LogPath: cfg.MustValue("log", "path", defaultLogPath),
 	}
 
-	os.Mkdir(Config.LogPath, 0755)
+	_ = os.Mkdir(Config.LogPath, 0755)
 
 	return Config.validateConfig()
 }

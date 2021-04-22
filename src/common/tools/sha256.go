@@ -5,7 +5,7 @@ import (
 	"encoding/hex"
 )
 
-// 生成SHA256哈希值
+// GenSha256HashCode 生成SHA256哈希值
 func GenSha256HashCode(message string) string {
 	hash := sha256.New()
 	hash.Write([]byte(message))

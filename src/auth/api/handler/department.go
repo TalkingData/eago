@@ -3,7 +3,7 @@ package handler
 import (
 	"database/sql"
 	"eago-auth/api/form"
-	"eago-auth/config/msg"
+	"eago-auth/conf/msg"
 	db "eago-auth/database"
 	"eago-common/log"
 	"eago-common/tools"
@@ -35,7 +35,7 @@ func NewDepartment(c *gin.Context) {
 
 	dept := db.DepartmentModel.New(dForm.Name, dForm.ParentId)
 	if dept == nil {
-		m := msg.ErrDatabase.NewMsg("Error in db.DepartmentModel.NewProduct.")
+		m := msg.ErrDatabase.NewMsg("Error in db.DepartmentModel.New.")
 		log.Error(m.String())
 		c.JSON(http.StatusOK, m.GinH())
 		return
@@ -45,14 +45,14 @@ func NewDepartment(c *gin.Context) {
 	c.JSON(http.StatusOK, m.GinH())
 }
 
-// DeleteDepartment 删除部门
+// RemoveDepartment 删除部门
 // @Summary 删除部门
 // @Tags 部门
 // @Param token header string true "Token"
 // @Param department_id path string true "部门ID"
 // @Success 200 {string} string "{"code":0,"message":"Success"}"
 // @Router /departments/{department_id} [DELETE]
-func DeleteDepartment(c *gin.Context) {
+func RemoveDepartment(c *gin.Context) {
 	deptId, err := strconv.Atoi(c.Param("department_id"))
 	if err != nil {
 		m := msg.WarnInvalidUri.NewMsg("Field 'department_id' required.")
@@ -63,8 +63,8 @@ func DeleteDepartment(c *gin.Context) {
 		return
 	}
 
-	if suc := db.DepartmentModel.Delete(deptId); !suc {
-		m := msg.ErrDatabase.NewMsg("Error in db.DepartmentModel.Delete.")
+	if suc := db.DepartmentModel.Remove(deptId); !suc {
+		m := msg.ErrDatabase.NewMsg("Error in db.DepartmentModel.Remove.")
 		log.Error(m.String())
 		c.JSON(http.StatusOK, m.GinH())
 		return

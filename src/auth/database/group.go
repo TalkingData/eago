@@ -13,11 +13,11 @@ var GroupModel groupModel
 type groupModel struct{}
 
 type UserGroup struct {
-	Id        int    `json:"id" swaggerignore:"true"`
-	UserId    int    `json:"user_id" binding:"required"`
-	GroupId   int    `json:"group_id" swaggerignore:"true"`
-	IsOwner   *bool  `json:"is_owner" binding:"required"`
-	CreatedAt MyTime `json:"created_at" swaggerignore:"true"`
+	Id       int    `json:"id" swaggerignore:"true"`
+	UserId   int    `json:"user_id" binding:"required"`
+	GroupId  int    `json:"group_id" swaggerignore:"true"`
+	IsOwner  *bool  `json:"is_owner" binding:"required"`
+	JoinedAt MyTime `json:"joined_at" gorm:"type:datetime;not null;autoCreateTime" swaggerignore:"true"`
 }
 
 type Group struct {
@@ -28,8 +28,8 @@ type Group struct {
 	UpdatedAt   *MyTime `json:"updated_at" swaggerignore:"true"`
 }
 
-// 新建组
-func (gm *groupModel) New(name string, description string) *Group {
+// New 新建组
+func (gm *groupModel) New(name, description string) *Group {
 	var g = Group{
 		Name:        name,
 		Description: description,
@@ -47,22 +47,22 @@ func (gm *groupModel) New(name string, description string) *Group {
 	return &g
 }
 
-// 删除组
-func (gm *groupModel) Delete(groupId int) bool {
+// Remove 删除组
+func (gm *groupModel) Remove(groupId int) bool {
 	res := db.Delete(Group{}, "id=?", groupId)
 	if res.Error != nil {
 		log.ErrorWithFields(log.Fields{
 			"id":    groupId,
 			"error": res.Error.Error(),
-		}, "Error in groupModel.Delete.")
+		}, "Error in groupModel.Remove.")
 		return false
 	}
 
 	return true
 }
 
-// 更新组
-func (gm *groupModel) Set(id int, name string, description string) (*Group, bool) {
+// Set 更新组
+func (gm *groupModel) Set(id int, name, description string) (*Group, bool) {
 	var g = Group{}
 
 	res := db.Model(&Group{}).
@@ -83,7 +83,7 @@ func (gm *groupModel) Set(id int, name string, description string) (*Group, bool
 	return &g, true
 }
 
-// 查询组
+// List 查询组
 func (gm *groupModel) List(query *Query) (*[]Group, bool) {
 	var d = db
 	gs := make([]Group, 0)
@@ -109,8 +109,8 @@ func (gm *groupModel) List(query *Query) (*[]Group, bool) {
 	return &gs, true
 }
 
-// 查询组-分页
-func (gm *groupModel) PagedList(query *Query, page int, pageSize int, orderBy ...string) (*pagination.Paginator, bool) {
+// PagedList 查询组-分页
+func (gm *groupModel) PagedList(query *Query, page, pageSize int, orderBy ...string) (*pagination.Paginator, bool) {
 	var d = db.Model(&Group{})
 	gs := make([]Group, 0)
 
@@ -134,8 +134,8 @@ func (gm *groupModel) PagedList(query *Query, page int, pageSize int, orderBy ..
 	return pg, true
 }
 
-// 关联表操作::添加用户至组
-func (gm *groupModel) AddUser(userId int, groupId int, isOwner bool) bool {
+// AddUser 关联表操作::添加用户至组
+func (gm *groupModel) AddUser(userId, groupId int, isOwner bool) bool {
 	var gp = UserGroup{
 		UserId:  userId,
 		GroupId: groupId,
@@ -144,11 +144,11 @@ func (gm *groupModel) AddUser(userId int, groupId int, isOwner bool) bool {
 
 	if res := db.Create(&gp); res.Error != nil {
 		log.ErrorWithFields(log.Fields{
-			"user_id":    userId,
-			"group_id":   groupId,
-			"is_owner":   isOwner,
-			"created_at": gp.CreatedAt,
-			"error":      res.Error.Error(),
+			"user_id":   userId,
+			"group_id":  groupId,
+			"is_owner":  isOwner,
+			"joined_at": gp.JoinedAt,
+			"error":     res.Error.Error(),
 		}, "Error in groupModel.AddUser.")
 		return false
 	}
@@ -156,8 +156,8 @@ func (gm *groupModel) AddUser(userId int, groupId int, isOwner bool) bool {
 	return true
 }
 
-// 关联表操作::移除组中用户
-func (gm *groupModel) RemoveUser(userId int, groupId int) bool {
+// RemoveUser 关联表操作::移除组中用户
+func (gm *groupModel) RemoveUser(userId, groupId int) bool {
 	res := db.Delete(UserGroup{}, "user_id=? AND group_id=?", userId, groupId)
 	if res.Error != nil {
 		log.ErrorWithFields(log.Fields{
@@ -171,8 +171,8 @@ func (gm *groupModel) RemoveUser(userId int, groupId int) bool {
 	return true
 }
 
-// 关联表操作::设置用户是否是组Owner
-func (gm *groupModel) SetUserIsOwner(userId int, groupId int, isOwner bool) bool {
+// SetUserIsOwner 关联表操作::设置用户是否是组Owner
+func (gm *groupModel) SetUserIsOwner(userId, groupId int, isOwner bool) bool {
 	res := db.Model(&UserGroup{}).
 		Where("user_id=? AND group_id=?", userId, groupId).
 		Update("IsOwner", isOwner)
@@ -189,7 +189,7 @@ func (gm *groupModel) SetUserIsOwner(userId int, groupId int, isOwner bool) bool
 	return true
 }
 
-// 关联表操作::列出组中所有用户
+// ListUsers 关联表操作::列出组中所有用户
 func (gm *groupModel) ListUsers(groupId int, query *Query) (*[]memberUser, bool) {
 	var d = db.Model(&User{})
 	mus := make([]memberUser, 0)
@@ -197,7 +197,7 @@ func (gm *groupModel) ListUsers(groupId int, query *Query) (*[]memberUser, bool)
 	for k, v := range *query {
 		d = d.Where(k, v)
 	}
-	res := d.Select("users.id AS id, users.username AS username, ug.is_owner AS is_owner, ug.created_at AS created_at").
+	res := d.Select("users.id AS id, users.username AS username, ug.is_owner AS is_owner, ug.joined_at AS joined_at").
 		Joins("LEFT JOIN user_groups AS ug ON users.id = ug.user_id").
 		Where("group_id=?", groupId).
 		Find(&mus)

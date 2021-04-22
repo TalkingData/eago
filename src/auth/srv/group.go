@@ -2,14 +2,14 @@ package srv
 
 import (
 	"context"
-	"eago-auth/config/msg"
+	"eago-auth/conf/msg"
 	db "eago-auth/database"
 	"eago-auth/srv/proto"
 	"eago-common/log"
 	"errors"
 )
 
-// RPC服务::根据组Id获得组信息
+// GetGroups RPC服务::根据组Id获得组信息
 func (as *AuthService) GetGroups(ctx context.Context, req *auth.Ids, res *auth.Groups) error {
 	var q = db.Query{"id IN (?)": req.Ids}
 

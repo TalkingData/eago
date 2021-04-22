@@ -2,7 +2,7 @@ package handler
 
 import (
 	"database/sql"
-	"eago-auth/config/msg"
+	"eago-auth/conf/msg"
 	db "eago-auth/database"
 	"eago-common/log"
 	"fmt"
@@ -43,14 +43,14 @@ func NewRole(c *gin.Context) {
 	c.JSON(http.StatusOK, m.GinH())
 }
 
-// DeleteRole 删除角色
+// RemoveRole 删除角色
 // @Summary 删除角色
 // @Tags 角色
 // @Param token header string true "Token"
 // @Param role_id path string true "角色ID"
 // @Success 200 {string} string "{"code":0,"message":"Success"}"
 // @Router /roles/{role_id} [DELETE]
-func DeleteRole(c *gin.Context) {
+func RemoveRole(c *gin.Context) {
 	roleId, err := strconv.Atoi(c.Param("role_id"))
 	if err != nil {
 		m := msg.WarnInvalidUri.NewMsg("Field 'role_id' required.")
@@ -61,8 +61,8 @@ func DeleteRole(c *gin.Context) {
 		return
 	}
 
-	if suc := db.RoleModel.Delete(roleId); !suc {
-		m := msg.ErrDatabase.NewMsg("Error in db.RoleModel.Delete.")
+	if suc := db.RoleModel.Remove(roleId); !suc {
+		m := msg.ErrDatabase.NewMsg("Error in db.RoleModel.Remove.")
 		log.Error(m.String())
 		c.JSON(http.StatusOK, m.GinH())
 		return
@@ -231,7 +231,13 @@ func RemoveRoleUser(c *gin.Context) {
 	c.JSON(http.StatusOK, m.GinH())
 }
 
-// 列出角色所有用户
+// ListRoleUsers 列出角色所有用户
+// @Summary 列出角色所有用户
+// @Tags 角色
+// @Param token header string true "Token"
+// @Param role_id path string true "角色ID"
+// @Success 200 {string} string "{"code":0,"message":"Success"}"
+// @Router /roles/{role_id}/users [GET]
 func ListRoleUsers(c *gin.Context) {
 	roleId, err := strconv.Atoi(c.Param("role_id"))
 	if err != nil {

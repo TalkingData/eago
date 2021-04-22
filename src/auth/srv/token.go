@@ -2,13 +2,14 @@ package srv
 
 import (
 	"context"
-	"eago-auth/config"
+	"eago-auth/conf"
 	db "eago-auth/database"
 	"eago-auth/srv/proto"
 	"eago-common/log"
 	"eago-common/redis"
 	"eago-common/tools"
 	"encoding/json"
+	"sync"
 	"time"
 )
 
@@ -36,21 +37,21 @@ type TokenContent struct {
 	OwnGroups   *[]GroupInToken   `json:"own_groups"`
 }
 
-// RPC服务::验证Token是否有效
+// VerifyToken RPC服务::验证Token是否有效
 func (as *AuthService) VerifyToken(ctx context.Context, req *auth.Token, res *auth.BoolResponse) error {
 	log.InfoWithFields(log.Fields{"token": req.Token}, "Gor rpc call verify token.")
 	res.Ok = VerifyToken(req.Token)
 	return nil
 }
 
-// RPC服务::通过Token获得TokenContent
+// GetTokenContent RPC服务::通过Token获得TokenContent
 func (as *AuthService) GetTokenContent(ctx context.Context, req *auth.Token, res *auth.TokenContent) error {
 	log.InfoWithFields(
 		log.Fields{"token": req.Token},
 		"Got rpc call get token content.",
 	)
 	tc, suc := GetTokenContent(req.Token)
-	if !suc {
+	if !suc || tc == nil {
 		res.Ok = false
 		return nil
 	}
@@ -65,8 +66,11 @@ func (as *AuthService) GetTokenContent(ctx context.Context, req *auth.Token, res
 	res.Roles = *tc.Roles
 
 	// 加载产品线
-	loadProduct := make(chan bool, 1)
-	go func(done chan bool) {
+	wg := sync.WaitGroup{}
+	wg.Add(1)
+	go func(wg *sync.WaitGroup) {
+		defer wg.Done()
+
 		res.Products = make([]*auth.Product, 0)
 		res.OwnProducts = make([]*auth.Product, 0)
 
@@ -88,12 +92,13 @@ func (as *AuthService) GetTokenContent(ctx context.Context, req *auth.Token, res
 			res.OwnProducts = append(res.OwnProducts, &newP)
 		}
 
-		done <- true
-	}(loadProduct)
+	}(&wg)
 
 	// 加载组
-	loadGroup := make(chan bool, 1)
-	go func(done chan bool) {
+	wg.Add(1)
+	go func(wg *sync.WaitGroup) {
+		defer wg.Done()
+
 		res.Groups = make([]*auth.Group, 0)
 		res.OwnGroups = make([]*auth.Group, 0)
 
@@ -111,31 +116,19 @@ func (as *AuthService) GetTokenContent(ctx context.Context, req *auth.Token, res
 			res.OwnGroups = append(res.OwnGroups, &newG)
 		}
 
-		done <- true
-	}(loadGroup)
+	}(&wg)
 
-	<-loadProduct
-	<-loadGroup
+	// 等待所有加载项结束
+	wg.Wait()
 
 	return nil
 }
 
-func intCopy2Int32(from *[]int, to *[]int32, done chan bool) {
-	if from != nil {
-		t := *to
-		for _, f := range *from {
-			t = append(t, int32(f))
-		}
-	}
-
-	done <- true
-}
-
-// 本地服务::生成Token
+// NewToken 本地服务::生成Token
 func NewToken(userObj *db.User) string {
 	var (
 		tc       = TokenContent{}
-		currTime = time.Now().Format(config.DEFAULT_TIMESTAMP_FORMAT)
+		currTime = time.Now().Format(conf.TIMESTAMP_FORMAT)
 	)
 
 	tc.UserId = userObj.Id
@@ -144,8 +137,11 @@ func NewToken(userObj *db.User) string {
 	tc.IsSuperuser = userObj.IsSuperuser
 
 	// 填入角色信息
-	loadRoles := make(chan bool, 1)
-	go func(done chan bool) {
+	wg := sync.WaitGroup{}
+	wg.Add(1)
+	go func(wg *sync.WaitGroup) {
+		defer wg.Done()
+
 		rolesStr := make([]string, 0)
 		roles, suc := db.UserModel.ListRoles(userObj.Id)
 		if !suc {
@@ -157,12 +153,13 @@ func NewToken(userObj *db.User) string {
 		}
 		tc.Roles = &rolesStr
 
-		done <- true
-	}(loadRoles)
+	}(&wg)
 
 	// 填入产品线信息
-	loadProduct := make(chan bool, 1)
-	go func(done chan bool) {
+	wg.Add(1)
+	go func(wg *sync.WaitGroup) {
+		defer wg.Done()
+
 		products := make([]ProductInToken, 0)
 		ownProducts := make([]ProductInToken, 0)
 
@@ -186,12 +183,13 @@ func NewToken(userObj *db.User) string {
 		tc.Products = &products
 		tc.OwnProducts = &ownProducts
 
-		done <- true
-	}(loadProduct)
+	}(&wg)
 
 	// 填入组信息
-	loadGroup := make(chan bool, 1)
-	go func(done chan bool) {
+	wg.Add(1)
+	go func(wg *sync.WaitGroup) {
+		defer wg.Done()
+
 		groups := make([]GroupInToken, 0)
 		ownGroups := make([]GroupInToken, 0)
 
@@ -213,22 +211,20 @@ func NewToken(userObj *db.User) string {
 		tc.Groups = &groups
 		tc.OwnGroups = &ownGroups
 
-		done <- true
-	}(loadGroup)
+	}(&wg)
 
 	// 计算token值
 	baseToken := tools.GenSha256HashCode(userObj.Username + currTime)
-	token := tools.GenSha256HashCode(baseToken + config.Config.SecretKey)
+	token := tools.GenSha256HashCode(baseToken + conf.Config.SecretKey)
 	// 生成TokenKey
 	tokenKey := genTokenKey(token)
 
 	// 等待所有信息填入结束
-	<-loadRoles
-	<-loadProduct
-	<-loadGroup
+	wg.Wait()
+
 	// TokenContent存到redis
 	tokenContent, _ := json.Marshal(tc)
-	if err := redis.Redis.Set(tokenKey, string(tokenContent), config.Config.TokenTtl); err != nil {
+	if err := redis.Redis.Set(tokenKey, string(tokenContent), conf.Config.TokenTtl); err != nil {
 		log.ErrorWithFields(log.Fields{
 			"user_id":  userObj.Id,
 			"username": userObj.Username,
@@ -239,14 +235,19 @@ func NewToken(userObj *db.User) string {
 	return token
 }
 
-// 本地服务::删除Token
-func DeleteToken(token string) {
-	redis.Redis.Del(genTokenKey(token))
+// RemoveToken 本地服务::删除Token
+func RemoveToken(token string) {
+	if err := redis.Redis.Del(genTokenKey(token)); err != nil {
+		log.ErrorWithFields(log.Fields{
+			"token": token,
+			"error": err.Error(),
+		}, "Error in RemoveToken.")
+	}
 }
 
-// 本地服务::续期Token
+// RenewalToken 本地服务::续期Token
 func RenewalToken(token string) {
-	if err := redis.Redis.Expire(genTokenKey(token), config.Config.TokenTtl); err != nil {
+	if err := redis.Redis.Expire(genTokenKey(token), conf.Config.TokenTtl); err != nil {
 		log.ErrorWithFields(log.Fields{
 			"token": token,
 			"error": err.Error(),
@@ -254,12 +255,12 @@ func RenewalToken(token string) {
 	}
 }
 
-// 本地服务::验证Token是否有效
+// VerifyToken 本地服务::验证Token是否有效
 func VerifyToken(token string) bool {
 	return redis.Redis.HasKey(genTokenKey(token))
 }
 
-// 本地服务::通过Token获得TokenContent
+// GetTokenContent 本地服务::通过Token获得TokenContent
 func GetTokenContent(token string) (*TokenContent, bool) {
 	if !redis.Redis.HasKey(genTokenKey(token)) {
 		log.WarnWithFields(log.Fields{
@@ -288,7 +289,7 @@ func GetTokenContent(token string) (*TokenContent, bool) {
 	return &tc, true
 }
 
-// 生成TokenKey
+// genTokenKey 生成TokenKey
 func genTokenKey(token string) string {
 	return "token/" + token
 }

@@ -13,6 +13,5 @@ func Dispatch(realPatch string) gin.HandlerFunc {
 			c.Abort()
 			return
 		}
-		c.Next()
 	}
 }
