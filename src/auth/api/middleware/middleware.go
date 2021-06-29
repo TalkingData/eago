@@ -1,7 +1,7 @@
 package middleware
 
 import (
-	"eago-common/api-suite/handler"
+	"eago/common/api-suite/handler"
 	"github.com/gin-gonic/gin"
 	"strings"
 )

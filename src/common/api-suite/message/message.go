@@ -1,68 +1,42 @@
 package message
 
 import (
-	"eago-common/api-suite/pagination"
 	"github.com/gin-gonic/gin"
+	"strings"
 )
 
-type Msg struct {
-	BaseMsg
-	payload *gin.H
-}
-
-type BaseMsg struct {
+type Message struct {
 	Code    int
 	Message string
 }
 
-// NewMsg 新生成一条消息
-func (bm *BaseMsg) NewMsg(detail ...string) *Msg {
-	var m = Msg{}
-	m.Code = bm.Code
-	m.Message = bm.Message
-
-	for _, d := range detail {
-		m.Message = m.Message + " " + d
+// SetDetail 设置消息详情
+func (m *Message) SetDetail(detail ...string) *Message {
+	var newM = Message{}
+	if len(detail) >= 1 {
+		newM.Message = m.Message + " " + strings.Join(detail, " ")
+	} else {
+		newM.Message = m.Message
 	}
 
-	return &m
-}
-
-// SetPayload 装载消息的Payload
-func (m *Msg) SetPayload(payload *gin.H) *Msg {
-	m.payload = payload
-	return m
-}
-
-// SetPagedPayload 装载分页过的Payload
-func (m *Msg) SetPagedPayload(paged *pagination.Paginator, objRename string) *Msg {
-	m.payload = &gin.H{
-		"page":      paged.Page,
-		"pages":     paged.Pages,
-		"page_size": paged.PageSize,
-		"total":     paged.Total,
-	}
-
-	pld := *m.payload
-	pld[objRename] = paged.Data
-	return m
-}
-
-// GinH 返回GinH
-func (m *Msg) GinH() *gin.H {
-	var h = gin.H{}
-	if m.payload != nil {
-		for k, v := range *m.payload {
-			h[k] = v
-		}
-	}
-
-	h["code"] = m.Code
-	h["message"] = m.Message
-	return &h
+	return &newM
 }
 
 // String 返回消息的字符串
-func (m *Msg) String() string {
+func (m *Message) String() string {
 	return m.Message
+}
+
+// GenResponse 新生成一条响应体
+func (m *Message) GenResponse(detail ...string) *response {
+	var resp = response{}
+	resp.code = m.Code
+	if len(detail) >= 1 {
+		resp.message = m.Message + " " + strings.Join(detail, " ")
+	} else {
+		resp.message = m.Message
+	}
+	resp.payload = make(gin.H)
+
+	return &resp
 }

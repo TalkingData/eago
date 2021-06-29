@@ -1,11 +1,14 @@
 [main]
-log_level = debug
 secret_key = eago_default_secret_key
 token_ttl = 900
 admin_role_name = auth_admin
 
+[log]
+level = debug
+path = ./logs
+
 [etcd]
-address = 127.0.0.1:2379
+addresses = 127.0.0.1:2379,127.0.0.1:2379,127.0.0.1:2379
 username = root
 password = root
 
@@ -29,6 +32,3 @@ max_idle_connections = 20
 address = 127.0.0.1:6379
 password = redis
 db = 1
-
-[log]
-path = ./logs

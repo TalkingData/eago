@@ -2,13 +2,14 @@ package handler
 
 import (
 	"bytes"
-	"eago-auth/conf"
-	"eago-auth/conf/msg"
-	db "eago-auth/database"
-	"eago-auth/srv"
-	"eago-auth/util/sso"
-	"eago-common/log"
-	"eago-common/tools"
+	"eago/auth/conf"
+	"eago/auth/conf/msg"
+	"eago/auth/model"
+	"eago/auth/srv/dto"
+	"eago/auth/srv/local"
+	"eago/auth/util/sso"
+	"eago/common/log"
+	"eago/common/utils"
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"net/http"
@@ -33,8 +34,8 @@ func Login() {
 // @Success 200 {string} string "{"code":0,"message":"Success"}"
 // @Router /logout [DELETE]
 func Logout(c *gin.Context) {
-	srv.RemoveToken(c.GetHeader("Token"))
-	c.JSON(http.StatusOK, msg.Success.NewMsg().GinH())
+	local.RemoveToken(c.GetHeader("Token"))
+	msg.Success.GenResponse().Write(c)
 }
 
 // Heartbeat 心跳
@@ -44,8 +45,8 @@ func Logout(c *gin.Context) {
 // @Success 200 {string} string "{"code":0,"message":"Success"}"
 // @Router /heartbeat [POST]
 func Heartbeat(c *gin.Context) {
-	srv.RenewalToken(c.GetHeader("Token"))
-	c.JSON(http.StatusOK, msg.Success.NewMsg().GinH())
+	local.RenewalToken(c.GetHeader("Token"))
+	msg.Success.GenResponse().Write(c)
 }
 
 // GetTokenContent 获得TokenContent
@@ -56,28 +57,28 @@ func Heartbeat(c *gin.Context) {
 // @Router /token/content [GET]
 func GetTokenContent(c *gin.Context) {
 	tc := c.GetStringMap("TokenContent")
-	m := msg.Success.NewMsg()
-	m.SetPayload(&gin.H{"content": gin.H{
-		"user_id":  tc["UserId"].(int),
-		"username": tc["Username"].(string),
 
-		"is_superuser": tc["IsSuperuser"].(bool),
-		"roles":        tc["Roles"].(*[]string),
-		"products":     tc["Products"].(*[]srv.ProductInToken),
-		"own_products": tc["OwnProducts"].(*[]srv.ProductInToken),
-		"groups":       tc["Groups"].(*[]srv.GroupInToken),
-		"own_groups":   tc["OwnGroups"].(*[]srv.GroupInToken),
-	}})
-	c.JSON(http.StatusOK, m.GinH())
+	content := make(map[string]interface{})
+	content["user_id"] = tc["UserId"]
+	content["username"] = tc["Username"].(string)
+	content["phone"] = tc["Phone"].(string)
+
+	content["is_superuser"] = tc["UserIsSuperuser"].(bool)
+
+	content["department"] = tc["Department"].(*[]string)
+	content["roles"] = tc["Roles"].(*[]string)
+	content["products"] = tc["Products"].(*[]dto.ProductInToken)
+	content["own_products"] = tc["OwnProducts"].(*[]dto.ProductInToken)
+	content["groups"] = tc["Groups"].(*[]dto.GroupInToken)
+	content["own_groups"] = tc["OwnGroups"].(*[]dto.GroupInToken)
+
+	resp := msg.Success.GenResponse()
+	resp.SetPayload("content", content)
+	resp.Write(c)
 }
 
 // IamLogin 从IAM登录处理
 func IamLogin(c *gin.Context) {
-	var (
-		err  error
-		resp *http.Response
-	)
-
 	log.Info("IamLogin called.")
 	defer log.Info("IamLogin end.")
 
@@ -89,23 +90,20 @@ func IamLogin(c *gin.Context) {
 
 	data := []byte(fmt.Sprintf(`{"username":"%s","password":"%s"}`, loginUser["username"], loginUser["password"]))
 
-	resp, err = http.Post(conf.Config.IamAddress, "application/json", bytes.NewReader(data))
+	iamResp, err := http.Post(conf.Config.IamAddress, "application/json", bytes.NewReader(data))
 	if err == nil {
 		defer func() {
-			_ = resp.Body.Close()
+			_ = iamResp.Body.Close()
 		}()
 
 		log.DebugWithFields(log.Fields{
-			"response_status_code": resp.StatusCode,
-			"response_body":        resp.Body,
+			"response_status_code": iamResp.StatusCode,
+			"response_body":        iamResp.Body,
 		}, "Got iam response")
 
-		if resp.StatusCode == 200 {
+		if iamResp.StatusCode == 200 {
 			log.Debug("Iam login success.")
-			c.AbortWithStatusJSON(
-				http.StatusOK,
-				updateOrCreateUserLastLogin(loginUser["username"]),
-			)
+			updateOrCreateUserLastLogin(c, loginUser["username"])
 			return
 		}
 	} else {
@@ -141,18 +139,15 @@ func CrowdLogin(c *gin.Context) {
 		log.Debug("Crowd login success.")
 		// 阻止登录，非启用的用户
 		if !crowdUser.Active {
-			m := msg.WarnLoginFailed.NewMsg("Inactive crowd user.")
+			resp := msg.WarnLoginFailed.GenResponse("Inactive crowd user.")
 			log.WarnWithFields(log.Fields{
 				"username": loginUser["username"],
-			}, m.String())
-			c.AbortWithStatusJSON(http.StatusOK, m.GinH())
+			}, resp.String())
+			resp.WriteAndAbort(c)
 			return
 		}
 
-		c.AbortWithStatusJSON(
-			http.StatusOK,
-			updateOrCreateUserLastLogin(crowdUser.Email),
-		)
+		updateOrCreateUserLastLogin(c, crowdUser.Email)
 		return
 	}
 
@@ -174,53 +169,53 @@ func DatabaseLogin(c *gin.Context) {
 	}, "DatabaseLoginHandler called and got a user.")
 
 	// 查询该用户在本地数据库中的数据
-	user, suc := db.UserModel.Get(&db.Query{"username=?": loginUser["username"]})
-	if !suc {
+	user, ok := model.GetUser(model.Query{"username=?": loginUser["username"]})
+	if !ok {
 		// 调用数据库出错
-		m := msg.ErrDatabase.NewMsg("Error in db.UserModel.GetUser.")
+		resp := msg.ErrDatabase.GenResponse("Error when GetUser.")
 		log.ErrorWithFields(log.Fields{
 			"username": loginUser["username"],
-		}, m.String())
-		c.AbortWithStatusJSON(http.StatusOK, m.GinH())
+		}, resp.String())
+		resp.WriteAndAbort(c)
 		return
 	}
 
 	// 判断用户是否在DB中存在
 	if user == nil {
-		m := msg.WarnLoginFailed.NewMsg("Not exist user.")
+		resp := msg.WarnLoginFailed.GenResponse("Not exist user.")
 		log.WarnWithFields(log.Fields{
 			"username": loginUser["username"],
-		}, m.String())
-		c.AbortWithStatusJSON(http.StatusOK, m.GinH())
+		}, resp.String())
+		resp.WriteAndAbort(c)
 		return
 	}
 
 	// 判断是否是被禁用的用户
 	if user.Disabled {
-		m := msg.WarnLoginFailed.NewMsg("Disabled database user.")
+		resp := msg.WarnLoginFailed.GenResponse("Disabled database user.")
 		log.WarnWithFields(log.Fields{
 			"username": loginUser["username"],
-		}, m.String())
-		c.AbortWithStatusJSON(http.StatusOK, m.GinH())
+		}, resp.String())
+		resp.WriteAndAbort(c)
 		return
 	}
 
 	// 判断是否是密码为空的用户
 	if user.Password == "" {
-		m := msg.WarnLoginFailed.NewMsg("No password user.")
+		resp := msg.WarnLoginFailed.GenResponse("No password user.")
 		log.WarnWithFields(log.Fields{
 			"username": loginUser["username"],
-		}, m.String())
-		c.AbortWithStatusJSON(http.StatusOK, m.GinH())
+		}, resp.String())
+		resp.WriteAndAbort(c)
 		return
 	}
 
 	// 判断账号密码是否匹配
-	saltedPasswd := tools.GenSha256HashCode(loginUser["password"] + conf.Config.SecretKey)
+	saltedPasswd := utils.GenSha256HashCode(loginUser["password"] + conf.Config.SecretKey)
 	if loginUser["username"] == user.Username && saltedPasswd == user.Password {
-		db.UserModel.SetLastLogin(&db.Query{"id=?": user.Id})
+		model.SetUserLastLogin(user.Id)
 		// 登录成功并返回token
-		c.AbortWithStatusJSON(http.StatusOK, newTokenResponse(user))
+		newTokenResponse(c, user)
 		return
 	}
 
@@ -229,13 +224,13 @@ func DatabaseLogin(c *gin.Context) {
 
 // LoginFailed 返回登录失败
 func LoginFailed(c *gin.Context) {
-	m := msg.WarnLoginFailed.NewMsg("Check username and password.")
-	log.Warn(m.String())
-	c.JSON(http.StatusOK, m.GinH())
+	resp := msg.WarnLoginFailed.GenResponse("Check username and password.")
+	log.Warn(resp.String())
+	resp.Write(c)
 }
 
 // updateOrCreateUserLastLogin 更新用户最近登录时间或创建用户并填入response
-func updateOrCreateUserLastLogin(username string) *gin.H {
+func updateOrCreateUserLastLogin(c *gin.Context, username string) {
 	log.InfoWithFields(log.Fields{
 		"username": username,
 	}, "updateOrCreateUserLastLogin called.")
@@ -244,49 +239,51 @@ func updateOrCreateUserLastLogin(username string) *gin.H {
 	}, "updateOrCreateUserLastLogin end.")
 
 	// 查询该用户在本地数据库中的数据
-	user, suc := db.UserModel.Get(&db.Query{"username=?": username})
-	if !suc {
-		m := msg.ErrDatabase.NewMsg("Error in db.UserModel.GetUser.")
+	user, ok := model.GetUser(model.Query{"username=?": username})
+	if !ok {
+		resp := msg.ErrDatabase.GenResponse("Error when GetUser.")
 		log.ErrorWithFields(log.Fields{
 			"username": username,
-		}, m.String())
-		return m.GinH()
+		}, resp.String())
+		resp.WriteAndAbort(c)
 	}
 
 	// 用户在DB中存在
 	if user != nil {
 		// 判断是否为禁用的账号
 		if user.Disabled {
-			m := msg.WarnLoginFailed.NewMsg("Disabled database user.")
+			resp := msg.WarnLoginFailed.GenResponse("Disabled database user.")
 			log.WarnWithFields(log.Fields{
 				"username": username,
-			}, m.String())
-			return m.GinH()
+			}, resp.String())
+			resp.WriteAndAbort(c)
 		}
 
 		// 如果查找到用户则更新其登录时间
-		db.UserModel.SetLastLogin(&db.Query{"id=?": user.Id})
+		model.SetUserLastLogin(user.Id)
 
 		// 登录成功并返回token
-		return newTokenResponse(user)
+		newTokenResponse(c, user)
+		return
 	}
 
 	// 在本地数据库中没查找到用户则创建一个用户
-	user = db.UserModel.New(username, username, true)
+	user = model.NewUser(username, username, true)
 	if user != nil {
 		// 登录成功并返回token
-		return newTokenResponse(user)
+		newTokenResponse(c, user)
+		return
 	}
 
-	m := msg.ErrUnknown.NewMsg()
+	resp := msg.ErrUnknown.GenResponse()
 	log.ErrorWithFields(log.Fields{
 		"username": username,
-	}, m.String())
-	return m.GinH()
+	}, resp.String())
+	resp.WriteAndAbort(c)
 }
 
 // newTokenResponse 生成Token并填入response
-func newTokenResponse(userObj *db.User) *gin.H {
+func newTokenResponse(c *gin.Context, userObj *model.User) {
 	log.InfoWithFields(log.Fields{
 		"user_id":  userObj.Id,
 		"username": userObj.Username,
@@ -297,22 +294,23 @@ func newTokenResponse(userObj *db.User) *gin.H {
 	}, "newTokenResponse end.")
 
 	// 登录成功并返回token
-	tk := srv.NewToken(userObj)
+	tk := local.NewToken(userObj)
 	if tk == "" {
-		m := msg.ErrGenToken.NewMsg()
+		resp := msg.ErrGenToken.GenResponse()
 		log.ErrorWithFields(log.Fields{
 			"user_id":  userObj.Id,
 			"username": userObj.Username,
-		}, m.String())
-		return m.GinH()
+		}, resp.String())
+		resp.WriteAndAbort(c)
+		return
 	}
 
-	m := msg.Success.NewMsg()
-	m.SetPayload(&gin.H{"token": tk})
+	resp := msg.Success.GenResponse().SetPayload("token", tk)
 	log.DebugWithFields(log.Fields{
 		"user_id":  userObj.Id,
 		"username": userObj.Username,
 		"token":    tk,
-	}, m.String())
-	return m.GinH()
+	}, resp.String())
+	resp.WriteAndAbort(c)
+	return
 }

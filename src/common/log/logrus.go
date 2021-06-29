@@ -10,7 +10,10 @@ import (
 	"runtime"
 )
 
-var logger *logrus.Logger
+var (
+	logger    *logrus.Logger
+	skipFiles int = 2
+)
 
 type Fields logrus.Fields
 
@@ -36,11 +39,15 @@ func InitLog(logPath, srvName, timestampFormatter string, lvl logrus.Level) erro
 	return nil
 }
 
+func SetSkipFiles(skip int) {
+	skipFiles = skip
+}
+
 // Debug
 func Debug(args ...interface{}) {
 	if logger.Level >= logrus.DebugLevel {
 		entry := logger.WithFields(logrus.Fields{})
-		entry.Data["file"] = fileInfo(2)
+		entry.Data["file"] = fileInfo(skipFiles)
 		entry.Debug(args)
 	}
 }
@@ -49,7 +56,7 @@ func Debug(args ...interface{}) {
 func DebugWithFields(f Fields, args ...interface{}) {
 	if logger.Level >= logrus.DebugLevel {
 		entry := logger.WithFields(logrus.Fields(f))
-		entry.Data["file"] = fileInfo(2)
+		entry.Data["file"] = fileInfo(skipFiles)
 		entry.Debug(args...)
 	}
 }
@@ -58,7 +65,7 @@ func DebugWithFields(f Fields, args ...interface{}) {
 func Info(args ...interface{}) {
 	if logger.Level >= logrus.InfoLevel {
 		entry := logger.WithFields(logrus.Fields{})
-		entry.Data["file"] = fileInfo(2)
+		entry.Data["file"] = fileInfo(skipFiles)
 		entry.Info(args...)
 	}
 }
@@ -67,7 +74,7 @@ func Info(args ...interface{}) {
 func InfoWithFields(f Fields, args ...interface{}) {
 	if logger.Level >= logrus.InfoLevel {
 		entry := logger.WithFields(logrus.Fields(f))
-		entry.Data["file"] = fileInfo(2)
+		entry.Data["file"] = fileInfo(skipFiles)
 		entry.Info(args...)
 	}
 }
@@ -76,7 +83,7 @@ func InfoWithFields(f Fields, args ...interface{}) {
 func Warn(args ...interface{}) {
 	if logger.Level >= logrus.WarnLevel {
 		entry := logger.WithFields(logrus.Fields{})
-		entry.Data["file"] = fileInfo(2)
+		entry.Data["file"] = fileInfo(skipFiles)
 		entry.Warn(args...)
 	}
 }
@@ -85,7 +92,7 @@ func Warn(args ...interface{}) {
 func WarnWithFields(f Fields, args ...interface{}) {
 	if logger.Level >= logrus.WarnLevel {
 		entry := logger.WithFields(logrus.Fields(f))
-		entry.Data["file"] = fileInfo(2)
+		entry.Data["file"] = fileInfo(skipFiles)
 		entry.Warn(args...)
 	}
 }
@@ -94,7 +101,7 @@ func WarnWithFields(f Fields, args ...interface{}) {
 func Error(args ...interface{}) {
 	if logger.Level >= logrus.ErrorLevel {
 		entry := logger.WithFields(logrus.Fields{})
-		entry.Data["file"] = fileInfo(2)
+		entry.Data["file"] = fileInfo(skipFiles)
 		entry.Error(args...)
 	}
 }
@@ -103,7 +110,7 @@ func Error(args ...interface{}) {
 func ErrorWithFields(f Fields, args ...interface{}) {
 	if logger.Level >= logrus.ErrorLevel {
 		entry := logger.WithFields(logrus.Fields(f))
-		entry.Data["file"] = fileInfo(2)
+		entry.Data["file"] = fileInfo(skipFiles)
 		entry.Error(args...)
 	}
 }
@@ -112,7 +119,7 @@ func ErrorWithFields(f Fields, args ...interface{}) {
 func Fatal(args ...interface{}) {
 	if logger.Level >= logrus.FatalLevel {
 		entry := logger.WithFields(logrus.Fields{})
-		entry.Data["file"] = fileInfo(2)
+		entry.Data["file"] = fileInfo(skipFiles)
 		entry.Fatal(args...)
 	}
 }
@@ -121,7 +128,7 @@ func Fatal(args ...interface{}) {
 func FatalWithFields(f Fields, args ...interface{}) {
 	if logger.Level >= logrus.FatalLevel {
 		entry := logger.WithFields(logrus.Fields(f))
-		entry.Data["file"] = fileInfo(2)
+		entry.Data["file"] = fileInfo(skipFiles)
 		entry.Fatal(args...)
 	}
 }

@@ -3,76 +3,78 @@ syntax = "proto3";
 package auth;
 option go_package = "proto;auth";
 
-service Auth {
+service AuthService {
 
-    // Token
-    rpc VerifyToken(Token) returns (BoolResponse) {}
-    rpc GetTokenContent(Token) returns (TokenContent) {}
+  // Token
+  rpc VerifyToken(Token) returns (BoolMsg) {}
+  rpc GetTokenContent(Token) returns (TokenContent) {}
 
-    // User
-    rpc GetUsers(Ids) returns (Users) {}
+  // User
+  rpc GetUsers(Ids) returns (Users) {}
 
-    // Product
-    rpc GetProducts(Ids) returns (Products) {}
+  // Product
+  rpc GetProducts(Ids) returns (Products) {}
 
-    // Group
-    rpc GetGroups(Ids) returns (Groups) {}
+  // Group
+  rpc GetGroups(Ids) returns (Groups) {}
 }
 
 message Token {
-    string token = 1;
+  string token = 1;
 }
 
 message TokenContent {
-    bool ok = 1;
+  bool ok = 1;
 
-    int32 user_id = 2;
-    string username = 3;
+  int32 user_id = 2;
+  string username = 3;
+  string phone = 4;
 
-    bool is_superuser = 4;
+  bool is_superuser = 5;
 
-    repeated string roles = 5;
-    repeated Product products = 6;
-    repeated Product own_products = 7;
-    repeated Group groups = 8;
-    repeated Group own_groups = 9;
+  repeated string department = 6;
+  repeated string roles = 7;
+  repeated Product products = 8;
+  repeated Product own_products = 9;
+  repeated Group groups = 10;
+  repeated Group own_groups = 11;
 }
 
-message BoolResponse {
-    bool ok = 1;
+message BoolMsg {
+  bool ok = 1;
 }
 
 message Ids {
-    repeated int32 ids = 1;
+  repeated int32 ids = 1;
 }
 
 message Users {
-    repeated User users = 1;
+  repeated User users = 1;
 }
 
 message Products {
-    repeated Product products = 1;
+  repeated Product products = 1;
 }
 
 message Groups {
-    repeated Group groups = 1;
+  repeated Group groups = 1;
 }
 
 message User {
-    int32 id = 1;
-    string username = 2;
-    string email = 3;
-    string phone = 4;
+  int32 id = 1;
+  string username = 2;
+  string email = 3;
+  string phone = 4;
 }
 
 message Product {
-    int32 id = 1;
-    string name = 2;
-    string alias = 3;
-    bool disabled = 4;
+  int32 id = 1;
+  string name = 2;
+  string alias = 3;
+  bool disabled = 4;
 }
 
 message Group {
-    int32 id = 1;
-    string name = 2;
+  int32 id = 1;
+  string name = 2;
 }

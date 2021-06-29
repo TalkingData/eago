@@ -1,7 +1,7 @@
 package sso
 
 import (
-	"eago-auth/conf"
+	"eago/auth/conf"
 	"github.com/jda/go-crowd"
 )
 

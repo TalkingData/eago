@@ -1,12 +1,12 @@
 package middleware
 
 import (
-	"eago-auth/conf/msg"
-	"eago-auth/srv"
-	"eago-common/log"
-	"eago-common/tools"
+	"eago/auth/conf/msg"
+	"eago/auth/srv/dto"
+	"eago/auth/srv/local"
+	"eago/common/log"
+	"eago/common/utils"
 	"github.com/gin-gonic/gin"
-	"net/http"
 	"strconv"
 )
 
@@ -14,27 +14,31 @@ import (
 func MustLogin() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		token := c.GetHeader("token")
-		tc, suc := srv.GetTokenContent(token)
-		if !suc {
-			m := msg.ErrGetToken.NewMsg()
+		tc, ok := local.GetTokenContent(token)
+		if !ok {
+			resp := msg.ErrGetToken.GenResponse()
 			log.WarnWithFields(log.Fields{
 				"token": token,
-			}, m.String())
-			c.AbortWithStatusJSON(http.StatusOK, m.GinH())
+			}, resp.String())
+			resp.WriteAndAbort(c)
 			return
 		} else if tc == nil {
-			m := msg.WarnPermissionDeny.NewMsg("Not login yet.")
+			resp := msg.WarnPermissionDeny.GenResponse("Not login yet.")
 			log.WarnWithFields(log.Fields{
 				"token": token,
-			}, m.String())
-			c.AbortWithStatusJSON(http.StatusOK, m.GinH())
+			}, resp.String())
+			resp.WriteAndAbort(c)
 			return
 		}
 
 		c.Set("TokenContent", map[string]interface{}{
-			"UserId":      tc.UserId,
-			"Username":    tc.Username,
-			"IsSuperuser": tc.IsSuperuser,
+			"UserId":   tc.UserId,
+			"Username": tc.Username,
+			"Phone":    tc.Phone,
+
+			"UserIsSuperuser": tc.IsSuperuser,
+
+			"Department":  tc.Department,
 			"Roles":       tc.Roles,
 			"Products":    tc.Products,
 			"OwnProducts": tc.OwnProducts,
@@ -56,11 +60,11 @@ func MustCurrUserOrRole(userIdField, role string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		res, err := isCurrUserHandler(c, userIdField)
 		if err != nil {
-			m := msg.WarnInvalidUri.NewMsg("Field '" + userIdField + "' required.")
+			resp := msg.WarnInvalidUri.GenResponse("Field '" + userIdField + "' required.")
 			log.WarnWithFields(log.Fields{
 				"error": err.Error(),
-			}, m.String())
-			c.AbortWithStatusJSON(http.StatusOK, m.GinH())
+			}, resp.String())
+			resp.WriteAndAbort(c)
 			return
 		} else if res {
 			return
@@ -75,11 +79,11 @@ func MustCurrUserInProductOrRole(prodIdField, role string, isOwner bool) gin.Han
 	return func(c *gin.Context) {
 		res, err := isCurrUserInProductHandler(c, prodIdField, isOwner)
 		if err != nil {
-			m := msg.WarnInvalidUri.NewMsg("Field '" + prodIdField + "' required.")
+			resp := msg.WarnInvalidUri.GenResponse("Field '" + prodIdField + "' required.")
 			log.WarnWithFields(log.Fields{
 				"error": err.Error(),
-			}, m.String())
-			c.AbortWithStatusJSON(http.StatusOK, m.GinH())
+			}, resp.String())
+			resp.WriteAndAbort(c)
 			return
 		} else if res {
 			return
@@ -94,11 +98,11 @@ func MustCurrUserInGroupOrRole(groupIdField, role string, isOwner bool) gin.Hand
 	return func(c *gin.Context) {
 		res, err := isCurrUserInGroupHandler(c, groupIdField, isOwner)
 		if err != nil {
-			m := msg.WarnInvalidUri.NewMsg("Field '" + groupIdField + "' required.")
+			resp := msg.WarnInvalidUri.GenResponse("Field '" + groupIdField + "' required.")
 			log.WarnWithFields(log.Fields{
 				"error": err.Error(),
-			}, m.String())
-			c.AbortWithStatusJSON(http.StatusOK, m.GinH())
+			}, resp.String())
+			resp.WriteAndAbort(c)
 			return
 		} else if res {
 			return
@@ -125,13 +129,13 @@ func isCurrUserHandler(c *gin.Context, userIdField string) (bool, error) {
 
 // isCurrUserInProductHandler 判断当前用户在指定产品线内处理
 func isCurrUserInProductHandler(c *gin.Context, prodIdField string, isOwner bool) (bool, error) {
-	var prods *[]srv.ProductInToken
+	var prods *[]dto.ProductInToken
 
 	tc := c.GetStringMap("TokenContent")
 	if isOwner {
-		prods = tc["OwnProducts"].(*[]srv.ProductInToken)
+		prods = tc["OwnProducts"].(*[]dto.ProductInToken)
 	} else {
-		prods = tc["Products"].(*[]srv.ProductInToken)
+		prods = tc["Products"].(*[]dto.ProductInToken)
 	}
 
 	prodId, err := strconv.Atoi(c.Param(prodIdField))
@@ -149,13 +153,13 @@ func isCurrUserInProductHandler(c *gin.Context, prodIdField string, isOwner bool
 
 // isCurrUserInGroupHandler 判断当前用户在指定组内处理
 func isCurrUserInGroupHandler(c *gin.Context, groupIdField string, isOwner bool) (bool, error) {
-	var groups *[]srv.GroupInToken
+	var groups *[]dto.GroupInToken
 
 	tc := c.GetStringMap("TokenContent")
 	if isOwner {
-		groups = tc["OwnGroups"].(*[]srv.GroupInToken)
+		groups = tc["OwnGroups"].(*[]dto.GroupInToken)
 	} else {
-		groups = tc["Groups"].(*[]srv.GroupInToken)
+		groups = tc["Groups"].(*[]dto.GroupInToken)
 	}
 
 	groupId, err := strconv.Atoi(c.Param(groupIdField))
@@ -177,34 +181,34 @@ func isRoleHandler(c *gin.Context, role string) {
 	roles := tc["Roles"].(*[]string)
 
 	// 超级用户拥有所有权限，跳过判断
-	if tc["IsSuperuser"].(bool) {
+	if tc["UserIsSuperuser"].(bool) {
 		return
 	}
 
 	// 判断是否是对应角色
-	res, err := tools.IsInSlice(*roles, role)
+	res, err := utils.IsInSlice(*roles, role)
 	if err != nil {
-		m := msg.ErrUnknown.NewMsg()
+		resp := msg.ErrUnknown.GenResponse()
 		log.ErrorWithFields(log.Fields{
 			"user_id":       tc["UserId"].(int),
 			"username":      tc["Username"].(string),
-			"is_superuser":  tc["IsSuperuser"].(bool),
+			"is_superuser":  tc["UserIsSuperuser"].(bool),
 			"roles":         tc["Roles"].(*[]string),
 			"role_required": role,
 			"error":         err.Error(),
-		}, m.String())
-		c.AbortWithStatusJSON(http.StatusOK, m.GinH())
+		}, resp.String())
+		resp.WriteAndAbort(c)
 		return
 	} else if !res {
-		m := msg.WarnPermissionDeny.NewMsg("Role: '" + role + "' required.")
+		resp := msg.WarnPermissionDeny.GenResponse("Role: '" + role + "' required.")
 		log.WarnWithFields(log.Fields{
 			"user_id":       tc["UserId"].(int),
 			"username":      tc["Username"].(string),
-			"is_superuser":  tc["IsSuperuser"].(bool),
+			"is_superuser":  tc["UserIsSuperuser"].(bool),
 			"roles":         tc["Roles"].(*[]string),
 			"role_required": role,
-		}, m.String())
-		c.AbortWithStatusJSON(http.StatusOK, m.GinH())
+		}, resp.String())
+		resp.WriteAndAbort(c)
 		return
 	}
 }

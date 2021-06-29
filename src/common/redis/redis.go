@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-const prefix = "/eago"
+const prefix = "/td/eago"
 
 var Redis *RedisTool
 
@@ -15,7 +15,7 @@ type RedisTool struct {
 	serviceName string
 }
 
-// 初始化连接
+// InitRedis 初始化连接
 func InitRedis(address, password, srvName string, db int) {
 	Redis = &RedisTool{
 		client: redis.NewClient(&redis.Options{
@@ -29,27 +29,27 @@ func InitRedis(address, password, srvName string, db int) {
 
 // Set
 func (rt *RedisTool) Set(key string, value interface{}, expiration time.Duration) error {
-	return rt.client.Set(context.TODO(), rt.getFinalKey(key), value, expiration).Err()
+	return rt.client.Set(context.Background(), rt.getFinalKey(key), value, expiration).Err()
 }
 
 // Del
 func (rt *RedisTool) Del(key string) error {
-	return rt.client.Del(context.TODO(), rt.getFinalKey(key)).Err()
+	return rt.client.Del(context.Background(), rt.getFinalKey(key)).Err()
 }
 
 // Expire
 func (rt *RedisTool) Expire(key string, expiration time.Duration) error {
-	return rt.client.PExpire(context.TODO(), rt.getFinalKey(key), expiration).Err()
+	return rt.client.PExpire(context.Background(), rt.getFinalKey(key), expiration).Err()
 }
 
 // Get
 func (rt *RedisTool) Get(key string) (string, error) {
-	return rt.client.Get(context.TODO(), rt.getFinalKey(key)).Result()
+	return rt.client.Get(context.Background(), rt.getFinalKey(key)).Result()
 }
 
 // HasKey
 func (rt *RedisTool) HasKey(key string) bool {
-	if err := rt.client.Get(context.TODO(), rt.getFinalKey(key)).Err(); err == nil {
+	if err := rt.client.Get(context.Background(), rt.getFinalKey(key)).Err(); err == nil {
 		return true
 	}
 	return false

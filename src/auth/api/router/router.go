@@ -1,17 +1,15 @@
 package router
 
 import (
-	h "eago-auth/api/handler"
-	m "eago-auth/api/middleware"
-	"eago-auth/conf"
-	"eago-auth/docs"
-	"eago-common/api-suite/handler"
-	pg "eago-common/api-suite/pagination"
+	"eago/auth/api/docs"
+	h "eago/auth/api/handler"
+	m "eago/auth/api/middleware"
+	"eago/auth/conf"
+	"eago/common/api-suite/handler"
+	pg "eago/common/api-suite/pagination"
 	"github.com/gin-gonic/gin"
-	"github.com/itsjamie/gin-cors"
 	"github.com/swaggo/files"
 	"github.com/swaggo/gin-swagger"
-	"time"
 )
 
 var Engine *gin.Engine
@@ -19,16 +17,6 @@ var Engine *gin.Engine
 // InitEngine
 func InitEngine() {
 	Engine = gin.Default()
-
-	Engine.Use(cors.Middleware(cors.Config{
-		Origins:         "*",
-		Methods:         "GET, PUT, POST, DELETE",
-		RequestHeaders:  "Origin, Authorization, Content-Type, Token",
-		ExposedHeaders:  "",
-		MaxAge:          50 * time.Second,
-		Credentials:     true,
-		ValidateHeaders: false,
-	}))
 
 	// Swagger文档
 	docs.SwaggerInfo.Title = "Eago auth API document"
@@ -47,27 +35,6 @@ func InitEngine() {
 		aGroup.POST("heartbeat", h.Heartbeat)
 		aGroup.DELETE("logout", h.Logout)
 		aGroup.GET("/token/content", h.GetTokenContent)
-
-		// User模块
-		ur := aGroup.Group("/users")
-		{
-			// 更新用户
-			ur.PUT("/:user_id", m.MustCurrUserOrRole("user_id", conf.Config.AdminRoleName), h.SetUser)
-			// 列出所有用户
-			ur.GET("", pg.ListPageHelper(), h.ListUsers)
-
-			// 列出用户所有角色
-			ur.GET("/:user_id/roles", m.MustCurrUserOrRole("user_id", conf.Config.AdminRoleName), h.ListUserRoles)
-
-			// 列出用户所有产品线
-			ur.GET("/:user_id/products", m.MustCurrUserOrRole("user_id", conf.Config.AdminRoleName), h.ListUserProducts)
-
-			// 列出用户所有组
-			ur.GET("/:user_id/groups", m.MustCurrUserOrRole("user_id", conf.Config.AdminRoleName), h.ListUserGroups)
-
-			// 列出用户所有部门
-			ur.GET("/:user_id/department", m.MustCurrUserOrRole("user_id", conf.Config.AdminRoleName), h.GetUserDepartment)
-		}
 
 		// Product模块
 		pr := aGroup.Group("/products")
@@ -174,6 +141,27 @@ func InitEngine() {
 			rr.DELETE("/:role_id/users/:user_id", h.RemoveRoleUser)
 			// 列出角色所有用户
 			rr.GET("/:role_id/users", h.ListRoleUsers)
+		}
+
+		// User模块
+		ur := aGroup.Group("/users")
+		{
+			// 更新用户
+			ur.PUT("/:user_id", m.MustCurrUserOrRole("user_id", conf.Config.AdminRoleName), h.SetUser)
+			// 列出所有用户
+			ur.GET("", pg.ListPageHelper(), h.ListUsers)
+
+			// 列出用户所有角色
+			ur.GET("/:user_id/roles", m.MustCurrUserOrRole("user_id", conf.Config.AdminRoleName), h.ListUserRoles)
+
+			// 列出用户所有产品线
+			ur.GET("/:user_id/products", m.MustCurrUserOrRole("user_id", conf.Config.AdminRoleName), h.ListUserProducts)
+
+			// 列出用户所有组
+			ur.GET("/:user_id/groups", m.MustCurrUserOrRole("user_id", conf.Config.AdminRoleName), h.ListUserGroups)
+
+			// 列出用户所有部门
+			ur.GET("/:user_id/department", m.MustCurrUserOrRole("user_id", conf.Config.AdminRoleName), h.GetUserDepartment)
 		}
 
 	}

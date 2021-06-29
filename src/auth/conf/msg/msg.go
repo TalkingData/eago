@@ -1,31 +1,21 @@
 package msg
 
 import (
-	"eago-common/api-suite/message"
+	m "eago/common/api-suite/message"
 	"net/http"
 )
 
 var (
-	Success = message.BaseMsg{0, "Success"}
+	Success = m.Message{0, "Success"}
 
-	// Invalid
-	WarnInvalidUri    = message.BaseMsg{http.StatusBadRequest, "Bad request, invalid Uri."}
-	WarnInvalidParams = message.BaseMsg{http.StatusBadRequest, "Bad request, invalid request body."}
-	WarnInvalidBody   = message.BaseMsg{http.StatusBadRequest, "Bad request, invalid params."}
+	WarnLoginFailed    = m.Message{http.StatusUnauthorized, "Login failed"}
+	WarnPermissionDeny = m.Message{http.StatusForbidden, "Permission deny"}
+	WarnInvalidUri     = m.Message{http.StatusBadRequest, "Bad request, invalid Uri"}
+	WarnInvalidParams  = m.Message{http.StatusBadRequest, "Bad request, invalid params"}
+	WarnInvalidBody    = m.Message{http.StatusBadRequest, "Bad request, invalid request body"}
 
-	// Token
-	ErrGenToken = message.BaseMsg{http.StatusInternalServerError, "An error occurred in generate token, please contact admin."}
-	ErrGetToken = message.BaseMsg{http.StatusInternalServerError, "An error occurred in get token content, please contact admin."}
-
-	// Login
-	WarnLoginFailed = message.BaseMsg{http.StatusUnauthorized, "Login failed."}
-
-	// Permission
-	WarnPermissionDeny = message.BaseMsg{http.StatusForbidden, "Permission deny."}
-
-	// Database
-	ErrDatabase = message.BaseMsg{http.StatusInternalServerError, "An database error occurred, please contact admin."}
-
-	// Others
-	ErrUnknown = message.BaseMsg{http.StatusInternalServerError, "Unknown error, please contact admin."}
+	ErrGenToken = m.Message{http.StatusInternalServerError, "An error occurred in generate token, please contact admin"}
+	ErrGetToken = m.Message{http.StatusInternalServerError, "An error occurred in get token content, please contact admin"}
+	ErrDatabase = m.Message{http.StatusInternalServerError, "An database error occurred, please contact admin"}
+	ErrUnknown  = m.Message{http.StatusInternalServerError, "Unknown error, please contact admin"}
 )

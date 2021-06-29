@@ -1,7 +1,7 @@
 package pagination
 
 import (
-	"eago-common/tools"
+	"eago/common/utils"
 	"github.com/gin-gonic/gin"
 	"strconv"
 	"strings"
@@ -20,10 +20,12 @@ func ListPageHelper() gin.HandlerFunc {
 		if err != nil {
 			pageSize = DEFAULT_PAGE_SIZE
 		}
-		c.Set("PageSize", tools.IntMin(pageSize, MAX_PAGE_SIZE))
+		c.Set("PageSize", utils.IntMin(pageSize, MAX_PAGE_SIZE))
 
 		c.Set("Query", c.Query("query"))
-		c.Set("OrderBy", strings.Split(c.Query("order_by"), ","))
+
+		orderBy := strings.Split(c.DefaultQuery("order_by", "-id"), ",")
+		c.Set("OrderBy", orderBy)
 
 		c.Next()
 	}

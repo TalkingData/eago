@@ -1,7 +1,7 @@
 package pagination
 
 import (
-	"eago-common/tools"
+	"eago/common/utils"
 	"errors"
 	"gorm.io/gorm"
 	"math"
@@ -68,7 +68,7 @@ func GormPaging(p *GormParams, result interface{}) (*Paginator, error) {
 	}
 	paginator.Data = result
 	paginator.Pages = int(math.Ceil(float64(paginator.Total) / float64(p.PageSize)))
-	paginator.Page = tools.IntMin(p.Page, paginator.Pages)
+	paginator.Page = utils.IntMin(p.Page, paginator.Pages)
 
 	return &paginator, nil
 }

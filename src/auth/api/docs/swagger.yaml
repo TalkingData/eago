@@ -1,0 +1,1141 @@
+definitions:
+  form.IsOwnerForm:
+    properties:
+      is_owner:
+        type: boolean
+    required:
+      - is_owner
+    type: object
+  form.LoginForm:
+    properties:
+      password:
+        type: string
+      username:
+        type: string
+    required:
+      - password
+      - username
+    type: object
+  model.Department:
+    properties:
+      name:
+        type: string
+      parent_id:
+        type: integer
+    required:
+      - name
+    type: object
+  model.Group:
+    properties:
+      description:
+        type: string
+      name:
+        type: string
+    required:
+      - description
+      - name
+    type: object
+  model.Product:
+    properties:
+      alias:
+        type: string
+      description:
+        type: string
+      disabled:
+        type: boolean
+      name:
+        type: string
+    required:
+      - alias
+      - description
+      - disabled
+      - name
+    type: object
+  model.Role:
+    properties:
+      name:
+        type: string
+    required:
+      - name
+    type: object
+  model.User:
+    properties:
+      email:
+        type: string
+      phone:
+        type: string
+    required:
+      - email
+      - phone
+    type: object
+  model.UserDepartment:
+    properties:
+      is_owner:
+        type: boolean
+      user_id:
+        type: integer
+    required:
+      - is_owner
+      - user_id
+    type: object
+  model.UserGroup:
+    properties:
+      is_owner:
+        type: boolean
+      user_id:
+        type: integer
+    required:
+      - is_owner
+      - user_id
+    type: object
+  model.UserProduct:
+    properties:
+      is_owner:
+        type: boolean
+      user_id:
+        type: integer
+    required:
+      - is_owner
+      - user_id
+    type: object
+  model.UserRole:
+    properties:
+      user_id:
+        type: integer
+    required:
+      - user_id
+    type: object
+info:
+  contact: { }
+paths:
+  /departments:
+    get:
+      parameters:
+        - description: Token
+          in: header
+          name: token
+          required: true
+          type: string
+        - description: 过滤条件
+          in: query
+          name: query
+          type: string
+        - description: 排序字段(多个间逗号分割)
+          in: query
+          name: order_by
+          type: string
+        - description: 页数
+          in: query
+          name: page
+          type: string
+        - description: 页尺寸
+          in: query
+          name: page_size
+          type: string
+      responses:
+        "200":
+          description: '{"code":0,"departments":[{"id":2,"name":"root","parent_id":null,"created_at":"2021-01-21 15:10:26","updated_at":"2021-01-21 15:10:26"},{"id":5,"name":"sub2","parent_id":2,"created_at":"2021-01-21 15:11:07","updated_at":"2021-01-21 15:11:07"}],"message":"Success","page":1,"page_size":50,"pages":1,"total":2}'
+          schema:
+            type: string
+      summary: 列出所有部门
+      tags:
+        - 部门
+    post:
+      parameters:
+        - description: Token
+          in: header
+          name: token
+          required: true
+          type: string
+        - description: body
+          in: body
+          name: data
+          required: true
+          schema:
+            $ref: '#/definitions/model.Department'
+      responses:
+        "200":
+          description: '{"code":0,"message":"Success","department":{"id":4,"name":"sub_dept3","parent_id":2,"created_at":"2021-01-21 15:11:00","updated_at":"2021-01-21 15:11:00"}}'
+          schema:
+            type: string
+      summary: 新建部门
+      tags:
+        - 部门
+    put:
+      parameters:
+        - description: Token
+          in: header
+          name: token
+          required: true
+          type: string
+        - description: 部门ID
+          in: path
+          name: department_id
+          required: true
+          type: string
+        - description: body
+          in: body
+          name: data
+          required: true
+          schema:
+            $ref: '#/definitions/model.Department'
+      responses:
+        "200":
+          description: '{"code":0,"message":"Success","department":{"id":4,"name":"sub_dept3","parent_id":2,"created_at":"2021-01-21 15:11:00","updated_at":"2021-01-21 15:11:00"}}'
+          schema:
+            type: string
+      summary: 更新部门
+      tags:
+        - 部门
+  /departments/{department_id}:
+    delete:
+      parameters:
+        - description: Token
+          in: header
+          name: token
+          required: true
+          type: string
+        - description: 部门ID
+          in: path
+          name: department_id
+          required: true
+          type: string
+      responses:
+        "200":
+          description: '{"code":0,"message":"Success"}'
+          schema:
+            type: string
+      summary: 删除部门
+      tags:
+        - 部门
+  /departments/{department_id}/tree:
+    get:
+      parameters:
+        - description: Token
+          in: header
+          name: token
+          required: true
+          type: string
+        - description: 部门ID
+          in: path
+          name: department_id
+          required: true
+          type: string
+      responses:
+        "200":
+          description: '{"code":0,"message":"Success","tree":{"id":6,"name":"sub3","sub_department":[{"id":9,"name":"sub3_1","sub_department":[],"created_at":"2021-02-19 03:17:30","updated_at":"2021-02-19 03:17:33"}],"created_at":"2021-01-21 15:11:10","updated_at":"2021-01-21 15:11:10"}}'
+          schema:
+            type: string
+      summary: 列出指定部门子树
+      tags:
+        - 部门
+  /departments/{department_id}/users:
+    get:
+      parameters:
+        - description: Token
+          in: header
+          name: token
+          required: true
+          type: string
+        - description: 部门ID
+          in: path
+          name: department_id
+          required: true
+          type: string
+      responses:
+        "200":
+          description: '{"code":0,"message":"Success","users":[{"id":4,"username":"test2","is_owner":false,"joined_at":"2021-01-20 11:01:16"},{"id":3,"username":"test","is_owner":true,"joined_at":"2021-01-20 11:01:32"}]}'
+          schema:
+            type: string
+      summary: 列出部门中所有用户
+      tags:
+        - 部门
+    post:
+      parameters:
+        - description: Token
+          in: header
+          name: token
+          required: true
+          type: string
+        - description: 部门ID
+          in: path
+          name: department_id
+          required: true
+          type: string
+        - description: body
+          in: body
+          name: data
+          required: true
+          schema:
+            $ref: '#/definitions/model.UserDepartment'
+      responses:
+        "200":
+          description: '{"code":0,"message":"Success"}'
+          schema:
+            type: string
+      summary: 添加用户至部门
+      tags:
+        - 部门
+  /departments/{department_id}/users/{user_id}:
+    delete:
+      parameters:
+        - description: Token
+          in: header
+          name: token
+          required: true
+          type: string
+        - description: 部门ID
+          in: path
+          name: department_id
+          required: true
+          type: string
+        - description: 用户ID
+          in: path
+          name: user_id
+          required: true
+          type: string
+      responses:
+        "200":
+          description: '{"code":0,"message":"Success"}'
+          schema:
+            type: string
+      summary: 移除部门中用户
+      tags:
+        - 部门
+    put:
+      parameters:
+        - description: Token
+          in: header
+          name: token
+          required: true
+          type: string
+        - description: 部门ID
+          in: path
+          name: department_id
+          required: true
+          type: string
+        - description: 用户ID
+          in: path
+          name: user_id
+          required: true
+          type: string
+        - description: body
+          in: body
+          name: data
+          required: true
+          schema:
+            $ref: '#/definitions/form.IsOwnerForm'
+      responses:
+        "200":
+          description: '{"code":0,"message":"Success"}'
+          schema:
+            type: string
+      summary: 设置用户是否是部门Owner
+      tags:
+        - 部门
+  /departments/tree:
+    get:
+      parameters:
+        - description: Token
+          in: header
+          name: token
+          required: true
+          type: string
+      responses:
+        "200":
+          description: '{"code":0,"message":"Success","tree":{"id":2,"name":"root","sub_department":[{"id":4,"name":"sub1","sub_department":[],"created_at":"2021-01-21 15:11:00","updated_at":"2021-01-21 15:11:00"},{"id":5,"name":"sub2","sub_department":[],"created_at":"2021-01-21 15:11:07","updated_at":"2021-01-21 15:11:07"},{"id":6,"name":"sub3","sub_department":[{"id":9,"name":"sub3_1","sub_department":[],"created_at":"2021-02-19 03:17:30","updated_at":"2021-02-19 03:17:33"}],"created_at":"2021-01-21 15:11:10","updated_at":"2021-01-21 15:11:10"},{"id":8,"name":"sub1_1","sub_department":[],"created_at":"2021-01-21 15:11:34","updated_at":"2021-01-22 10:53:13"}],"created_at":"2021-01-21 15:10:26","updated_at":"2021-01-21 15:10:26"}}'
+          schema:
+            type: string
+      summary: 以树结构列出所有部门
+      tags:
+        - 部门
+  /groups:
+    get:
+      parameters:
+        - description: Token
+          in: header
+          name: token
+          required: true
+          type: string
+        - description: 过滤条件
+          in: query
+          name: query
+          type: string
+        - description: 排序字段(多个间逗号分割)
+          in: query
+          name: order_by
+          type: string
+        - description: 页数
+          in: query
+          name: page
+          type: string
+        - description: 页尺寸
+          in: query
+          name: page_size
+          type: string
+      responses:
+        "200":
+          description: '{"code":0,"groups":[{"id":1,"name":"group1","description":"group1","created_at":"2021-01-21 11:20:29","updated_at":"2021-01-21 11:20:29"}],"message":"Success","page":1,"page_size":50,"pages":1,"total":1}'
+          schema:
+            type: string
+      summary: 列出所有组
+      tags:
+        - 组
+    post:
+      parameters:
+        - description: Token
+          in: header
+          name: token
+          required: true
+          type: string
+        - description: body
+          in: body
+          name: data
+          required: true
+          schema:
+            $ref: '#/definitions/model.Group'
+      responses:
+        "200":
+          description: '{"code":0,"message":"Success","group":{"id":1,"name":"group1"}}'
+          schema:
+            type: string
+      summary: 新建组
+      tags:
+        - 组
+  /groups/{group_id}:
+    delete:
+      parameters:
+        - description: Token
+          in: header
+          name: token
+          required: true
+          type: string
+        - description: 组ID
+          in: path
+          name: group_id
+          required: true
+          type: string
+      responses:
+        "200":
+          description: '{"code":0,"message":"Success"}'
+          schema:
+            type: string
+      summary: 删除组
+      tags:
+        - 组
+    put:
+      parameters:
+        - description: Token
+          in: header
+          name: token
+          required: true
+          type: string
+        - description: 组ID
+          in: path
+          name: group_id
+          required: true
+          type: string
+        - description: body
+          in: body
+          name: data
+          required: true
+          schema:
+            $ref: '#/definitions/model.Group'
+      responses:
+        "200":
+          description: '{"code":0,"message":"Success","group":{"id":1,"name":"group_rename"}}'
+          schema:
+            type: string
+      summary: 更新组
+      tags:
+        - 组
+  /groups/{group_id}/users:
+    get:
+      parameters:
+        - description: Token
+          in: header
+          name: token
+          required: true
+          type: string
+        - description: 组ID
+          in: path
+          name: group_id
+          required: true
+          type: string
+      responses:
+        "200":
+          description: '{"code":0,"message":"Success","users":[{"id":4,"username":"test2","is_owner":false,"joined_at":"2021-01-20 11:01:16"},{"id":3,"username":"test","is_owner":true,"joined_at":"2021-01-20 11:01:32"}]}'
+          schema:
+            type: string
+      summary: 列出角色所有用户
+      tags:
+        - 组
+    post:
+      parameters:
+        - description: Token
+          in: header
+          name: token
+          required: true
+          type: string
+        - description: 组ID
+          in: path
+          name: group_id
+          required: true
+          type: string
+        - description: body
+          in: body
+          name: data
+          required: true
+          schema:
+            $ref: '#/definitions/model.UserGroup'
+      responses:
+        "200":
+          description: '{"code":0,"message":"Success"}'
+          schema:
+            type: string
+      summary: 添加用户至组
+      tags:
+        - 组
+  /groups/{group_id}/users/{user_id}:
+    delete:
+      parameters:
+        - description: Token
+          in: header
+          name: token
+          required: true
+          type: string
+        - description: 组ID
+          in: path
+          name: group_id
+          required: true
+          type: string
+        - description: 用户ID
+          in: path
+          name: user_id
+          required: true
+          type: string
+      responses:
+        "200":
+          description: '{"code":0,"message":"Success"}'
+          schema:
+            type: string
+      summary: 移除组中用户
+      tags:
+        - 组
+    put:
+      parameters:
+        - description: Token
+          in: header
+          name: token
+          required: true
+          type: string
+        - description: 组ID
+          in: path
+          name: product_id
+          required: true
+          type: string
+        - description: 用户ID
+          in: path
+          name: user_id
+          required: true
+          type: string
+        - description: body
+          in: body
+          name: data
+          required: true
+          schema:
+            $ref: '#/definitions/form.IsOwnerForm'
+      responses:
+        "200":
+          description: '{"code":0,"message":"Success"}'
+          schema:
+            type: string
+      summary: 设置用户是否是组Owner
+      tags:
+        - 组
+  /heartbeat:
+    post:
+      parameters:
+        - description: Token
+          in: header
+          name: token
+          required: true
+          type: string
+      responses:
+        "200":
+          description: '{"code":0,"message":"Success"}'
+          schema:
+            type: string
+      summary: 心跳（续期Token）
+      tags:
+        - 登录
+  /login:
+    post:
+      parameters:
+        - description: body
+          in: body
+          name: data
+          required: true
+          schema:
+            $ref: '#/definitions/form.LoginForm'
+      responses:
+        "200":
+          description: '{"code":0,"message":"Success","token":"2acff1bc1de905d67c1312aa97699dd70c74ade1ad4efb831462ed5122e7d404"}'
+          schema:
+            type: string
+      summary: 登录
+      tags:
+        - 登录
+  /logout:
+    delete:
+      parameters:
+        - description: Token
+          in: header
+          name: token
+          required: true
+          type: string
+      responses:
+        "200":
+          description: '{"code":0,"message":"Success"}'
+          schema:
+            type: string
+      summary: 登出（销毁Token）
+      tags:
+        - 登录
+  /products:
+    get:
+      parameters:
+        - description: Token
+          in: header
+          name: token
+          required: true
+          type: string
+        - description: 过滤条件
+          in: query
+          name: query
+          type: string
+        - description: 排序字段(多个间逗号分割)
+          in: query
+          name: order_by
+          type: string
+        - description: 页数
+          in: query
+          name: page
+          type: string
+        - description: 页尺寸
+          in: query
+          name: page_size
+          type: string
+      responses:
+        "200":
+          description: '{"code":0,"message":"Success","page":1,"page_size":50,"pages":1,"products":[{"id":1,"name":"prodtct2","alias":"p2","disabled":false,"description":"1233","created_at":"2021-01-19 15:10:35","updated_at":"2021-01-19 15:10:35"}],"total":1}'
+          schema:
+            type: string
+      summary: 列出所有产品线
+      tags:
+        - 产品线
+    post:
+      parameters:
+        - description: Token
+          in: header
+          name: token
+          required: true
+          type: string
+        - description: body
+          in: body
+          name: data
+          required: true
+          schema:
+            $ref: '#/definitions/model.Product'
+      responses:
+        "200":
+          description: '{"code":0,"message":"Success","product":{"id":2,"name":"new_role"}}'
+          schema:
+            type: string
+      summary: 新建产品线
+      tags:
+        - 产品线
+  /products/{product_id}:
+    delete:
+      parameters:
+        - description: Token
+          in: header
+          name: token
+          required: true
+          type: string
+        - description: 产品线ID
+          in: path
+          name: product_id
+          required: true
+          type: string
+      responses:
+        "200":
+          description: '{"code":0,"message":"Success"}'
+          schema:
+            type: string
+      summary: 删除产品线
+      tags:
+        - 产品线
+    put:
+      parameters:
+        - description: Token
+          in: header
+          name: token
+          required: true
+          type: string
+        - description: 产品线ID
+          in: path
+          name: product_id
+          required: true
+          type: string
+        - description: body
+          in: body
+          name: data
+          required: true
+          schema:
+            $ref: '#/definitions/model.Product'
+      responses:
+        "200":
+          description: '{"code":0,"message":"Success","product":{"id":2,"name":"new_role"}}'
+          schema:
+            type: string
+      summary: 更新产品线
+      tags:
+        - 产品线
+  /products/{product_id}/users:
+    get:
+      parameters:
+        - description: Token
+          in: header
+          name: token
+          required: true
+          type: string
+        - description: 产品线ID
+          in: path
+          name: product_id
+          required: true
+          type: string
+      responses:
+        "200":
+          description: '{"code":0,"message":"Success","users":[{"id":4,"username":"test2","is_owner":false,"joined_at":"2021-01-20 11:01:16"},{"id":3,"username":"test","is_owner":true,"joined_at":"2021-01-20 11:01:32"}]}'
+          schema:
+            type: string
+      summary: 列出产品线所有用户
+      tags:
+        - 产品线
+    post:
+      parameters:
+        - description: Token
+          in: header
+          name: token
+          required: true
+          type: string
+        - description: 产品线ID
+          in: path
+          name: product_id
+          required: true
+          type: string
+        - description: body
+          in: body
+          name: data
+          required: true
+          schema:
+            $ref: '#/definitions/model.UserProduct'
+      responses:
+        "200":
+          description: '{"code":0,"message":"Success"}'
+          schema:
+            type: string
+      summary: 添加用户至产品线
+      tags:
+        - 产品线
+  /products/{product_id}/users/{user_id}:
+    delete:
+      parameters:
+        - description: Token
+          in: header
+          name: token
+          required: true
+          type: string
+        - description: 产品线ID
+          in: path
+          name: product_id
+          required: true
+          type: string
+        - description: 用户ID
+          in: path
+          name: user_id
+          required: true
+          type: string
+      responses:
+        "200":
+          description: '{"code":0,"message":"Success"}'
+          schema:
+            type: string
+      summary: 移除产品线中用户
+      tags:
+        - 产品线
+    put:
+      parameters:
+        - description: Token
+          in: header
+          name: token
+          required: true
+          type: string
+        - description: 产品线ID
+          in: path
+          name: product_id
+          required: true
+          type: string
+        - description: 用户ID
+          in: path
+          name: user_id
+          required: true
+          type: string
+        - description: body
+          in: body
+          name: data
+          required: true
+          schema:
+            $ref: '#/definitions/form.IsOwnerForm'
+      responses:
+        "200":
+          description: '{"code":0,"message":"Success"}'
+          schema:
+            type: string
+      summary: 设置用户是否是产品线Owner
+      tags:
+        - 产品线
+  /roles:
+    get:
+      parameters:
+        - description: Token
+          in: header
+          name: token
+          required: true
+          type: string
+        - description: 过滤条件
+          in: query
+          name: query
+          type: string
+        - description: 排序字段(多个间逗号分割)
+          in: query
+          name: order_by
+          type: string
+        - description: 页数
+          in: query
+          name: page
+          type: string
+        - description: 页尺寸
+          in: query
+          name: page_size
+          type: string
+      responses:
+        "200":
+          description: '{"code":0,"message":"Success","page":1,"page_size":50,"pages":1,"roles":[{"id":1,"name":"auth_admin"},{"id":2,"name":"tester"}],"total":2}'
+          schema:
+            type: string
+      summary: 列出所有角色
+      tags:
+        - 角色
+    post:
+      parameters:
+        - description: Token
+          in: header
+          name: token
+          required: true
+          type: string
+        - description: body
+          in: body
+          name: data
+          required: true
+          schema:
+            $ref: '#/definitions/model.Role'
+      responses:
+        "200":
+          description: '{"code":0,"message":"Success","role":{"id":2,"name":"new_role"}}'
+          schema:
+            type: string
+      summary: 新建角色
+      tags:
+        - 角色
+  /roles/{role_id}:
+    delete:
+      parameters:
+        - description: Token
+          in: header
+          name: token
+          required: true
+          type: string
+        - description: 角色ID
+          in: path
+          name: role_id
+          required: true
+          type: string
+      responses:
+        "200":
+          description: '{"code":0,"message":"Success"}'
+          schema:
+            type: string
+      summary: 删除角色
+      tags:
+        - 角色
+    put:
+      parameters:
+        - description: Token
+          in: header
+          name: token
+          required: true
+          type: string
+        - description: 角色ID
+          in: path
+          name: role_id
+          required: true
+          type: string
+        - description: body
+          in: body
+          name: data
+          required: true
+          schema:
+            $ref: '#/definitions/model.Role'
+      responses:
+        "200":
+          description: '{"code":0,"message":"Success","role":{"id":2,"name":"tester"}}'
+          schema:
+            type: string
+      summary: 更新角色
+      tags:
+        - 角色
+  /roles/{role_id}/users:
+    get:
+      parameters:
+        - description: Token
+          in: header
+          name: token
+          required: true
+          type: string
+        - description: 角色ID
+          in: path
+          name: role_id
+          required: true
+          type: string
+      responses:
+        "200":
+          description: '{"code":0,"message":"Success"}'
+          schema:
+            type: string
+      summary: 列出角色所有用户
+      tags:
+        - 角色
+    post:
+      parameters:
+        - description: Token
+          in: header
+          name: token
+          required: true
+          type: string
+        - description: 角色ID
+          in: path
+          name: role_id
+          required: true
+          type: string
+        - description: body
+          in: body
+          name: data
+          required: true
+          schema:
+            $ref: '#/definitions/model.UserRole'
+      responses:
+        "200":
+          description: '{"code":0,"message":"Success"}'
+          schema:
+            type: string
+      summary: 添加用户至角色
+      tags:
+        - 角色
+  /roles/{role_id}/users/{user_id}:
+    delete:
+      parameters:
+        - description: Token
+          in: header
+          name: token
+          required: true
+          type: string
+        - description: 角色ID
+          in: path
+          name: role_id
+          required: true
+          type: string
+        - description: 用户ID
+          in: path
+          name: user_id
+          required: true
+          type: string
+      responses:
+        "200":
+          description: '{"code":0,"message":"Success"}'
+          schema:
+            type: string
+      summary: 移除角色中用户
+      tags:
+        - 角色
+  /token/content:
+    get:
+      parameters:
+        - description: Token
+          in: header
+          name: token
+          required: true
+          type: string
+      responses:
+        "200":
+          description: '{"code":0,"content":{"groups":[],"is_superuser":false,"own_groups":[],"own_products":[{"id":2,"name":"scm","alias":"scm","disabled":false}],"products":[],"roles":["auth_admin","tester"],"user_id":3,"username":"test"},"message":"Success"}'
+          schema:
+            type: string
+      summary: 获得TokenContent
+      tags:
+        - 登录
+  /users:
+    get:
+      parameters:
+        - description: Token
+          in: header
+          name: token
+          required: true
+          type: string
+        - description: 过滤条件
+          in: query
+          name: query
+          type: string
+        - description: 排序字段(多个间逗号分割)
+          in: query
+          name: order_by
+          type: string
+        - description: 页数
+          in: query
+          name: page
+          type: string
+        - description: 页尺寸
+          in: query
+          name: page_size
+          type: string
+      responses:
+        "200":
+          description: '{"code":0,"message":"Success","page":1,"page_size":50,"pages":1,"users":[{"id":1,"username":"username","email":"email","phone":"phone","is_superuser":false,"disabled":false,"last_login":null,"created_at":"2021-01-08 10:57:27","updated_at":"2021-01-26 11:31:24"}],"total":1}'
+          schema:
+            type: string
+      summary: 列出所有用户
+      tags:
+        - 用户
+  /users/{user_id}:
+    put:
+      parameters:
+        - description: Token
+          in: header
+          name: token
+          required: true
+          type: string
+        - description: 用户ID
+          in: path
+          name: user_id
+          required: true
+          type: string
+        - description: body
+          in: body
+          name: data
+          required: true
+          schema:
+            $ref: '#/definitions/model.User'
+      responses:
+        "200":
+          description: '{"code":0,"message":"Success","user":{"id":1,"username":"username","email":"email","phone":"phone","is_superuser":false,"disabled":false,"last_login":null,"created_at":"2021-01-08 10:57:27","updated_at":"2021-01-26 11:31:24"}}'
+          schema:
+            type: string
+      summary: 更新用户
+      tags:
+        - 用户
+  /users/{user_id}/department:
+    get:
+      parameters:
+        - description: Token
+          in: header
+          name: token
+          required: true
+          type: string
+        - description: 用户ID
+          in: path
+          name: user_id
+          required: true
+          type: string
+      responses:
+        "200":
+          description: '{"code":0,"departments":{"id":2,"name":"dept2","is_owner":true,"joined_at":"2021-01-21 11:20:56"},"message":"Success"}'
+          schema:
+            type: string
+      summary: 获得用户所在部门（一个用户只能在一个部门）
+      tags:
+        - 用户
+  /users/{user_id}/groups:
+    get:
+      parameters:
+        - description: Token
+          in: header
+          name: token
+          required: true
+          type: string
+        - description: 用户ID
+          in: path
+          name: user_id
+          required: true
+          type: string
+      responses:
+        "200":
+          description: '{"code":0,"groups":[{"id":2,"name":"group2","is_owner":true,"joined_at":"2021-01-21 11:20:56"}],"message":"Success"}'
+          schema:
+            type: string
+      summary: 列出用户所在组
+      tags:
+        - 用户
+  /users/{user_id}/products:
+    get:
+      parameters:
+        - description: Token
+          in: header
+          name: token
+          required: true
+          type: string
+        - description: 用户ID
+          in: path
+          name: user_id
+          required: true
+          type: string
+      responses:
+        "200":
+          description: '{"code":0,"message":"Success","products":[{"id":3,"name":"SCM","is_owner":false,"joined_at":"0001-01-01 00:00:00","alias":"scm","disable":false}]}'
+          schema:
+            type: string
+      summary: 列出用户所在产品线
+      tags:
+        - 用户
+  /users/{user_id}/roles:
+    get:
+      parameters:
+        - description: Token
+          in: header
+          name: token
+          required: true
+          type: string
+        - description: 用户ID
+          in: path
+          name: user_id
+          required: true
+          type: string
+      responses:
+        "200":
+          description: '{"code":0,"message":"Success","roles":[{"id":1,"name":"auth_admin"},{"id":2,"name":"tester"}]}'
+          schema:
+            type: string
+      summary: 列出用户所在角色
+      tags:
+        - 用户
+swagger: "2.0"

@@ -2,14 +2,13 @@ package handler
 
 import (
 	"database/sql"
-	"eago-auth/api/form"
-	"eago-auth/conf/msg"
-	db "eago-auth/database"
-	"eago-common/log"
-	"eago-common/tools"
+	"eago/auth/api/form"
+	"eago/auth/conf/msg"
+	"eago/auth/model"
+	"eago/common/log"
+	"eago/common/utils"
 	"fmt"
 	"github.com/gin-gonic/gin"
-	"net/http"
 	"strconv"
 )
 
@@ -17,32 +16,32 @@ import (
 // @Summary 新建产品线
 // @Tags 产品线
 // @Param token header string true "Token"
-// @Param data body db.Product true "body"
+// @Param data body model.Product true "body"
 // @Success 200 {string} string "{"code":0,"message":"Success","product":{"id":2,"name":"new_role"}}"
 // @Router /products [POST]
 func NewProduct(c *gin.Context) {
-	var prod db.Product
+	var prod model.Product
 
 	// 序列化request body
 	if err := c.ShouldBindJSON(&prod); err != nil {
-		m := msg.WarnInvalidBody.NewMsg("Field 'name', 'alias', 'disabled', 'description' required.")
+		resp := msg.WarnInvalidBody.GenResponse("Field 'name', 'alias', 'disabled', 'description' required.")
 		log.WarnWithFields(log.Fields{
 			"error": err.Error(),
-		}, m.String())
-		c.JSON(http.StatusOK, m.GinH())
+		}, resp.String())
+		resp.Write(c)
 		return
 	}
 
-	p := db.ProductModel.New(prod.Name, prod.Alias, prod.Description, *prod.Disabled)
+	p := model.NewProduct(prod.Name, prod.Alias, *prod.Description, prod.Disabled)
 	if p == nil {
-		m := msg.ErrDatabase.NewMsg("Error in db.ProductModel.New.")
-		log.Error(m.String())
-		c.JSON(http.StatusOK, m.GinH())
+		resp := msg.ErrDatabase.GenResponse("Error when NewProduct.")
+		log.Error(resp.String())
+		resp.Write(c)
 		return
 	}
 
-	m := msg.Success.NewMsg().SetPayload(&gin.H{"product": p})
-	c.JSON(http.StatusOK, m.GinH())
+	resp := msg.Success.GenResponse().SetPayload("product", p)
+	resp.Write(c)
 }
 
 // RemoveProduct 删除产品线
@@ -55,23 +54,23 @@ func NewProduct(c *gin.Context) {
 func RemoveProduct(c *gin.Context) {
 	prodId, err := strconv.Atoi(c.Param("product_id"))
 	if err != nil {
-		m := msg.WarnInvalidUri.NewMsg("Field 'product_id' required.")
+		resp := msg.WarnInvalidUri.GenResponse("Field 'product_id' required.")
 		log.WarnWithFields(log.Fields{
 			"error": err.Error(),
-		}, m.String())
-		c.JSON(http.StatusOK, m.GinH())
+		}, resp.String())
+		resp.Write(c)
 		return
 	}
 
-	if suc := db.ProductModel.Remove(prodId); !suc {
-		m := msg.ErrDatabase.NewMsg("Error in db.ProductModel.Remove.")
-		log.Error(m.String())
-		c.JSON(http.StatusOK, m.GinH())
+	if ok := model.RemoveProduct(prodId); !ok {
+		resp := msg.ErrDatabase.GenResponse("Error when RemoveProduct.")
+		log.Error(resp.String())
+		resp.Write(c)
 		return
 	}
 
-	m := msg.Success.NewMsg()
-	c.JSON(http.StatusOK, m.GinH())
+	resp := msg.Success.GenResponse()
+	resp.Write(c)
 }
 
 // SetProduct 更新产品线
@@ -79,42 +78,42 @@ func RemoveProduct(c *gin.Context) {
 // @Tags 产品线
 // @Param token header string true "Token"
 // @Param product_id path string true "产品线ID"
-// @Param data body db.Product true "body"
+// @Param data body model.Product true "body"
 // @Success 200 {string} string "{"code":0,"message":"Success","product":{"id":2,"name":"new_role"}}"
 // @Router /products/{product_id} [PUT]
 func SetProduct(c *gin.Context) {
-	var prodFm db.Product
+	var prodFm model.Product
 
 	prodId, err := strconv.Atoi(c.Param("product_id"))
 	if err != nil {
-		m := msg.WarnInvalidUri.NewMsg("Field 'product_id' required.")
+		resp := msg.WarnInvalidUri.GenResponse("Field 'product_id' required.")
 		log.WarnWithFields(log.Fields{
 			"error": err.Error(),
-		}, m.String())
-		c.JSON(http.StatusOK, m.GinH())
+		}, resp.String())
+		resp.Write(c)
 		return
 	}
 
 	// 序列化request body
 	if err := c.ShouldBindJSON(&prodFm); err != nil {
-		m := msg.WarnInvalidBody.NewMsg("Field 'name' required.")
+		resp := msg.WarnInvalidBody.GenResponse("Field 'name' required.")
 		log.WarnWithFields(log.Fields{
 			"error": err.Error(),
-		}, m.String())
-		c.JSON(http.StatusOK, m.GinH())
+		}, resp.String())
+		resp.Write(c)
 		return
 	}
 
-	prod, suc := db.ProductModel.Set(prodId, prodFm.Name, prodFm.Alias, prodFm.Description, *prodFm.Disabled)
-	if !suc {
-		m := msg.ErrDatabase.NewMsg("Error in db.ProductModel.Set.")
-		log.Error(m.String())
-		c.JSON(http.StatusOK, m.GinH())
+	prod, ok := model.SetProduct(prodId, prodFm.Name, prodFm.Alias, *prodFm.Description, *prodFm.Disabled)
+	if !ok {
+		resp := msg.ErrDatabase.GenResponse("Error when SetProduct.")
+		log.Error(resp.String())
+		resp.Write(c)
 		return
 	}
 
-	m := msg.Success.NewMsg().SetPayload(&gin.H{"product": prod})
-	c.JSON(http.StatusOK, m.GinH())
+	resp := msg.Success.GenResponse().SetPayload("product", prod)
+	resp.Write(c)
 }
 
 // ListProducts 列出所有产品线
@@ -122,34 +121,35 @@ func SetProduct(c *gin.Context) {
 // @Tags 产品线
 // @Param token header string true "Token"
 // @Param query query string false "过滤条件"
+// @Param order_by query string false "排序字段(多个间逗号分割)"
 // @Param page query string false "页数"
 // @Param page_size query string false "页尺寸"
 // @Success 200 {string} string "{"code":0,"message":"Success","page":1,"page_size":50,"pages":1,"products":[{"id":1,"name":"prodtct2","alias":"p2","disabled":false,"description":"1233","created_at":"2021-01-19 15:10:35","updated_at":"2021-01-19 15:10:35"}],"total":1}"
 // @Router /products [GET]
 func ListProducts(c *gin.Context) {
-	var query db.Query
+	var query model.Query
 
 	q := c.GetString("Query")
 	if q != "" {
 		likeQuery := fmt.Sprintf("%%%s%%", q)
-		query = db.Query{"name LIKE @query OR alias LIKE @query id LIKE @query": sql.Named("query", likeQuery)}
+		query = model.Query{"name LIKE @query OR alias LIKE @query OR id LIKE @query": sql.Named("query", likeQuery)}
 	}
 
-	paged, suc := db.ProductModel.PagedList(
-		&query,
+	paged, ok := model.PagedListProducts(
+		query,
 		c.GetInt("Page"),
 		c.GetInt("PageSize"),
 		c.GetStringSlice("OrderBy")...,
 	)
-	if !suc {
-		m := msg.ErrDatabase.NewMsg("Error in db.ProductModel.PageList.")
-		log.Error(m.String())
-		c.JSON(http.StatusOK, m.GinH())
+	if !ok {
+		resp := msg.ErrDatabase.GenResponse("Error when PageListProducts.")
+		log.Error(resp.String())
+		resp.Write(c)
 		return
 	}
 
-	m := msg.Success.NewMsg().SetPagedPayload(paged, "products")
-	c.JSON(http.StatusOK, m.GinH())
+	resp := msg.Success.GenResponse().SetPagedPayload(paged, "products")
+	resp.Write(c)
 }
 
 // AddUser2Product 添加用户至产品线
@@ -157,41 +157,41 @@ func ListProducts(c *gin.Context) {
 // @Tags 产品线
 // @Param token header string true "Token"
 // @Param product_id path string true "产品线ID"
-// @Param data body db.UserProduct true "body"
+// @Param data body model.UserProduct true "body"
 // @Success 200 {string} string "{"code":0,"message":"Success"}"
 // @Router /products/{product_id}/users [POST]
 func AddUser2Product(c *gin.Context) {
-	var uProd db.UserProduct
+	var uProd model.UserProduct
 
 	prodId, err := strconv.Atoi(c.Param("product_id"))
 	if err != nil {
-		m := msg.WarnInvalidUri.NewMsg("Field 'product_id' required.")
+		resp := msg.WarnInvalidUri.GenResponse("Field 'product_id' required.")
 		log.WarnWithFields(log.Fields{
 			"error": err.Error(),
-		}, m.String())
-		c.JSON(http.StatusOK, m.GinH())
+		}, resp.String())
+		resp.Write(c)
 		return
 	}
 
 	// 序列化request body
 	if err := c.ShouldBindJSON(&uProd); err != nil {
-		m := msg.WarnInvalidBody.NewMsg("Field 'user_id', 'is_owner' required.")
+		resp := msg.WarnInvalidBody.GenResponse("Field 'user_id', 'is_owner' required, and 'user_id' must greater than 0.")
 		log.WarnWithFields(log.Fields{
 			"error": err.Error(),
-		}, m.String())
-		c.JSON(http.StatusOK, m.GinH())
+		}, resp.String())
+		resp.Write(c)
 		return
 	}
 
-	if !db.ProductModel.AddUser(uProd.UserId, prodId, *uProd.IsOwner) {
-		m := msg.ErrDatabase.NewMsg("Error in db.ProductModel.AddUser.")
-		log.Error(m.String())
-		c.JSON(http.StatusOK, m.GinH())
+	if !model.AddProductUser(uProd.UserId, prodId, *uProd.IsOwner) {
+		resp := msg.ErrDatabase.GenResponse("Error when AddProductUser.")
+		log.Error(resp.String())
+		resp.Write(c)
 		return
 	}
 
-	m := msg.Success.NewMsg()
-	c.JSON(http.StatusOK, m.GinH())
+	resp := msg.Success.GenResponse()
+	resp.Write(c)
 }
 
 // RemoveProductUser 移除产品线中用户
@@ -205,33 +205,33 @@ func AddUser2Product(c *gin.Context) {
 func RemoveProductUser(c *gin.Context) {
 	prodId, err := strconv.Atoi(c.Param("product_id"))
 	if err != nil {
-		m := msg.WarnInvalidUri.NewMsg("Field 'product_id' required.")
+		resp := msg.WarnInvalidUri.GenResponse("Field 'product_id' required.")
 		log.WarnWithFields(log.Fields{
 			"error": err.Error(),
-		}, m.String())
-		c.JSON(http.StatusOK, m.GinH())
+		}, resp.String())
+		resp.Write(c)
 		return
 	}
 
 	userId, err := strconv.Atoi(c.Param("user_id"))
 	if err != nil {
-		m := msg.WarnInvalidUri.NewMsg("Field 'user_id' required.")
+		resp := msg.WarnInvalidUri.GenResponse("Field 'user_id' required.")
 		log.WarnWithFields(log.Fields{
 			"error": err.Error(),
-		}, m.String())
-		c.JSON(http.StatusOK, m.GinH())
+		}, resp.String())
+		resp.Write(c)
 		return
 	}
 
-	if !db.ProductModel.RemoveUser(userId, prodId) {
-		m := msg.ErrDatabase.NewMsg("Error in db.ProductModel.RemoveUser.")
-		log.Error(m.String())
-		c.JSON(http.StatusOK, m.GinH())
+	if !model.RemoveProductUser(userId, prodId) {
+		resp := msg.ErrDatabase.GenResponse("Error when RemoveProductUser.")
+		log.Error(resp.String())
+		resp.Write(c)
 		return
 	}
 
-	m := msg.Success.NewMsg()
-	c.JSON(http.StatusOK, m.GinH())
+	resp := msg.Success.GenResponse()
+	resp.Write(c)
 }
 
 // SetUserIsProductOwner 设置用户是否是产品线Owner
@@ -248,62 +248,62 @@ func SetUserIsProductOwner(c *gin.Context) {
 
 	prodId, err := strconv.Atoi(c.Param("product_id"))
 	if err != nil {
-		m := msg.WarnInvalidUri.NewMsg("Field 'product_id' required.")
+		resp := msg.WarnInvalidUri.GenResponse("Field 'product_id' required.")
 		log.WarnWithFields(log.Fields{
 			"error": err.Error(),
-		}, m.String())
-		c.JSON(http.StatusOK, m.GinH())
+		}, resp.String())
+		resp.Write(c)
 		return
 	}
 
 	userId, err := strconv.Atoi(c.Param("user_id"))
 	if err != nil {
-		m := msg.WarnInvalidUri.NewMsg("Field 'user_id' required.")
+		resp := msg.WarnInvalidUri.GenResponse("Field 'user_id' required")
 		log.WarnWithFields(log.Fields{
 			"error": err.Error(),
-		}, m.String())
-		c.JSON(http.StatusOK, m.GinH())
+		}, resp.String())
+		resp.Write(c)
 		return
 	}
 
 	// 序列化request body
 	if err := c.ShouldBindJSON(&fm); err != nil {
-		m := msg.WarnInvalidBody.NewMsg("Field 'is_owner' required.")
+		resp := msg.WarnInvalidBody.GenResponse("Field 'is_owner' required")
 		log.WarnWithFields(log.Fields{
 			"error": err.Error(),
-		}, m.String())
-		c.JSON(http.StatusOK, m.GinH())
+		}, resp.String())
+		resp.Write(c)
 		return
 	}
 
-	if !db.ProductModel.SetUserIsOwner(userId, prodId, *fm.IsOwner) {
-		m := msg.ErrDatabase.NewMsg("Error in db.ProductModel.SetUserIsOwner.")
-		log.Error(m.String())
-		c.JSON(http.StatusOK, m.GinH())
+	if !model.SetProductUserIsOwner(userId, prodId, *fm.IsOwner) {
+		resp := msg.ErrDatabase.GenResponse("Error when SetProductUserIsOwner")
+		log.Error(resp.String())
+		resp.Write(c)
 		return
 	}
 
-	m := msg.Success.NewMsg()
-	c.JSON(http.StatusOK, m.GinH())
+	resp := msg.Success.GenResponse()
+	resp.Write(c)
 }
 
-// ListProductUsers 列出角色所有用户
-// @Summary 列出角色所有用户
+// ListProductUsers 列出产品线所有用户
+// @Summary 列出产品线所有用户
 // @Tags 产品线
 // @Param token header string true "Token"
 // @Param product_id path string true "产品线ID"
 // @Success 200 {string} string "{"code":0,"message":"Success","users":[{"id":4,"username":"test2","is_owner":false,"joined_at":"2021-01-20 11:01:16"},{"id":3,"username":"test","is_owner":true,"joined_at":"2021-01-20 11:01:32"}]}"
 // @Router /products/{product_id}/users [GET]
 func ListProductUsers(c *gin.Context) {
-	var query = db.Query{}
+	var query = model.Query{}
 
 	prodId, err := strconv.Atoi(c.Param("product_id"))
 	if err != nil {
-		m := msg.WarnInvalidUri.NewMsg("Field 'product_id' required.")
+		resp := msg.WarnInvalidUri.GenResponse("Field 'product_id' required")
 		log.WarnWithFields(log.Fields{
 			"error": err.Error(),
-		}, m.String())
-		c.JSON(http.StatusOK, m.GinH())
+		}, resp.String())
+		resp.Write(c)
 		return
 	}
 
@@ -311,25 +311,25 @@ func ListProductUsers(c *gin.Context) {
 	// 方法中is_owner传值只能是0 or 1，待将来解决
 	isOwner, err := strconv.Atoi(c.DefaultQuery("is_owner", "-1"))
 	if err != nil {
-		m := msg.WarnInvalidUri.NewMsg("Field 'is_owner' required, and must integer 0 or 1.")
+		resp := msg.WarnInvalidUri.GenResponse("Field 'is_owner' required, and must integer 0 or 1")
 		log.WarnWithFields(log.Fields{
 			"error": err.Error(),
-		}, m.String())
-		c.JSON(http.StatusOK, m.GinH())
+		}, resp.String())
+		resp.Write(c)
 		return
 	}
 	if isOwner >= 0 {
-		query["is_owner"] = tools.IntMin(isOwner, 1)
+		query["is_owner"] = utils.IntMin(isOwner, 1)
 	}
 
-	u, suc := db.ProductModel.ListUsers(prodId, &query)
-	if !suc {
-		m := msg.ErrDatabase.NewMsg("Error in db.ProductModel.ListUsers.")
-		log.Error(m.String())
-		c.JSON(http.StatusOK, m.GinH())
+	u, ok := model.ListProductUsers(prodId, query)
+	if !ok {
+		resp := msg.ErrDatabase.GenResponse("Error when ListProductUsers")
+		log.Error(resp.String())
+		resp.Write(c)
 		return
 	}
 
-	m := msg.Success.NewMsg().SetPayload(&gin.H{"users": u})
-	c.JSON(http.StatusOK, m.GinH())
+	resp := msg.Success.GenResponse().SetPayload("users", u)
+	resp.Write(c)
 }

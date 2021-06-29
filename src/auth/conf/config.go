@@ -3,43 +3,44 @@ package conf
 import (
 	"github.com/Unknwon/goconfig"
 	"os"
+	"strings"
 	"time"
 )
 
 const (
-	defaultLogLevel  = "debug"
-	defaultSecretKey = "eago_default_secret_key"
+	_DEFAULT_SECRET_KEY = "eago_default_secret_key"
 	// Token生命周期默认配置，秒
-	defaultTokenTtl      = 900
-	defaultAdminRoleName = "auth_admin"
+	_DEFAULT_TOKEN_TTL       = 900
+	_DEFAULT_ADMIN_ROLE_NAME = "auth_admin"
 
 	// Etcd默认配置
-	defaultEtcdAddress  = "127.0.0.1:2379"
-	defaultEtcdUsername = "root"
-	defaultEtcdPassword = "root"
+	_DEFAULT_ETCD_ADDRESSES = "127.0.0.1:2379,127.0.0.1:2379,127.0.0.1:2379"
+	_DEFAULT_ETCD_USERNAME  = "root"
+	_DEFAULT_ETCD_PASSWORD  = "root"
 
 	// IAM默认配置
-	defaultIamAddress = "https://127.0.0.1/auth"
+	_DEFAULT_IAM_ADDRESS = "https://127.0.0.1/auth"
 
 	// Crowd默认配置
-	defaultCrowdAddress     = "http://127.0.0.1/crowd"
-	defaultCrowdAppName     = "eago"
-	defaultCrowdAppPassword = "eago"
+	_DEFAULT_CROWD_ADDRESS      = "http://127.0.0.1/crowd"
+	_DEFAULT_CROWD_APP_NAME     = "eago"
+	_DEFAULT_CROWD_APP_PASSWORD = "eago"
 
 	// Mysql默认配置
-	defaultMysqlAddress            = "127.0.0.1:3306"
-	defaultMysqlDbName             = "eago_auth"
-	defaultMysqlUser               = "root"
-	defaultMysqlPassword           = "root"
-	defaultMysqlMaxOpenConnections = 20
-	defaultMysqlMaxIdleConnections = 5
+	_DEFAULT_MYSQL_ADDRESS              = "127.0.0.1:3306"
+	_DEFAULT_MYSQL_DB_NAME              = "eago_auth"
+	_DEFAULT_MYSQL_USER                 = "root"
+	_DEFAULT_MYSQL_PASSWORD             = "root"
+	_DEFAULT_MYSQL_MAX_OPEN_CONNECTIONS = 20
+	_DEFAULT_MYSQL_MAX_IDLE_CONNECTIONS = 5
 
 	// Redis默认配置
-	defaultRedisAddress  = "127.0.0.1:6379"
-	defaultRedisPassword = ""
-	defaultRedisDb       = 1
+	_DEFAULT_REDIS_ADDRESS  = "127.0.0.1:6379"
+	_DEFAULT_REDIS_PASSWORD = ""
+	_DEFAULT_REDIS_DB       = 1
 
-	defaultLogPath = "./logs"
+	_DEFAULT_LOG_LEVEL = "debug"
+	_DEFAULT_LOG_PATH  = "./logs"
 )
 
 var Config *Conf
@@ -52,9 +53,9 @@ type Conf struct {
 
 	AdminRoleName string
 
-	EtcdAddress  string
-	EtcdUsername string
-	EtcdPassword string
+	EtcdAddresses []string
+	EtcdUsername  string
+	EtcdPassword  string
 
 	IamAddress string
 
@@ -76,49 +77,42 @@ type Conf struct {
 	LogPath string
 }
 
-// 验证配置文件
-func (c *Conf) validateConfig() error {
-	return nil
-}
-
-// InitConfig 初始化配置文件
-func InitConfig() error {
+// init 初始化配置文件
+func init() {
 	cfg, err := goconfig.LoadConfigFile(CONFIG_FILE_PATHNAME)
 	if err != nil {
-		return err
+		panic(err)
 	}
 
 	Config = &Conf{
-		LogLevel:      cfg.MustValue("main", "log_level", defaultLogLevel),
-		SecretKey:     cfg.MustValue("main", "secret_key", defaultSecretKey),
-		TokenTtl:      time.Duration(cfg.MustInt64("main", "token_ttl", defaultTokenTtl)) * time.Second,
-		AdminRoleName: cfg.MustValue("main", "admin_role_name", defaultAdminRoleName),
+		SecretKey:     cfg.MustValue("main", "secret_key", _DEFAULT_SECRET_KEY),
+		TokenTtl:      time.Duration(cfg.MustInt64("main", "token_ttl", _DEFAULT_TOKEN_TTL)) * time.Second,
+		AdminRoleName: cfg.MustValue("main", "admin_role_name", _DEFAULT_ADMIN_ROLE_NAME),
 
-		EtcdAddress:  cfg.MustValue("etcd", "address", defaultEtcdAddress),
-		EtcdUsername: cfg.MustValue("etcd", "username", defaultEtcdUsername),
-		EtcdPassword: cfg.MustValue("etcd", "password", defaultEtcdPassword),
+		LogLevel: cfg.MustValue("log", "level", _DEFAULT_LOG_LEVEL),
+		LogPath:  cfg.MustValue("log", "path", _DEFAULT_LOG_PATH),
 
-		IamAddress: cfg.MustValue("iam", "address", defaultIamAddress),
+		EtcdAddresses: strings.Split(cfg.MustValue("etcd", "addresses", _DEFAULT_ETCD_ADDRESSES), ","),
+		EtcdUsername:  cfg.MustValue("etcd", "username", _DEFAULT_ETCD_USERNAME),
+		EtcdPassword:  cfg.MustValue("etcd", "password", _DEFAULT_ETCD_PASSWORD),
 
-		CrowdAddress:     cfg.MustValue("crowd", "address", defaultCrowdAddress),
-		CrowdAppName:     cfg.MustValue("crowd", "app_name", defaultCrowdAppName),
-		CrowdAppPassword: cfg.MustValue("crowd", "app_pass", defaultCrowdAppPassword),
+		IamAddress: cfg.MustValue("iam", "address", _DEFAULT_IAM_ADDRESS),
 
-		MysqlAddress:            cfg.MustValue("mysql", "address", defaultMysqlAddress),
-		MysqlDbName:             cfg.MustValue("mysql", "db_name", defaultMysqlDbName),
-		MysqlUser:               cfg.MustValue("mysql", "user", defaultMysqlUser),
-		MysqlPassword:           cfg.MustValue("mysql", "password", defaultMysqlPassword),
-		MysqlMaxOpenConnections: cfg.MustInt("mysql", "max_open_connections", defaultMysqlMaxOpenConnections),
-		MysqlMaxIdleConnections: cfg.MustInt("mysql", "max_idle_connections", defaultMysqlMaxIdleConnections),
+		CrowdAddress:     cfg.MustValue("crowd", "address", _DEFAULT_CROWD_ADDRESS),
+		CrowdAppName:     cfg.MustValue("crowd", "app_name", _DEFAULT_CROWD_APP_NAME),
+		CrowdAppPassword: cfg.MustValue("crowd", "app_pass", _DEFAULT_CROWD_APP_PASSWORD),
 
-		RedisAddress:  cfg.MustValue("redis", "address", defaultRedisAddress),
-		RedisPassword: cfg.MustValue("redis", "password", defaultRedisPassword),
-		RedisDb:       cfg.MustInt("redis", "db", defaultRedisDb),
+		MysqlAddress:            cfg.MustValue("mysql", "address", _DEFAULT_MYSQL_ADDRESS),
+		MysqlDbName:             cfg.MustValue("mysql", "db_name", _DEFAULT_MYSQL_DB_NAME),
+		MysqlUser:               cfg.MustValue("mysql", "user", _DEFAULT_MYSQL_USER),
+		MysqlPassword:           cfg.MustValue("mysql", "password", _DEFAULT_MYSQL_PASSWORD),
+		MysqlMaxOpenConnections: cfg.MustInt("mysql", "max_open_connections", _DEFAULT_MYSQL_MAX_OPEN_CONNECTIONS),
+		MysqlMaxIdleConnections: cfg.MustInt("mysql", "max_idle_connections", _DEFAULT_MYSQL_MAX_IDLE_CONNECTIONS),
 
-		LogPath: cfg.MustValue("log", "path", defaultLogPath),
+		RedisAddress:  cfg.MustValue("redis", "address", _DEFAULT_REDIS_ADDRESS),
+		RedisPassword: cfg.MustValue("redis", "password", _DEFAULT_REDIS_PASSWORD),
+		RedisDb:       cfg.MustInt("redis", "db", _DEFAULT_REDIS_DB),
 	}
 
 	_ = os.Mkdir(Config.LogPath, 0755)
-
-	return Config.validateConfig()
 }
