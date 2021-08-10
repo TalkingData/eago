@@ -268,7 +268,7 @@ func SetUserIsProductOwner(c *gin.Context) {
 
 	// 序列化request body
 	if err := c.ShouldBindJSON(&fm); err != nil {
-		resp := msg.WarnInvalidBody.GenResponse("Field 'is_owner' required")
+		resp := msg.WarnInvalidBody.GenResponse("Field 'is_owner' required.")
 		log.WarnWithFields(log.Fields{
 			"error": err.Error(),
 		}, resp.String())
@@ -277,7 +277,7 @@ func SetUserIsProductOwner(c *gin.Context) {
 	}
 
 	if !model.SetProductUserIsOwner(userId, prodId, *fm.IsOwner) {
-		resp := msg.ErrDatabase.GenResponse("Error when SetProductUserIsOwner")
+		resp := msg.ErrDatabase.GenResponse("Error when SetProductUserIsOwner.")
 		log.Error(resp.String())
 		resp.Write(c)
 		return
@@ -299,7 +299,7 @@ func ListProductUsers(c *gin.Context) {
 
 	prodId, err := strconv.Atoi(c.Param("product_id"))
 	if err != nil {
-		resp := msg.WarnInvalidUri.GenResponse("Field 'product_id' required")
+		resp := msg.WarnInvalidUri.GenResponse("Field 'product_id' required.")
 		log.WarnWithFields(log.Fields{
 			"error": err.Error(),
 		}, resp.String())
@@ -311,7 +311,7 @@ func ListProductUsers(c *gin.Context) {
 	// 方法中is_owner传值只能是0 or 1，待将来解决
 	isOwner, err := strconv.Atoi(c.DefaultQuery("is_owner", "-1"))
 	if err != nil {
-		resp := msg.WarnInvalidUri.GenResponse("Field 'is_owner' required, and must integer 0 or 1")
+		resp := msg.WarnInvalidUri.GenResponse("Field 'is_owner' required, and must integer 0 or 1.")
 		log.WarnWithFields(log.Fields{
 			"error": err.Error(),
 		}, resp.String())
@@ -324,7 +324,7 @@ func ListProductUsers(c *gin.Context) {
 
 	u, ok := model.ListProductUsers(prodId, query)
 	if !ok {
-		resp := msg.ErrDatabase.GenResponse("Error when ListProductUsers")
+		resp := msg.ErrDatabase.GenResponse("Error in ListProductUsers.")
 		log.Error(resp.String())
 		resp.Write(c)
 		return

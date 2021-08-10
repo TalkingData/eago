@@ -1,4 +1,4 @@
-package router
+package main
 
 import (
 	"eago/auth/api/docs"
@@ -14,8 +14,8 @@ import (
 
 var Engine *gin.Engine
 
-// InitEngine
-func InitEngine() {
+// init
+func init() {
 	Engine = gin.Default()
 
 	// Swagger文档
@@ -80,8 +80,7 @@ func InitEngine() {
 			// 列出指定部门子树
 			dr.GET("/:department_id/tree", h.ListDepartmentTree)
 			// 以树结构列出所有部门
-			// 真实URI = "/v1/auth/departments/tree"
-			dr.GET("/:department_id", m.Dispatch("/v1/auth/departments/tree"), h.ListDepartmentsTree)
+			dr.GET("/tree", h.ListDepartmentsTree)
 
 			// 添加部门至角色
 			dr.POST("/:department_id/users", m.MustRole(conf.Config.AdminRoleName), h.AddUser2Department)

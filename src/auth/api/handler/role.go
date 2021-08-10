@@ -32,7 +32,7 @@ func NewRole(c *gin.Context) {
 
 	r := model.NewRole(role.Name)
 	if r == nil {
-		resp := msg.ErrDatabase.GenResponse("Error when NewRole.")
+		resp := msg.ErrDatabase.GenResponse("Error in model.NewRole.")
 		log.Error(resp.String())
 		resp.Write(c)
 		return
@@ -61,7 +61,7 @@ func RemoveRole(c *gin.Context) {
 	}
 
 	if ok := model.RemoveRole(roleId); !ok {
-		resp := msg.ErrDatabase.GenResponse("Error when RemoveRole.")
+		resp := msg.ErrDatabase.GenResponse("Error in model.RemoveRole.")
 		log.Error(resp.String())
 		resp.Write(c)
 		return
@@ -104,7 +104,7 @@ func SetRole(c *gin.Context) {
 
 	role, ok := model.SetRole(roleId, roleFm.Name)
 	if !ok {
-		resp := msg.ErrDatabase.GenResponse("Error when SetRole.")
+		resp := msg.ErrDatabase.GenResponse("Error in model.SetRole.")
 		log.Error(resp.String())
 		resp.Write(c)
 		return
@@ -139,7 +139,7 @@ func ListRoles(c *gin.Context) {
 		c.GetStringSlice("OrderBy")...,
 	)
 	if !ok {
-		resp := msg.ErrDatabase.GenResponse("Error when PageListRoles.")
+		resp := msg.ErrDatabase.GenResponse("Error in model.PageListRoles.")
 		log.Error(resp.String())
 		resp.Write(c)
 		return
@@ -181,7 +181,7 @@ func AddUser2Role(c *gin.Context) {
 	}
 
 	if !model.AddRoleUser(uRole.UserId, roleId) {
-		resp := msg.ErrDatabase.GenResponse("Error when AddRoleUser.")
+		resp := msg.ErrDatabase.GenResponse("Error in model.AddRoleUser.")
 		log.Error(resp.String())
 		resp.Write(c)
 		return
@@ -221,7 +221,7 @@ func RemoveRoleUser(c *gin.Context) {
 	}
 
 	if !model.RemoveRoleUser(userId, roleId) {
-		resp := msg.ErrDatabase.GenResponse("Error when RemoveRoleUser.")
+		resp := msg.ErrDatabase.GenResponse("Error in model.RemoveRoleUser.")
 		log.Error(resp.String())
 		resp.Write(c)
 		return
@@ -252,7 +252,7 @@ func ListRoleUsers(c *gin.Context) {
 
 	u, ok := model.ListRoleUsers(roleId)
 	if !ok {
-		resp := msg.ErrDatabase.GenResponse("Error when ListUsers")
+		resp := msg.ErrDatabase.GenResponse("Error in model.ListUsers")
 		log.Error(resp.String())
 		resp.Write(c)
 		return

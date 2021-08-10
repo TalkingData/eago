@@ -41,7 +41,7 @@ func CallTask(c *gin.Context) {
 
 	tObj, ok := model.GetTask(model.Query{"id=?": taskId, "disabled=?": false})
 	if !ok {
-		resp := msg.ErrDatabase.GenResponse("Error when GetTask.")
+		resp := msg.ErrDatabase.GenResponse("Error in model.GetTask.")
 		log.Error(resp.String())
 		resp.Write(c)
 		return
@@ -90,7 +90,7 @@ func NewTask(c *gin.Context) {
 	tc := c.GetStringMap("TokenContent")
 	t := model.NewTask(task.Disabled, task.Category, task.Codename, *task.Description, task.Arguments, tc["Username"].(string))
 	if t == nil {
-		resp := msg.ErrDatabase.GenResponse("Error when NewTask.")
+		resp := msg.ErrDatabase.GenResponse("Error in model.NewTask.")
 		log.Error(resp.String())
 		resp.Write(c)
 		return
@@ -119,7 +119,7 @@ func RemoveTask(c *gin.Context) {
 	}
 
 	if ok := model.RemoveTask(taskId); !ok {
-		resp := msg.ErrDatabase.GenResponse("Error when model.RemoveTask.")
+		resp := msg.ErrDatabase.GenResponse("Error in model.model.RemoveTask.")
 		log.Error(resp.String())
 		resp.Write(c)
 		return
@@ -198,7 +198,7 @@ func ListTasks(c *gin.Context) {
 		c.GetStringSlice("OrderBy")...,
 	)
 	if !ok {
-		resp := msg.ErrDatabase.GenResponse("Error when PageListTasks.")
+		resp := msg.ErrDatabase.GenResponse("Error in model.PageListTasks.")
 		log.Error(resp.String())
 		resp.Write(c)
 		return

@@ -2,7 +2,7 @@ package main
 
 import (
 	"eago/common/log"
-	"eago/task/api/router"
+	"eago/common/orm"
 	"eago/task/cli"
 	"eago/task/conf"
 	"eago/task/model"
@@ -10,20 +10,23 @@ import (
 	"github.com/micro/go-micro/v2/registry"
 	"github.com/micro/go-micro/v2/web"
 	"github.com/micro/go-plugins/registry/etcdv3/v2"
-	"github.com/sirupsen/logrus"
+	"os"
+	"os/signal"
 	"runtime"
+	"syscall"
 )
 
 func main() {
 	// 初始化DAO
-	if err := model.InitDb(); err != nil {
-		log.Error(err.Error())
-		panic(err)
-	}
+	model.SetDb(orm.InitMysql(
+		conf.Config.MysqlAddress,
+		conf.Config.MysqlUser,
+		conf.Config.MysqlPassword,
+		conf.Config.MysqlDbName,
+	))
 
 	cli.InitAuthCli()
 	cli.InitTaskCli()
-	router.InitEngine()
 
 	etcdReg := etcdv3.NewRegistry(
 		registry.Addrs(conf.Config.EtcdAddresses...),
@@ -32,32 +35,54 @@ func main() {
 	apiV1 := web.NewService(
 		web.Name(conf.API_SERVICE_NAME),
 		web.Registry(etcdReg),
-		web.Handler(router.Engine),
+		web.Handler(Engine),
 		web.Version("v1"),
 	)
 
 	// 初始化WorkerCli
 	cli.InitWorkerCli()
 
-	if err := apiV1.Run(); err != nil {
-		log.Error(err.Error())
-		panic(err)
+	e := make(chan error)
+	go func() {
+		e <- apiV1.Run()
+	}()
+
+	// 等待退出信号
+	quit := make(chan os.Signal)
+	signal.Notify(quit, syscall.SIGKILL, syscall.SIGQUIT, syscall.SIGINT, syscall.SIGTERM, os.Interrupt, os.Kill)
+
+	for {
+		select {
+		case err := <-e:
+			log.ErrorWithFields(log.Fields{
+				"error": err.Error(),
+			}, "Error when apiV1.Run.")
+			closeAll()
+			return
+		case sig := <-quit:
+			log.InfoWithFields(log.Fields{
+				"signal": sig.String(),
+			}, "Got quit signal.")
+			closeAll()
+			return
+		}
 	}
+}
+
+// closeAll 关闭全部
+func closeAll() {
+	orm.Close()
+	log.Close()
 }
 
 func init() {
 	runtime.GOMAXPROCS(runtime.NumCPU())
 
-	logLvl, err := logrus.ParseLevel(conf.Config.LogLevel)
-	if err != nil {
-		panic(err)
-	}
 	// 加载日志设置
-	err = log.InitLog(
+	err := log.InitLog(
 		conf.Config.LogPath,
 		conf.MODULAR_NAME,
-		conf.TIMESTAMP_FORMAT,
-		logLvl,
+		conf.Config.LogLevel,
 	)
 	if err != nil {
 		fmt.Println("Failed to init logging, error:", err.Error())

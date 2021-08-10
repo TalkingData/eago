@@ -8,39 +8,52 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
+)
+
+const (
+	LOG_DATA_SEPARATOR = "; "
 )
 
 var (
 	logger    *logrus.Logger
 	skipFiles int = 2
+	fw        *lumberjack.Logger
 )
 
 type Fields logrus.Fields
 
 // InitLog 初始化log
-func InitLog(logPath, srvName, timestampFormatter string, lvl logrus.Level) error {
+func InitLog(path, srvName, level string) error {
 	logger = logrus.New()
 
-	logPathName := filepath.Join(logPath, srvName+".log")
+	logPathName := filepath.Join(path, srvName+".log")
 
-	fw := &lumberjack.Logger{
+	fw = &lumberjack.Logger{
 		Filename:  logPathName,
 		LocalTime: true,
-		MaxSize:   20,
-		MaxAge:    31,
+		MaxSize:   10,
+		MaxAge:    3,
 	}
 	logger.SetOutput(io.MultiWriter(os.Stdout, fw))
 
-	formatter := &logrus.JSONFormatter{}
-	formatter.TimestampFormat = timestampFormatter
-	logger.SetFormatter(formatter)
+	logger.SetFormatter(&logrus.JSONFormatter{
+		TimestampFormat: "2006-01-02 15:04:05",
+	})
 
-	logger.SetLevel(lvl)
+	logLvl, err := logrus.ParseLevel(level)
+	if err != nil {
+		panic(err)
+	}
+	logger.SetLevel(logLvl)
 	return nil
 }
 
-func SetSkipFiles(skip int) {
-	skipFiles = skip
+func Close() {
+	if fw == nil {
+		return
+	}
+	_ = fw.Close()
 }
 
 // Debug
@@ -55,7 +68,7 @@ func Debug(args ...interface{}) {
 // DebugWithFields
 func DebugWithFields(f Fields, args ...interface{}) {
 	if logger.Level >= logrus.DebugLevel {
-		entry := logger.WithFields(logrus.Fields(f))
+		entry := logger.WithFields(f.RusFields())
 		entry.Data["file"] = fileInfo(skipFiles)
 		entry.Debug(args...)
 	}
@@ -73,7 +86,7 @@ func Info(args ...interface{}) {
 // InfoWithFields
 func InfoWithFields(f Fields, args ...interface{}) {
 	if logger.Level >= logrus.InfoLevel {
-		entry := logger.WithFields(logrus.Fields(f))
+		entry := logger.WithFields(f.RusFields())
 		entry.Data["file"] = fileInfo(skipFiles)
 		entry.Info(args...)
 	}
@@ -91,7 +104,7 @@ func Warn(args ...interface{}) {
 // WarnWithFields
 func WarnWithFields(f Fields, args ...interface{}) {
 	if logger.Level >= logrus.WarnLevel {
-		entry := logger.WithFields(logrus.Fields(f))
+		entry := logger.WithFields(f.RusFields())
 		entry.Data["file"] = fileInfo(skipFiles)
 		entry.Warn(args...)
 	}
@@ -109,7 +122,7 @@ func Error(args ...interface{}) {
 // ErrorWithFields
 func ErrorWithFields(f Fields, args ...interface{}) {
 	if logger.Level >= logrus.ErrorLevel {
-		entry := logger.WithFields(logrus.Fields(f))
+		entry := logger.WithFields(f.RusFields())
 		entry.Data["file"] = fileInfo(skipFiles)
 		entry.Error(args...)
 	}
@@ -127,10 +140,24 @@ func Fatal(args ...interface{}) {
 // FatalWithFields
 func FatalWithFields(f Fields, args ...interface{}) {
 	if logger.Level >= logrus.FatalLevel {
-		entry := logger.WithFields(logrus.Fields(f))
+		entry := logger.WithFields(f.RusFields())
 		entry.Data["file"] = fileInfo(skipFiles)
 		entry.Fatal(args...)
 	}
+}
+
+// Panic
+func Panic(args ...interface{}) {
+	entry := logger.WithFields(logrus.Fields{})
+	entry.Data["file"] = fileInfo(skipFiles)
+	entry.Panic(args...)
+}
+
+// PanicWithFields
+func PanicWithFields(f Fields, args ...interface{}) {
+	entry := logger.WithFields(f.RusFields())
+	entry.Data["file"] = fileInfo(skipFiles)
+	entry.Panic(args...)
 }
 
 func fileInfo(skip int) string {
@@ -140,4 +167,33 @@ func fileInfo(skip int) string {
 		line = -1
 	}
 	return fmt.Sprintf("%s:%d", file, line)
+}
+
+// String 将logger.Fields转换为字符串形式
+func (f Fields) String() string {
+	data := []string{}
+	for k, v := range f {
+		data = append(data, fmt.Sprintf("%s=%v", k, v))
+	}
+
+	return strings.Join(data, LOG_DATA_SEPARATOR)
+}
+
+// 将logger.Fields转换为logrus.Fields
+func (f Fields) RusFields() logrus.Fields {
+	res := logrus.Fields{}
+
+	if f["error"] != nil {
+		res["error"] = f["error"]
+		delete(f, "error")
+	}
+
+	if f["trace_id"] != nil {
+		res["trace_id"] = f["trace_id"]
+		delete(f, "trace_id")
+	}
+
+	res["data"] = f.String()
+
+	return res
 }

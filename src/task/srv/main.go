@@ -2,6 +2,8 @@ package main
 
 import (
 	"eago/common/log"
+	"eago/common/orm"
+	"eago/common/redis"
 	"eago/task/cli"
 	"eago/task/conf"
 	"eago/task/model"
@@ -10,18 +12,22 @@ import (
 	"github.com/micro/go-micro/v2"
 	"github.com/micro/go-micro/v2/registry"
 	"github.com/micro/go-plugins/registry/etcdv3/v2"
-	"github.com/sirupsen/logrus"
+	"os"
+	"os/signal"
 	"runtime"
+	"syscall"
 )
 
 type TaskService struct{}
 
 func main() {
 	// 初始化DAO
-	if err := model.InitDb(); err != nil {
-		log.Error(err.Error())
-		panic(err)
-	}
+	model.SetDb(orm.InitMysql(
+		conf.Config.MysqlAddress,
+		conf.Config.MysqlUser,
+		conf.Config.MysqlPassword,
+		conf.Config.MysqlDbName,
+	))
 
 	etcdReg := etcdv3.NewRegistry(
 		registry.Addrs(conf.Config.EtcdAddresses...),
@@ -37,25 +43,47 @@ func main() {
 
 	cli.InitWorkerCli()
 
-	if err := srv.Run(); err != nil {
-		log.Error(err.Error())
-		panic(err)
+	e := make(chan error)
+	go func() {
+		e <- srv.Run()
+	}()
+
+	// 等待退出信号
+	quit := make(chan os.Signal)
+	signal.Notify(quit, syscall.SIGKILL, syscall.SIGQUIT, syscall.SIGINT, syscall.SIGTERM, os.Interrupt, os.Kill)
+
+	for {
+		select {
+		case err := <-e:
+			log.ErrorWithFields(log.Fields{
+				"error": err.Error(),
+			}, "Error when srv.Run.")
+			closeAll()
+			return
+		case sig := <-quit:
+			log.InfoWithFields(log.Fields{
+				"signal": sig.String(),
+			}, "Got quit signal.")
+			closeAll()
+			return
+		}
 	}
+}
+
+// closeAll 关闭全部
+func closeAll() {
+	redis.Close()
+	log.Close()
 }
 
 func init() {
 	runtime.GOMAXPROCS(runtime.NumCPU())
 
-	logLvl, err := logrus.ParseLevel(conf.Config.LogLevel)
-	if err != nil {
-		panic(err)
-	}
 	// 加载日志设置
-	err = log.InitLog(
+	err := log.InitLog(
 		conf.Config.LogPath,
 		conf.MODULAR_NAME,
-		conf.TIMESTAMP_FORMAT,
-		logLvl,
+		conf.Config.LogLevel,
 	)
 	if err != nil {
 		fmt.Println("Failed to init logging, error:", err.Error())

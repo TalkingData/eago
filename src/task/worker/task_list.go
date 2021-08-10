@@ -21,7 +21,7 @@ func (t *taskList) Del(k string) {
 	delete(t.data, k)
 }
 
-// Get 获取单个数据
+// CopyGet 获取单个数据
 func (t *taskList) CopyGet(k string) Task {
 	t.mu.RLock()
 	defer t.mu.RUnlock()

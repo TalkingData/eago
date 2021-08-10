@@ -15,9 +15,6 @@ const (
 )
 
 const (
-	WORKER_PORT_MIN = 40000
-	WORKER_PORT_MAX = 50000
-
 	WORKER_LOGGER_BUFFER_SIZE = 100
 	WORKER_REGISTER_TTL       = 3
 )
@@ -46,6 +43,6 @@ type WorkerInfo struct {
 }
 
 type WorkerResponse struct {
-	Code    int64  `json:"code"`
+	Ok      bool   `json:"ok"`
 	Message string `json:"message"`
 }

@@ -37,7 +37,7 @@ func NewGroup(name, description string) *Group {
 			"name":        name,
 			"description": description,
 			"error":       res.Error.Error(),
-		}, ".Error in model.New.")
+		}, "Error in model.New.")
 		return nil
 	}
 
@@ -51,7 +51,7 @@ func RemoveGroup(groupId int) bool {
 		log.ErrorWithFields(log.Fields{
 			"id":    groupId,
 			"error": res.Error.Error(),
-		}, ".Error in model.RemoveGroup.")
+		}, "Error in model.RemoveGroup.")
 		return false
 	}
 
@@ -73,7 +73,7 @@ func SetGroup(id int, name, description string) (*Group, bool) {
 		log.ErrorWithFields(log.Fields{
 			"id":    id,
 			"error": res.Error.Error(),
-		}, ".Error in model.SetGroup.")
+		}, "Error in model.SetGroup.")
 		return nil, false
 	}
 
@@ -99,7 +99,7 @@ func ListGroups(query Query) (*[]Group, bool) {
 		log.ErrorWithFields(log.Fields{
 			"query": fmt.Sprintf("%v", query),
 			"error": res.Error.Error(),
-		}, ".Error in model.ListGroups.")
+		}, "Error in model.ListGroups.")
 		return nil, false
 	}
 
@@ -124,7 +124,7 @@ func PagedListGroups(query Query, page, pageSize int, orderBy ...string) (*pagin
 		log.ErrorWithFields(log.Fields{
 			"query": query,
 			"error": err.Error(),
-		}, ".Error in model.PagedListGroups.")
+		}, "Error in model.PagedListGroups.")
 		return nil, false
 	}
 
@@ -146,7 +146,7 @@ func AddGroupUser(userId, groupId int, isOwner bool) bool {
 			"is_owner":  isOwner,
 			"joined_at": gp.JoinedAt,
 			"error":     res.Error.Error(),
-		}, ".Error in model.AddGroupUser.")
+		}, "Error in model.AddGroupUser.")
 		return false
 	}
 
@@ -161,7 +161,7 @@ func RemoveGroupUser(userId, groupId int) bool {
 			"user_id":  userId,
 			"group_id": groupId,
 			"error":    res.Error.Error(),
-		}, ".Error in model.RemoveGroupUser.")
+		}, "Error in model.RemoveGroupUser.")
 		return false
 	}
 
@@ -179,7 +179,7 @@ func SetGroupUserIsOwner(userId, groupId int, isOwner bool) bool {
 			"group_id": groupId,
 			"is_owner": isOwner,
 			"error":    res.Error.Error(),
-		}, ".Error in model.SetGroupUserIsOwner.")
+		}, "Error in model.SetGroupUserIsOwner.")
 		return false
 	}
 
@@ -207,7 +207,7 @@ func ListGroupUsers(groupId int, query Query) (*[]memberUser, bool) {
 		}
 		log.ErrorWithFields(log.Fields{
 			"error": res.Error.Error(),
-		}, ".Error in model.ListGroupUsers.")
+		}, "Error in model.ListGroupUsers.")
 		return nil, false
 	}
 

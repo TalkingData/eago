@@ -167,6 +167,45 @@ var doc = `{
                 }
             }
         },
+        "/results/{result_partition_id}/{result_id}": {
+            "delete": {
+                "tags": [
+                    "结果"
+                ],
+                "summary": "手动结束任务",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Token",
+                        "name": "token",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "结果分区ID",
+                        "name": "result_partition_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "结果ID",
+                        "name": "result_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{\"code\":0,\"message\":\"Success\"}",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
         "/tasks": {
             "get": {
                 "tags": [

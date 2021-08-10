@@ -7,7 +7,6 @@ import (
 	"eago/common/log"
 	"eago/common/redis"
 	"fmt"
-	"github.com/sirupsen/logrus"
 	"runtime"
 	"testing"
 )
@@ -38,7 +37,6 @@ func init() {
 		conf.Config.LogPath,
 		conf.MODULAR_NAME,
 		conf.TIMESTAMP_FORMAT,
-		logrus.DebugLevel,
 	)
 	if err != nil {
 		fmt.Println("Failed to init logging, error:", err.Error())

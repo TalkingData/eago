@@ -8,7 +8,6 @@ import (
 	"eago/task/srv/local"
 	task "eago/task/srv/proto"
 	"eago/task/worker"
-	"errors"
 	"fmt"
 	"io"
 )
@@ -24,9 +23,8 @@ func (ts *TaskService) ListTasks(ctx context.Context, req *task.Empty, rsp *task
 	objs, ok := model.ListTasks(model.Query{"Disabled": 0})
 	if !ok {
 		m := msg.ErrDatabase.SetDetail("GetUser object failed.")
-		err := errors.New(m.String())
 		log.Error(m.String())
-		return err
+		return m.Error()
 	}
 
 	for _, obj := range *objs {
@@ -34,7 +32,7 @@ func (ts *TaskService) ListTasks(ctx context.Context, req *task.Empty, rsp *task
 			Id:          int32(obj.Id),
 			Codename:    obj.Codename,
 			Arguments:   obj.Arguments,
-			Description: obj.Description,
+			Description: *obj.Description,
 		}
 		tasks = append(tasks, &t)
 	}
@@ -55,7 +53,7 @@ func (ts *TaskService) CallTask(ctx context.Context, req *task.CallTaskReq, rsp 
 			"arguments":     req.Arguments,
 			"timeout":       req.Timeout,
 			"caller":        req.Caller,
-		}, "Error in local.CallTask")
+		}, "Error when TaskService.AppendTaskLog called, in local.CallTask")
 		return err
 	}
 
@@ -78,30 +76,28 @@ func (ts *TaskService) SetTaskStatus(ctx context.Context, req *task.SetTaskStatu
 		log.ErrorWithFields(log.Fields{
 			"task_unique_id": req.TaskUniqueId,
 			"error":          err.Error(),
-		}, "Error in local.TaskUniqueIdDecode.")
+		}, "Error when TaskService.AppendTaskLog called, in local.TaskUniqueIdDecode.")
 		return err
 	}
 
 	// 取数据库中任务结果记录
 	obj, ok := model.GetResult(p, id)
 	if !ok {
-		m := msg.ErrDatabase.SetDetail("Error in model.GetResult.")
-		err := errors.New(m.String())
+		m := msg.ErrDatabase.SetDetail("Error when TaskService.AppendTaskLog called, in model.GetResult.")
 		log.ErrorWithFields(log.Fields{
 			"partition": p,
 			"result_id": id,
 		}, m.String())
-		return err
+		return m.Error()
 	}
 	// 找不到数据的处理
 	if obj == nil {
 		m := msg.WarnNotFound.SetDetail("Result object not found.")
-		err := errors.New(m.String())
 		log.ErrorWithFields(log.Fields{
 			"partition": p,
 			"result_id": id,
 		}, m.String())
-		return err
+		return m.Error()
 	}
 
 	// 判断任务记录，无法结束不是在执行的状态就，返回错误
@@ -111,7 +107,7 @@ func (ts *TaskService) SetTaskStatus(ctx context.Context, req *task.SetTaskStatu
 			"partition": p,
 			"result_id": id,
 			"error":     err.Error(),
-		}, "Error in check result status.")
+		}, "Error when TaskService.AppendTaskLog called, in check result status.")
 		return err
 	}
 
@@ -122,13 +118,12 @@ func (ts *TaskService) SetTaskStatus(ctx context.Context, req *task.SetTaskStatu
 	}
 	ok = model.SetResultStatus(p, id, int(req.Status), end)
 	if !ok {
-		m := msg.ErrDatabase.SetDetail("Error in model.SetResultStatus.")
-		err := errors.New(m.String())
+		m := msg.ErrDatabase.SetDetail("Error when TaskService.AppendTaskLog called, in model.SetResultStatus.")
 		log.ErrorWithFields(log.Fields{
 			"partition": p,
 			"result_id": id,
 		}, m.String())
-		return err
+		return m.Error()
 	}
 
 	log.DebugWithFields(log.Fields{
@@ -155,7 +150,7 @@ func (ts *TaskService) AppendTaskLog(ctx context.Context, stream task.TaskServic
 		if err != nil {
 			log.ErrorWithFields(log.Fields{
 				"error": err.Error(),
-			}, "Error in stream.Recv.")
+			}, "Error when TaskService.AppendTaskLog called, in stream.Recv.")
 			return err
 		}
 		// 新增Log
@@ -163,7 +158,7 @@ func (ts *TaskService) AppendTaskLog(ctx context.Context, stream task.TaskServic
 			log.ErrorWithFields(log.Fields{
 				"task_unique_id": tlq.TaskUniqueId,
 				"error":          err.Error(),
-			}, "Error in local.NewLog.")
+			}, "Error when TaskService.AppendTaskLog called, in local.NewLog.")
 			return err
 		}
 
@@ -172,7 +167,7 @@ func (ts *TaskService) AppendTaskLog(ctx context.Context, stream task.TaskServic
 			log.ErrorWithFields(log.Fields{
 				"task_unique_id": tlq.TaskUniqueId,
 				"error":          err.Error(),
-			}, "Error in stream.Send.")
+			}, "Error when TaskService.AppendTaskLog called, in stream.Send.")
 			return err
 		}
 
@@ -180,7 +175,7 @@ func (ts *TaskService) AppendTaskLog(ctx context.Context, stream task.TaskServic
 	if err := stream.Close(); err != nil {
 		log.ErrorWithFields(log.Fields{
 			"error": err.Error(),
-		}, "Error in stream.Close.")
+		}, "Error when TaskService.AppendTaskLog called, in stream.Close.")
 		return err
 	}
 

@@ -106,7 +106,7 @@ func NewResultPartitionWithCreateTables(partition string) *ResultPartition {
 			"action":    "RenameTable",
 			"table":     "Logs",
 			"error":     err.Error(),
-		}, "Error in model.New.")
+		}, "Error in model.NewResultPartitionWithCreateTables.")
 		return nil
 	}
 
@@ -142,8 +142,8 @@ func GetResultPartition(query Query) (*ResultPartition, bool) {
 	return &rt, true
 }
 
-// GetResultPartitionTableSuffix 获得结果分区名
-func GetResultPartitionTableSuffix(id int) (string, bool) {
+// GetResultPartitionsPartition 获得结果分区名
+func GetResultPartitionsPartition(id int) (string, bool) {
 	rt, ok := GetResultPartition(Query{"id=?": id})
 	if ok && rt != nil {
 

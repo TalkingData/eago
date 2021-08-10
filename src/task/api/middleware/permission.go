@@ -2,11 +2,11 @@ package middleware
 
 import (
 	"context"
+	auth "eago/auth/srv/proto"
 	"eago/common/log"
 	"eago/common/utils"
 	"eago/task/cli"
 	"eago/task/conf/msg"
-	"eago/task/srv/proto/auth"
 	"github.com/gin-gonic/gin"
 )
 
@@ -35,11 +35,10 @@ func MustLogin() gin.HandlerFunc {
 		}
 
 		c.Set("TokenContent", map[string]interface{}{
-			"UserId":   tc.UserId,
-			"Username": tc.Username,
-			"Phone":    tc.Phone,
-
-			"UserIsSuperuser": tc.IsSuperuser,
+			"UserId":      tc.UserId,
+			"Username":    tc.Username,
+			"Phone":       tc.Phone,
+			"IsSuperuser": tc.IsSuperuser,
 
 			"Department":  tc.Department,
 			"Roles":       tc.Roles,
@@ -64,7 +63,7 @@ func isRoleHandler(c *gin.Context, role string) {
 	roles := tc["Roles"].([]string)
 
 	// 超级用户拥有所有权限，跳过判断
-	if tc["UserIsSuperuser"].(bool) {
+	if tc["IsSuperuser"].(bool) {
 		return
 	}
 
@@ -75,7 +74,7 @@ func isRoleHandler(c *gin.Context, role string) {
 		log.ErrorWithFields(log.Fields{
 			"user_id":       tc["UserId"].(int32),
 			"username":      tc["Username"].(string),
-			"is_superuser":  tc["UserIsSuperuser"].(bool),
+			"is_superuser":  tc["IsSuperuser"].(bool),
 			"roles":         tc["Roles"].([]string),
 			"role_required": role,
 			"error":         err.Error(),
@@ -87,7 +86,7 @@ func isRoleHandler(c *gin.Context, role string) {
 		log.WarnWithFields(log.Fields{
 			"user_id":       tc["UserId"].(int32),
 			"username":      tc["Username"].(string),
-			"is_superuser":  tc["UserIsSuperuser"].(bool),
+			"is_superuser":  tc["IsSuperuser"].(bool),
 			"roles":         tc["Roles"].([]string),
 			"role_required": role,
 		}, resp.String())

@@ -12,9 +12,9 @@ import (
 	"github.com/micro/go-micro/v2/registry"
 	"github.com/micro/go-plugins/registry/etcdv3/v2"
 	uuid "github.com/satori/go.uuid"
-	"io/ioutil"
 	"net"
-	"net/http"
+	"net/rpc"
+	"net/rpc/jsonrpc"
 	"os"
 	"os/signal"
 	"sync"
@@ -25,8 +25,6 @@ import (
 type Worker interface {
 	RegTask(codename string, fn TaskFunc)
 
-	//// Init 初始化Worker
-	//Init()
 	// Start 启动Worker服务
 	Start() error
 	// Stop 关闭Worker服务
@@ -36,7 +34,7 @@ type Worker interface {
 // NewWorker 创建Worker
 func NewWorker(opts ...Option) Worker {
 	w := newWorker(opts...)
-	w.Init()
+	w.init()
 	return w
 }
 
@@ -50,7 +48,8 @@ func newWorker(opts ...Option) *worker {
 type worker struct {
 	workerId string
 
-	workerIpPort string
+	endpoint string
+	listener net.Listener
 
 	taskList *taskList
 	runList  *taskList
@@ -101,11 +100,11 @@ func (w *worker) callTask(req *CallTaskReq) {
 	}
 
 	task := w.taskList.CopyGet(req.TaskCodename)
-	cxt := context.Background()
+	ctx := context.Background()
 	if req.Timeout > 0 {
-		task.Cxt, task.Cancel = context.WithTimeout(cxt, time.Duration(req.Timeout)*time.Second)
+		task.Cxt, task.Cancel = context.WithTimeout(ctx, time.Duration(req.Timeout)*time.Second)
 	} else {
-		task.Cxt, task.Cancel = context.WithCancel(cxt)
+		task.Cxt, task.Cancel = context.WithCancel(ctx)
 	}
 
 	task.logger = NewLogger(w.opts.LogBufferSize)
@@ -294,25 +293,43 @@ func (w *worker) RegTask(codename string, fn TaskFunc) {
 
 // Start 启动Worker
 func (w *worker) Start() error {
-	// 创建路由
-	mux := http.NewServeMux()
-	// 设置路由规则
-	mux.HandleFunc("/call", w.callTaskHandler)
-	mux.HandleFunc("/kill", w.killTaskHandler)
-
-	// 创建服务器
-	server := &http.Server{
-		WriteTimeout: time.Second * 3,
-		Handler:      mux,
+	err := rpc.Register(&WorkerService{wk: w})
+	if err != nil {
+		log.ErrorWithFields(log.Fields{
+			"error": err.Error(),
+		}, "Error on worker rpc.Register.")
+		return err
 	}
-	go func() {
-		listener, _ := net.Listen("tcp", fmt.Sprintf("%s:0", w.opts.WorkerIp))
-		w.workerIpPort = listener.Addr().String()
 
-		log.Info(fmt.Sprintf("Worker %s starting at %s", w.workerId, w.workerIpPort))
-		w.register()
-		_ = server.Serve(listener)
+	// 开启RPC监听端口
+	w.listener, err = net.Listen("tcp", fmt.Sprintf("%s:0", w.opts.WorkerIp))
+	if err != nil {
+		log.ErrorWithFields(log.Fields{
+			"error": err.Error(),
+		}, "Error on worker net.Listen.")
+		return err
+	}
+
+	// 设置当前Worker的IP和端口(endpoint)信息
+	w.endpoint = w.listener.Addr().String()
+	log.Info(fmt.Sprintf("Worker %s starting at %s", w.workerId, w.endpoint))
+
+	go func() {
+		for {
+			conn, err := w.listener.Accept()
+			if err != nil {
+				log.ErrorWithFields(log.Fields{
+					"error": err.Error(),
+				}, "Error on worker w.listener.Accept.")
+				continue
+			}
+			// 处理实际请求
+			go jsonrpc.ServeConn(conn)
+		}
 	}()
+
+	// 向注册中心注册Worker
+	w.register()
 
 	// 等待退出信号
 	quit := make(chan os.Signal)
@@ -322,8 +339,8 @@ func (w *worker) Start() error {
 	return nil
 }
 
-// Init 初始化Worker
-func (w *worker) Init() {
+// init 初始化Worker
+func (w *worker) init() {
 	// 生成WorkerId
 	w.workerId = fmt.Sprintf("%s.worker-%s", w.opts.Modular, uuid.NewV4().String())
 
@@ -363,7 +380,9 @@ func (w *worker) Stop() {
 	// 等待所有任务结束
 
 	w.unregister()
+
 	_ = w.etcdCli.Close()
+	_ = w.listener.Close()
 }
 
 // register
@@ -386,7 +405,7 @@ func (w *worker) register() {
 	regK := fmt.Sprintf("%s/%s/%s", WORKER_REGISTER_KEY_PREFFIX, w.opts.Modular, w.workerId)
 	regV, _ := json.Marshal(WorkerInfo{
 		Modular:   w.opts.Modular,
-		Address:   w.workerIpPort,
+		Address:   w.endpoint,
 		WorkerId:  w.workerId,
 		StartTime: time.Now().Format("2006-01-02 15:04:05"),
 	})
@@ -434,50 +453,4 @@ func (w *worker) unregister() {
 	}
 
 	w.startTime = nil
-}
-
-// callTaskHandler
-func (w *worker) callTaskHandler(writer http.ResponseWriter, req *http.Request) {
-	r, _ := ioutil.ReadAll(req.Body)
-
-	callTaskReq := &CallTaskReq{}
-	err := json.Unmarshal(r, callTaskReq)
-	if err != nil {
-		log.ErrorWithFields(log.Fields{
-			"worker_id": w.workerId,
-		}, "Error in unmarshal params")
-		_, _ = writer.Write(WriteResponse(500, "Error in Pares params"))
-		return
-	}
-
-	log.InfoWithFields(log.Fields{
-		"worker_id":      w.workerId,
-		"task_codename":  callTaskReq.TaskCodename,
-		"task_unique_id": callTaskReq.TaskUniqueId,
-		"caller":         callTaskReq.Caller,
-	}, "Got a call task request.")
-	w.callTask(callTaskReq)
-	_, _ = writer.Write(WriteResponse(0, "Ok!"))
-}
-
-// killTaskHandler
-func (w *worker) killTaskHandler(writer http.ResponseWriter, req *http.Request) {
-	r, _ := ioutil.ReadAll(req.Body)
-
-	killTaskReq := &KillTaskReq{}
-	err := json.Unmarshal(r, killTaskReq)
-	if err != nil {
-		log.ErrorWithFields(log.Fields{
-			"worker_id": w.workerId,
-		}, "Error in unmarshal params")
-		_, _ = writer.Write(WriteResponse(500, "Error in Pares params"))
-		return
-	}
-
-	log.InfoWithFields(log.Fields{
-		"worker_id":      w.workerId,
-		"task_unique_id": killTaskReq.TaskUniqueId,
-	}, "Got a kill task request.")
-	w.killTask(killTaskReq.TaskUniqueId)
-	_, _ = writer.Write(WriteResponse(0, "Ok!"))
 }

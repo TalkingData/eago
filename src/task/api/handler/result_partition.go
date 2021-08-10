@@ -26,7 +26,7 @@ func NewResultPartitionsWithCreateTables(c *gin.Context) {
 
 	rp := model.NewResultPartitionWithCreateTables(rpForm.Partition)
 	if rp == nil {
-		resp := msg.ErrDatabase.GenResponse("Error when NewResultPartitionWithCreateTables.")
+		resp := msg.ErrDatabase.GenResponse("Error in model.NewResultPartitionWithCreateTables.")
 		log.Error(resp.String())
 		resp.Write(c)
 		return
@@ -55,7 +55,7 @@ func ListResultPartitions(c *gin.Context) {
 
 	rp, ok := model.ListResultPartitions(query)
 	if !ok {
-		resp := msg.ErrDatabase.GenResponse("Error when ListResultPartitions.")
+		resp := msg.ErrDatabase.GenResponse("Error in model.ListResultPartitions.")
 		log.Error(resp.String())
 		resp.Write(c)
 		return

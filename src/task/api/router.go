@@ -1,4 +1,4 @@
-package router
+package main
 
 import (
 	"eago/common/api-suite/handler"
@@ -14,8 +14,8 @@ import (
 
 var Engine *gin.Engine
 
-// InitEngine
-func InitEngine() {
+// init
+func init() {
 	Engine = gin.Default()
 
 	// Swagger文档
@@ -49,7 +49,7 @@ func InitEngine() {
 		{
 			// 仅测试用，不对外开放的方法
 			// 新建结果分区并建立结果表和日志表
-			rpr.POST("/with_create_tables", m.MustRole("task_admin"), h.NewResultPartitionsWithCreateTables)
+			rpr.POST("/with_create_tables", m.MustRole(conf.ADMIN_ROLE_NAME), h.NewResultPartitionsWithCreateTables)
 
 			// 列出所有结果分区
 			rpr.GET("", h.ListResultPartitions)
@@ -60,6 +60,8 @@ func InitEngine() {
 		{
 			// 按分区ID列出所有结果
 			rr.GET("/:result_partition_id", pg.ListPageHelper(), h.ListResults)
+			// 手动结束任务
+			rr.DELETE("/:result_partition_id/:result_id", m.MustRole(conf.ADMIN_ROLE_NAME), h.KillTask)
 		}
 
 		// Log模块

@@ -62,8 +62,7 @@ func GetTokenContent(c *gin.Context) {
 	content["user_id"] = tc["UserId"]
 	content["username"] = tc["Username"].(string)
 	content["phone"] = tc["Phone"].(string)
-
-	content["is_superuser"] = tc["UserIsSuperuser"].(bool)
+	content["is_superuser"] = tc["IsSuperuser"].(bool)
 
 	content["department"] = tc["Department"].(*[]string)
 	content["roles"] = tc["Roles"].(*[]string)
@@ -99,7 +98,7 @@ func IamLogin(c *gin.Context) {
 		log.DebugWithFields(log.Fields{
 			"response_status_code": iamResp.StatusCode,
 			"response_body":        iamResp.Body,
-		}, "Got iam response")
+		}, "Got iam response.")
 
 		if iamResp.StatusCode == 200 {
 			log.Debug("Iam login success.")

@@ -4,7 +4,6 @@ import (
 	"eago/common/log"
 	"eago/task/conf/msg"
 	"eago/task/model"
-	"errors"
 )
 
 // NewLog 新增一条任务Log
@@ -22,12 +21,11 @@ func NewLog(taskUniqueId string, content *string) error {
 	l := model.NewLog(p, id, content)
 	if l == nil {
 		m := msg.ErrDatabase.SetDetail("Error in model.NewLog.")
-		err := errors.New(m.String())
 		log.ErrorWithFields(log.Fields{
 			"partition": p,
 			"id":        id,
 		}, m.String())
-		return err
+		return m.Error()
 	}
 
 	log.DebugWithFields(log.Fields{

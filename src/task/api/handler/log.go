@@ -37,7 +37,7 @@ func ListLogs(c *gin.Context) {
 		return
 	}
 
-	tableSuffix, ok := model.GetResultPartitionTableSuffix(rpId)
+	tableSuffix, ok := model.GetResultPartitionsPartition(rpId)
 	if !ok {
 		resp := msg.WarnNotFound.GenResponse("Find record from model.GetResultPartitionTableSuffix.")
 		log.WarnWithFields(log.Fields{
@@ -92,7 +92,7 @@ func WsListLogs(c *gin.Context) {
 		return
 	}
 
-	tableSuffix, ok := model.GetResultPartitionTableSuffix(rpId)
+	partition, ok := model.GetResultPartitionsPartition(rpId)
 	if !ok {
 		resp := msg.WarnNotFound.GenResponse("Find record from model.GetResultPartitionTableSuffix.")
 		log.WarnWithFields(log.Fields{
@@ -125,26 +125,28 @@ func WsListLogs(c *gin.Context) {
 	if err != nil {
 		return
 	}
-	defer ws.Close()
+	defer func() {
+		_ = ws.Close()
+	}()
 
 	_, _, _ = ws.ReadMessage()
 
 	for {
-		logs, ok := model.ListLogs(query, tableSuffix)
+		logs, ok := model.ListLogs(query, partition)
 		if !ok {
 			break
 		}
 
 		for _, l := range *logs {
-			msg := fmt.Sprintf("[%s] %s", l.CreatedAt.Format(conf.TIMESTAMP_FORMAT), l.Content)
-			err = ws.WriteMessage(1, []byte(msg))
+			m := fmt.Sprintf("[%s] %s", l.CreatedAt.Format(conf.TIMESTAMP_FORMAT), l.Content)
+			err = ws.WriteMessage(1, []byte(m))
 			if err != nil {
 				break
 			}
 			query["id>?"] = l.Id
 		}
 
-		r, ok := model.GetResult(tableSuffix, resultId)
+		r, ok := model.GetResult(partition, resultId)
 		if !ok {
 			break
 		}

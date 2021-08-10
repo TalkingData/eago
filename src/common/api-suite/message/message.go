@@ -1,6 +1,7 @@
 package message
 
 import (
+	"errors"
 	"github.com/gin-gonic/gin"
 	"strings"
 )
@@ -25,6 +26,11 @@ func (m *Message) SetDetail(detail ...string) *Message {
 // String 返回消息的字符串
 func (m *Message) String() string {
 	return m.Message
+}
+
+// Error 以Error实例返回
+func (m *Message) Error() error {
+	return errors.New(m.Message)
 }
 
 // GenResponse 新生成一条响应体

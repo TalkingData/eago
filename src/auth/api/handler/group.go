@@ -34,7 +34,7 @@ func NewGroup(c *gin.Context) {
 
 	group := model.NewGroup(gForm.Name, *gForm.Description)
 	if group == nil {
-		resp := msg.ErrDatabase.GenResponse("Error when NewGroup.")
+		resp := msg.ErrDatabase.GenResponse("Error in NewGroup.")
 		log.Error(resp.String())
 		resp.Write(c)
 		return
@@ -63,7 +63,7 @@ func RemoveGroup(c *gin.Context) {
 	}
 
 	if ok := model.RemoveGroup(gId); !ok {
-		resp := msg.ErrDatabase.GenResponse("Error when RemoveGroup.")
+		resp := msg.ErrDatabase.GenResponse("Error in model.RemoveGroup.")
 		log.Error(resp.String())
 		resp.Write(c)
 		return
@@ -106,7 +106,7 @@ func SetGroup(c *gin.Context) {
 
 	group, ok := model.SetGroup(gId, gFm.Name, *gFm.Description)
 	if !ok {
-		resp := msg.ErrDatabase.GenResponse("Error when SetGroup.")
+		resp := msg.ErrDatabase.GenResponse("Error in model.SetGroup.")
 		log.Error(resp.String())
 		resp.Write(c)
 		return
@@ -142,7 +142,7 @@ func ListGroups(c *gin.Context) {
 		c.GetStringSlice("OrderBy")...,
 	)
 	if !ok {
-		resp := msg.ErrDatabase.GenResponse("Error when PageListGroups.")
+		resp := msg.ErrDatabase.GenResponse("Error in model.PageListGroups.")
 		log.Error(resp.String())
 		resp.Write(c)
 		return
@@ -184,7 +184,7 @@ func AddUser2Group(c *gin.Context) {
 	}
 
 	if !model.AddGroupUser(uGroup.UserId, gId, *uGroup.IsOwner) {
-		resp := msg.ErrDatabase.GenResponse("Error when AddGroupUser.")
+		resp := msg.ErrDatabase.GenResponse("Error in model.AddGroupUser.")
 		log.Error(resp.String())
 		resp.Write(c)
 		return
@@ -224,7 +224,7 @@ func RemoveGroupUser(c *gin.Context) {
 	}
 
 	if !model.RemoveGroupUser(userId, gId) {
-		resp := msg.ErrDatabase.GenResponse("Error when RemoveUser.")
+		resp := msg.ErrDatabase.GenResponse("Error in model.RemoveUser.")
 		log.Error(resp.String())
 		resp.Write(c)
 		return
@@ -277,7 +277,7 @@ func SetUserIsGroupOwner(c *gin.Context) {
 	}
 
 	if !model.SetGroupUserIsOwner(userId, gId, *fm.IsOwner) {
-		resp := msg.ErrDatabase.GenResponse("Error when SetGroupUserIsOwner.")
+		resp := msg.ErrDatabase.GenResponse("Error in model.SetGroupUserIsOwner.")
 		log.Error(resp.String())
 		resp.Write(c)
 		return
@@ -324,7 +324,7 @@ func ListGroupUsers(c *gin.Context) {
 
 	u, ok := model.ListGroupUsers(gId, query)
 	if !ok {
-		resp := msg.ErrDatabase.GenResponse("Error when ListGroupUsers.")
+		resp := msg.ErrDatabase.GenResponse("Error in model.ListGroupUsers.")
 		log.Error(resp.String())
 		resp.Write(c)
 		return

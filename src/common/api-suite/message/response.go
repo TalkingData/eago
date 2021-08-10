@@ -2,6 +2,7 @@ package message
 
 import (
 	"eago/common/api-suite/pagination"
+	"errors"
 	"github.com/gin-gonic/gin"
 	"net/http"
 )
@@ -43,5 +44,10 @@ func (resp *response) WriteAndAbort(to *gin.Context) {
 
 // String 返回消息的字符串
 func (resp *response) String() string {
-	return resp.message
+	return resp.message + "."
+}
+
+// Error 以Error实例返回
+func (resp *response) Error() error {
+	return errors.New(resp.message)
 }

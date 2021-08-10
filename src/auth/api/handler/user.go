@@ -44,7 +44,7 @@ func SetUser(c *gin.Context) {
 
 	u, ok := model.SetUser(userId, userFm.Email, userFm.Phone)
 	if !ok {
-		resp := msg.ErrDatabase.GenResponse(" Error when SetUser.")
+		resp := msg.ErrDatabase.GenResponse("Error in model.SetUser.")
 		log.Error(resp.String())
 		resp.Write(c)
 		return
@@ -79,7 +79,7 @@ func ListUsers(c *gin.Context) {
 		c.GetStringSlice("OrderBy")...,
 	)
 	if !ok {
-		resp := msg.ErrDatabase.GenResponse(" Error when PageListUsers.")
+		resp := msg.ErrDatabase.GenResponse("Error in model.PageListUsers.")
 		log.Error(resp.String())
 		resp.Write(c)
 		return
@@ -110,7 +110,7 @@ func ListUserRoles(c *gin.Context) {
 
 	roles, ok := model.ListUserRoles(userId)
 	if !ok {
-		resp := msg.ErrDatabase.GenResponse(" Error when ListUserRoles.")
+		resp := msg.ErrDatabase.GenResponse("Error in model.ListUserRoles.")
 		log.Error(resp.String())
 		resp.Write(c)
 		return
@@ -141,7 +141,7 @@ func ListUserProducts(c *gin.Context) {
 
 	prods, ok := model.ListUserProducts(userId)
 	if !ok {
-		resp := msg.ErrDatabase.GenResponse(" Error when ListUserProducts")
+		resp := msg.ErrDatabase.GenResponse("Error in model.ListUserProducts")
 		log.Error(resp.String())
 		resp.Write(c)
 		return
@@ -172,7 +172,7 @@ func ListUserGroups(c *gin.Context) {
 
 	gps, ok := model.ListUserGroups(userId)
 	if !ok {
-		resp := msg.ErrDatabase.GenResponse(" Error when ListUserGroups")
+		resp := msg.ErrDatabase.GenResponse("Error in model.ListUserGroups")
 		log.Error(resp.String())
 		resp.Write(c)
 		return
@@ -203,7 +203,7 @@ func GetUserDepartment(c *gin.Context) {
 
 	dept, ok := model.GetUserDepartment(userId)
 	if !ok {
-		resp := msg.ErrDatabase.GenResponse(" Error when GetUserDepartment")
+		resp := msg.ErrDatabase.GenResponse("Error in model.GetUserDepartment")
 		log.Error(resp.String())
 		resp.Write(c)
 		return

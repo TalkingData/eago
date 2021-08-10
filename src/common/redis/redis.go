@@ -15,7 +15,7 @@ type RedisTool struct {
 	serviceName string
 }
 
-// InitRedis 初始化连接
+// InitRedis 初始化Redis
 func InitRedis(address, password, srvName string, db int) {
 	Redis = &RedisTool{
 		client: redis.NewClient(&redis.Options{
@@ -25,6 +25,14 @@ func InitRedis(address, password, srvName string, db int) {
 		}),
 		serviceName: srvName,
 	}
+}
+
+// Close 关闭Redis
+func Close() {
+	if Redis == nil {
+		return
+	}
+	_ = Redis.client.Close()
 }
 
 // Set

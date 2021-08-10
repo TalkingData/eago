@@ -1,23 +1,19 @@
 package local
 
 import (
-	"bytes"
 	"eago/common/log"
 	"eago/task/cli"
 	"eago/task/conf"
 	"eago/task/model"
 	"eago/task/worker"
-	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"math/rand"
-	"net/http"
 	"strconv"
 	"strings"
 )
 
 // CallTask 调用任务
-func CallTask(taskCodename, arguments, caller string, timeout int64) (task_unique_id string, err error) {
+func CallTask(taskCodename, arguments, caller string, timeout int64) (taskUniqueId string, err error) {
 	taskResult := model.NewResult(taskCodename, caller, arguments, timeout, worker.TASK_INITIALIZATION_STATUS)
 	if taskResult == nil {
 		err = fmt.Errorf("Got an empty result object.")
@@ -54,52 +50,20 @@ func CallTask(taskCodename, arguments, caller string, timeout int64) (task_uniqu
 	}
 
 	// 生成任务实例唯一ID
-	task_unique_id = TaskUniqueIdEncode(partition, taskResult.Id)
-
-	data, _ := json.Marshal(worker.CallTaskReq{
-		TaskCodename: cNameSplit[1],
-
-		TaskUniqueId: task_unique_id,
-		Arguments:    arguments,
-		Timeout:      timeout,
-		Caller:       caller,
-
-		Timestamp: taskResult.StartAt.Unix(),
-	})
+	taskUniqueId = TaskUniqueIdEncode(partition, taskResult.Id)
 
 	// 随机找一个Worker
 	w := wks[rand.Intn(len(wks))]
 	// 调用Worker
-	uri := fmt.Sprintf("http://%s/call", w.Address)
-	req, _ := http.NewRequest("POST", uri, bytes.NewReader(data))
-	req.Header.Add("Content-Type", "application/json")
-
-	client := &http.Client{}
-	resp, err := client.Do(req)
+	err = cli.WorkerClient.CallTask(w, cNameSplit[1], taskUniqueId, arguments, caller, timeout, taskResult.StartAt.Unix())
 	if err != nil {
 		log.ErrorWithFields(log.Fields{
-			"error": err.Error(),
-		}, "Error in call task client.Do.")
+			"partition": partition,
+			"result_id": taskResult.Id,
+			"error":     err.Error(),
+		}, "Error in cli.WorkerClient.KillTask.")
 		return "", err
 	}
-	defer func() { _ = resp.Body.Close() }()
-	body, _ := ioutil.ReadAll(resp.Body)
-
-	wkResp := &worker.WorkerResponse{}
-	if err := json.Unmarshal(body, wkResp); err != nil {
-		log.ErrorWithFields(log.Fields{
-			"error": err.Error(),
-		}, "Error in call task json.Unmarshal.")
-		return "", err
-	}
-
-	if wkResp.Code != 0 {
-		log.ErrorWithFields(log.Fields{
-			"status_code": wkResp.Code,
-		}, "Error in call task, worker status is not 0.")
-		return "", err
-	}
-
 	// 填充执行任务的WorkerId
 	_ = model.SetResultWorker(partition, taskResult.Id, w.WorkerId)
 
@@ -135,6 +99,8 @@ func TaskUniqueIdDecode(taskUniqueId string) (partition string, taskResultId int
 		}, "Error in TaskUniqueIdDecode.")
 		return "", -1, err
 	}
+
 	partition = split[0]
+
 	return
 }

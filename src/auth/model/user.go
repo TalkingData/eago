@@ -26,6 +26,14 @@ type userProductMember struct {
 	JoinedAt *utils.LocalTime `json:"joined_at" gorm:"type:datetime;not null;autoCreateTime"`
 }
 
+type userDepartmentMember struct {
+	Id       int              `json:"id"`
+	Name     string           `json:"name"`
+	ParentId *int             `json:"parent_id"`
+	IsOwner  bool             `json:"is_owner"`
+	JoinedAt *utils.LocalTime `json:"joined_at" gorm:"type:datetime;not null;autoCreateTime"`
+}
+
 type memberUser struct {
 	Id       int              `json:"id"`
 	Username string           `json:"username"`
@@ -317,14 +325,14 @@ func ListUserGroups(userId int) (*[]userMember, bool) {
 }
 
 // GetUserDepartment 关联表操作::获得用户所在部门
-func GetUserDepartment(userId int) (*userMember, bool) {
-	var uMember = userMember{}
+func GetUserDepartment(userId int) (*userDepartmentMember, bool) {
+	var uDeptMember = userDepartmentMember{}
 
-	res := db.Model(&Group{}).
-		Select("groups.id AS id, groups.name AS name, ug.is_owner AS is_owner, ug.joined_at AS joined_at").
-		Joins("LEFT JOIN user_groups AS ug ON groups.id = ug.group_id").
+	res := db.Model(&Department{}).
+		Select("departments.id AS id, departments.name AS name, departments.parent_id AS parent_id, ud.is_owner AS is_owner, ud.joined_at AS joined_at").
+		Joins("LEFT JOIN user_departments AS ud ON departments.id = ug.department_id").
 		Where("user_id=?", userId).
-		First(&uMember)
+		First(&uDeptMember)
 	if res.Error != nil {
 		if errors.Is(res.Error, gorm.ErrRecordNotFound) {
 			log.WarnWithFields(log.Fields{
@@ -338,5 +346,5 @@ func GetUserDepartment(userId int) (*userMember, bool) {
 		return nil, false
 	}
 
-	return &uMember, true
+	return &uDeptMember, true
 }

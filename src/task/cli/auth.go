@@ -1,8 +1,8 @@
 package cli
 
 import (
+	auth "eago/auth/srv/proto"
 	"eago/task/conf"
-	"eago/task/srv/proto/auth"
 	"github.com/micro/go-micro/v2"
 	"github.com/micro/go-micro/v2/registry"
 	"github.com/micro/go-plugins/registry/etcdv3/v2"

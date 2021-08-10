@@ -34,7 +34,7 @@ func NewDepartment(c *gin.Context) {
 
 	dept := model.NewDepartment(dForm.Name, dForm.ParentId)
 	if dept == nil {
-		resp := msg.ErrDatabase.GenResponse("Error when NewDepartment.")
+		resp := msg.ErrDatabase.GenResponse("Error in model.NewDepartment.")
 		log.Error(resp.String())
 		resp.Write(c)
 		return
@@ -63,7 +63,7 @@ func RemoveDepartment(c *gin.Context) {
 	}
 
 	if ok := model.RemoveDepartment(deptId); !ok {
-		resp := msg.ErrDatabase.GenResponse("Error when RemoveDepartment.")
+		resp := msg.ErrDatabase.GenResponse("Error in model.RemoveDepartment.")
 		log.Error(resp.String())
 		resp.Write(c)
 		return
@@ -105,7 +105,7 @@ func SetDepartment(c *gin.Context) {
 
 	dept, ok := model.SetDepartment(deptId, dForm.Name, dForm.ParentId)
 	if !ok {
-		resp := msg.ErrDatabase.GenResponse("Error when SetDepartment.")
+		resp := msg.ErrDatabase.GenResponse("Error in model.SetDepartment.")
 		log.Error(resp.String())
 		resp.Write(c)
 		return
@@ -141,7 +141,7 @@ func ListDepartments(c *gin.Context) {
 		c.GetStringSlice("OrderBy")...,
 	)
 	if !ok {
-		resp := msg.ErrDatabase.GenResponse("Error when PageListDepartments.")
+		resp := msg.ErrDatabase.GenResponse("Error in model.PageListDepartments.")
 		log.Error(resp.String())
 		resp.Write(c)
 		return
@@ -161,7 +161,7 @@ func ListDepartmentsTree(c *gin.Context) {
 	// 查找根部门
 	dept, ok := model.GetDepartment(model.Query{"parent_id": nil})
 	if !ok {
-		resp := msg.ErrDatabase.GenResponse("Error when GetDepartment.")
+		resp := msg.ErrDatabase.GenResponse("Error in model.GetDepartment.")
 		log.Error(resp.String())
 		resp.Write(c)
 		return
@@ -176,7 +176,7 @@ func ListDepartmentsTree(c *gin.Context) {
 	// 列出所有部门
 	deptList, ok := model.ListDepartments(model.Query{})
 	if !ok {
-		resp := msg.ErrDatabase.GenResponse("Error when ListDepartments.")
+		resp := msg.ErrDatabase.GenResponse("Error in model.ListDepartments.")
 		log.Error(resp.String())
 		resp.Write(c)
 		return
@@ -211,7 +211,7 @@ func ListDepartmentTree(c *gin.Context) {
 	// 查找根部门
 	dept, ok := model.GetDepartment(model.Query{"id=?": deptId})
 	if !ok {
-		resp := msg.ErrDatabase.GenResponse("Error when GetDepartment.")
+		resp := msg.ErrDatabase.GenResponse("Error in model.GetDepartment.")
 		log.Error(resp.String())
 		resp.Write(c)
 		return
@@ -226,7 +226,7 @@ func ListDepartmentTree(c *gin.Context) {
 	// 列出所有部门
 	deptList, ok := model.ListDepartments(model.Query{})
 	if !ok {
-		resp := msg.ErrDatabase.GenResponse("Error when ListDepartments.")
+		resp := msg.ErrDatabase.GenResponse("Error in model.ListDepartments.")
 		log.Error(resp.String())
 		resp.Write(c)
 		return
@@ -272,7 +272,7 @@ func AddUser2Department(c *gin.Context) {
 	}
 
 	if !model.AddDepartmentUser(uDept.UserId, deptId, *uDept.IsOwner) {
-		resp := msg.ErrDatabase.GenResponse("Error when AddDepartmentUser.")
+		resp := msg.ErrDatabase.GenResponse("Error in model.AddDepartmentUser.")
 		log.Error(resp.String())
 		resp.Write(c)
 		return
@@ -312,7 +312,7 @@ func RemoveDepartmentUser(c *gin.Context) {
 	}
 
 	if !model.RemoveDepartmentUser(userId, deptId) {
-		resp := msg.ErrDatabase.GenResponse("Error when RemoveDepartmentUser.")
+		resp := msg.ErrDatabase.GenResponse("Error in model.RemoveDepartmentUser.")
 		log.Error(resp.String())
 		resp.Write(c)
 		return
@@ -365,7 +365,7 @@ func SetUserIsDepartmentOwner(c *gin.Context) {
 	}
 
 	if !model.SetDepartmentUserIsOwner(userId, deptId, *fm.IsOwner) {
-		resp := msg.ErrDatabase.GenResponse("Error when SetDepartmentUserIsOwner.")
+		resp := msg.ErrDatabase.GenResponse("Error in model.SetDepartmentUserIsOwner.")
 		log.Error(resp.String())
 		resp.Write(c)
 		return
@@ -412,7 +412,7 @@ func ListDepartmentUsers(c *gin.Context) {
 
 	u, ok := model.ListDepartmentUsers(deptId, query)
 	if !ok {
-		resp := msg.ErrDatabase.GenResponse("Error when ListDepartmentUsers.")
+		resp := msg.ErrDatabase.GenResponse("Error in model.ListDepartmentUsers.")
 		log.Error(resp.String())
 		resp.Write(c)
 		return
