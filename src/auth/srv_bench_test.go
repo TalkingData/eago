@@ -5,6 +5,7 @@ import (
 	"eago/auth/model"
 	"eago/auth/srv/local"
 	"eago/common/log"
+	"eago/common/orm"
 	"eago/common/redis"
 	"fmt"
 	"runtime"
@@ -43,11 +44,13 @@ func init() {
 		panic(err)
 	}
 
-	// 初始化关系型数据库
-	if err := model.InitDb(); err != nil {
-		log.Error(err.Error())
-		panic(err)
-	}
+	// 初始化DAO
+	model.SetDb(orm.InitMysql(
+		conf.Config.MysqlAddress,
+		conf.Config.MysqlUser,
+		conf.Config.MysqlPassword,
+		conf.Config.MysqlDbName,
+	))
 
 	// 初始化Redis
 	redis.InitRedis(
