@@ -46,11 +46,20 @@ type AuthService interface {
 	VerifyToken(ctx context.Context, in *Token, opts ...client.CallOption) (*BoolMsg, error)
 	GetTokenContent(ctx context.Context, in *Token, opts ...client.CallOption) (*TokenContent, error)
 	// User
-	GetUsers(ctx context.Context, in *Ids, opts ...client.CallOption) (*Users, error)
+	ListUsers(ctx context.Context, in *QueryWithPage, opts ...client.CallOption) (*PagedUsers, error)
+	GetUserDepartment(ctx context.Context, in *IdQuery, opts ...client.CallOption) (*Department, error)
+	ListUserDepartmentUsers(ctx context.Context, in *IdQuery, opts ...client.CallOption) (*MemberUsers, error)
 	// Product
-	GetProducts(ctx context.Context, in *Ids, opts ...client.CallOption) (*Products, error)
+	ListProducts(ctx context.Context, in *QueryWithPage, opts ...client.CallOption) (*PagedProducts, error)
+	ListProductUsers(ctx context.Context, in *IdQuery, opts ...client.CallOption) (*MemberUsers, error)
+	// Department
+	ListDepartmentUsers(ctx context.Context, in *IdQuery, opts ...client.CallOption) (*MemberUsers, error)
+	ListParentDepartmentUsers(ctx context.Context, in *IdQuery, opts ...client.CallOption) (*MemberUsers, error)
 	// Group
-	GetGroups(ctx context.Context, in *Ids, opts ...client.CallOption) (*Groups, error)
+	ListGroups(ctx context.Context, in *QueryWithPage, opts ...client.CallOption) (*PagedGroups, error)
+	ListGroupUsers(ctx context.Context, in *IdQuery, opts ...client.CallOption) (*MemberUsers, error)
+	// Role
+	ListRoleUsers(ctx context.Context, in *NameQuery, opts ...client.CallOption) (*RoleMemberUsers, error)
 }
 
 type authService struct {
@@ -85,9 +94,9 @@ func (c *authService) GetTokenContent(ctx context.Context, in *Token, opts ...cl
 	return out, nil
 }
 
-func (c *authService) GetUsers(ctx context.Context, in *Ids, opts ...client.CallOption) (*Users, error) {
-	req := c.c.NewRequest(c.name, "AuthService.GetUsers", in)
-	out := new(Users)
+func (c *authService) ListUsers(ctx context.Context, in *QueryWithPage, opts ...client.CallOption) (*PagedUsers, error) {
+	req := c.c.NewRequest(c.name, "AuthService.ListUsers", in)
+	out := new(PagedUsers)
 	err := c.c.Call(ctx, req, out, opts...)
 	if err != nil {
 		return nil, err
@@ -95,9 +104,9 @@ func (c *authService) GetUsers(ctx context.Context, in *Ids, opts ...client.Call
 	return out, nil
 }
 
-func (c *authService) GetProducts(ctx context.Context, in *Ids, opts ...client.CallOption) (*Products, error) {
-	req := c.c.NewRequest(c.name, "AuthService.GetProducts", in)
-	out := new(Products)
+func (c *authService) GetUserDepartment(ctx context.Context, in *IdQuery, opts ...client.CallOption) (*Department, error) {
+	req := c.c.NewRequest(c.name, "AuthService.GetUserDepartment", in)
+	out := new(Department)
 	err := c.c.Call(ctx, req, out, opts...)
 	if err != nil {
 		return nil, err
@@ -105,9 +114,79 @@ func (c *authService) GetProducts(ctx context.Context, in *Ids, opts ...client.C
 	return out, nil
 }
 
-func (c *authService) GetGroups(ctx context.Context, in *Ids, opts ...client.CallOption) (*Groups, error) {
-	req := c.c.NewRequest(c.name, "AuthService.GetGroups", in)
-	out := new(Groups)
+func (c *authService) ListUserDepartmentUsers(ctx context.Context, in *IdQuery, opts ...client.CallOption) (*MemberUsers, error) {
+	req := c.c.NewRequest(c.name, "AuthService.ListUserDepartmentUsers", in)
+	out := new(MemberUsers)
+	err := c.c.Call(ctx, req, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authService) ListProducts(ctx context.Context, in *QueryWithPage, opts ...client.CallOption) (*PagedProducts, error) {
+	req := c.c.NewRequest(c.name, "AuthService.ListProducts", in)
+	out := new(PagedProducts)
+	err := c.c.Call(ctx, req, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authService) ListProductUsers(ctx context.Context, in *IdQuery, opts ...client.CallOption) (*MemberUsers, error) {
+	req := c.c.NewRequest(c.name, "AuthService.ListProductUsers", in)
+	out := new(MemberUsers)
+	err := c.c.Call(ctx, req, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authService) ListDepartmentUsers(ctx context.Context, in *IdQuery, opts ...client.CallOption) (*MemberUsers, error) {
+	req := c.c.NewRequest(c.name, "AuthService.ListDepartmentUsers", in)
+	out := new(MemberUsers)
+	err := c.c.Call(ctx, req, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authService) ListParentDepartmentUsers(ctx context.Context, in *IdQuery, opts ...client.CallOption) (*MemberUsers, error) {
+	req := c.c.NewRequest(c.name, "AuthService.ListParentDepartmentUsers", in)
+	out := new(MemberUsers)
+	err := c.c.Call(ctx, req, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authService) ListGroups(ctx context.Context, in *QueryWithPage, opts ...client.CallOption) (*PagedGroups, error) {
+	req := c.c.NewRequest(c.name, "AuthService.ListGroups", in)
+	out := new(PagedGroups)
+	err := c.c.Call(ctx, req, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authService) ListGroupUsers(ctx context.Context, in *IdQuery, opts ...client.CallOption) (*MemberUsers, error) {
+	req := c.c.NewRequest(c.name, "AuthService.ListGroupUsers", in)
+	out := new(MemberUsers)
+	err := c.c.Call(ctx, req, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authService) ListRoleUsers(ctx context.Context, in *NameQuery, opts ...client.CallOption) (*RoleMemberUsers, error) {
+	req := c.c.NewRequest(c.name, "AuthService.ListRoleUsers", in)
+	out := new(RoleMemberUsers)
 	err := c.c.Call(ctx, req, out, opts...)
 	if err != nil {
 		return nil, err
@@ -122,20 +201,36 @@ type AuthServiceHandler interface {
 	VerifyToken(context.Context, *Token, *BoolMsg) error
 	GetTokenContent(context.Context, *Token, *TokenContent) error
 	// User
-	GetUsers(context.Context, *Ids, *Users) error
+	ListUsers(context.Context, *QueryWithPage, *PagedUsers) error
+	GetUserDepartment(context.Context, *IdQuery, *Department) error
+	ListUserDepartmentUsers(context.Context, *IdQuery, *MemberUsers) error
 	// Product
-	GetProducts(context.Context, *Ids, *Products) error
+	ListProducts(context.Context, *QueryWithPage, *PagedProducts) error
+	ListProductUsers(context.Context, *IdQuery, *MemberUsers) error
+	// Department
+	ListDepartmentUsers(context.Context, *IdQuery, *MemberUsers) error
+	ListParentDepartmentUsers(context.Context, *IdQuery, *MemberUsers) error
 	// Group
-	GetGroups(context.Context, *Ids, *Groups) error
+	ListGroups(context.Context, *QueryWithPage, *PagedGroups) error
+	ListGroupUsers(context.Context, *IdQuery, *MemberUsers) error
+	// Role
+	ListRoleUsers(context.Context, *NameQuery, *RoleMemberUsers) error
 }
 
 func RegisterAuthServiceHandler(s server.Server, hdlr AuthServiceHandler, opts ...server.HandlerOption) error {
 	type authService interface {
 		VerifyToken(ctx context.Context, in *Token, out *BoolMsg) error
 		GetTokenContent(ctx context.Context, in *Token, out *TokenContent) error
-		GetUsers(ctx context.Context, in *Ids, out *Users) error
-		GetProducts(ctx context.Context, in *Ids, out *Products) error
-		GetGroups(ctx context.Context, in *Ids, out *Groups) error
+		ListUsers(ctx context.Context, in *QueryWithPage, out *PagedUsers) error
+		GetUserDepartment(ctx context.Context, in *IdQuery, out *Department) error
+		ListUserDepartmentUsers(ctx context.Context, in *IdQuery, out *MemberUsers) error
+		ListProducts(ctx context.Context, in *QueryWithPage, out *PagedProducts) error
+		ListProductUsers(ctx context.Context, in *IdQuery, out *MemberUsers) error
+		ListDepartmentUsers(ctx context.Context, in *IdQuery, out *MemberUsers) error
+		ListParentDepartmentUsers(ctx context.Context, in *IdQuery, out *MemberUsers) error
+		ListGroups(ctx context.Context, in *QueryWithPage, out *PagedGroups) error
+		ListGroupUsers(ctx context.Context, in *IdQuery, out *MemberUsers) error
+		ListRoleUsers(ctx context.Context, in *NameQuery, out *RoleMemberUsers) error
 	}
 	type AuthService struct {
 		authService
@@ -156,14 +251,42 @@ func (h *authServiceHandler) GetTokenContent(ctx context.Context, in *Token, out
 	return h.AuthServiceHandler.GetTokenContent(ctx, in, out)
 }
 
-func (h *authServiceHandler) GetUsers(ctx context.Context, in *Ids, out *Users) error {
-	return h.AuthServiceHandler.GetUsers(ctx, in, out)
+func (h *authServiceHandler) ListUsers(ctx context.Context, in *QueryWithPage, out *PagedUsers) error {
+	return h.AuthServiceHandler.ListUsers(ctx, in, out)
 }
 
-func (h *authServiceHandler) GetProducts(ctx context.Context, in *Ids, out *Products) error {
-	return h.AuthServiceHandler.GetProducts(ctx, in, out)
+func (h *authServiceHandler) GetUserDepartment(ctx context.Context, in *IdQuery, out *Department) error {
+	return h.AuthServiceHandler.GetUserDepartment(ctx, in, out)
 }
 
-func (h *authServiceHandler) GetGroups(ctx context.Context, in *Ids, out *Groups) error {
-	return h.AuthServiceHandler.GetGroups(ctx, in, out)
+func (h *authServiceHandler) ListUserDepartmentUsers(ctx context.Context, in *IdQuery, out *MemberUsers) error {
+	return h.AuthServiceHandler.ListUserDepartmentUsers(ctx, in, out)
+}
+
+func (h *authServiceHandler) ListProducts(ctx context.Context, in *QueryWithPage, out *PagedProducts) error {
+	return h.AuthServiceHandler.ListProducts(ctx, in, out)
+}
+
+func (h *authServiceHandler) ListProductUsers(ctx context.Context, in *IdQuery, out *MemberUsers) error {
+	return h.AuthServiceHandler.ListProductUsers(ctx, in, out)
+}
+
+func (h *authServiceHandler) ListDepartmentUsers(ctx context.Context, in *IdQuery, out *MemberUsers) error {
+	return h.AuthServiceHandler.ListDepartmentUsers(ctx, in, out)
+}
+
+func (h *authServiceHandler) ListParentDepartmentUsers(ctx context.Context, in *IdQuery, out *MemberUsers) error {
+	return h.AuthServiceHandler.ListParentDepartmentUsers(ctx, in, out)
+}
+
+func (h *authServiceHandler) ListGroups(ctx context.Context, in *QueryWithPage, out *PagedGroups) error {
+	return h.AuthServiceHandler.ListGroups(ctx, in, out)
+}
+
+func (h *authServiceHandler) ListGroupUsers(ctx context.Context, in *IdQuery, out *MemberUsers) error {
+	return h.AuthServiceHandler.ListGroupUsers(ctx, in, out)
+}
+
+func (h *authServiceHandler) ListRoleUsers(ctx context.Context, in *NameQuery, out *RoleMemberUsers) error {
+	return h.AuthServiceHandler.ListRoleUsers(ctx, in, out)
 }

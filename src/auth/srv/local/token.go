@@ -14,6 +14,9 @@ import (
 
 // NewToken 本地服务::生成Token
 func NewToken(userObj *model.User) string {
+	log.Info("local.NewToken called.")
+	defer log.Info("local.NewToken end.")
+
 	tc := dto.TokenContent{}
 	tc.UserId = userObj.Id
 	tc.Username = userObj.Username
@@ -28,9 +31,11 @@ func NewToken(userObj *model.User) string {
 		defer wg.Done()
 
 		rolesStr := make([]string, 0)
+
+		log.InfoWithFields(log.Fields{"user_id": userObj.Id}, "Loading user roles.")
 		roles, ok := model.ListUserRoles(userObj.Id)
 		if !ok {
-			log.Error("Can not load roles, Error in new token model.ListUserProducts.")
+			log.Error("Can not load roles, Error in new token model.ListUserRoles.")
 		} else {
 			for _, r := range *roles {
 				rolesStr = append(rolesStr, r.Name)
@@ -48,6 +53,7 @@ func NewToken(userObj *model.User) string {
 		products := make([]dto.ProductInToken, 0)
 		ownProducts := make([]dto.ProductInToken, 0)
 
+		log.InfoWithFields(log.Fields{"user_id": userObj.Id}, "Loading user products.")
 		prods, ok := model.ListUserProducts(userObj.Id)
 		if !ok {
 			log.Error("Can not load products, Error in new token model.ListUserProducts.")
@@ -78,6 +84,7 @@ func NewToken(userObj *model.User) string {
 		groups := make([]dto.GroupInToken, 0)
 		ownGroups := make([]dto.GroupInToken, 0)
 
+		log.InfoWithFields(log.Fields{"user_id": userObj.Id}, "Loading user groups.")
 		gps, ok := model.ListUserGroups(userObj.Id)
 		if !ok {
 			log.Error("Can not load groups, Error in new token model.ListUserGroups.")
@@ -102,6 +109,7 @@ func NewToken(userObj *model.User) string {
 	go func(wg *sync.WaitGroup) {
 		defer wg.Done()
 
+		log.InfoWithFields(log.Fields{"user_id": userObj.Id}, "Loading user department.")
 		dep := make([]string, 0)
 		tc.Department = &dep
 	}(wg)
@@ -117,6 +125,10 @@ func NewToken(userObj *model.User) string {
 	wg.Wait()
 
 	// TokenContent存到redis
+	log.Info(log.Fields{
+		"user_id":   userObj.Id,
+		"token_ket": tokenKey,
+	}, "Write token to redis.")
 	tokenContent, _ := json.Marshal(tc)
 	if err := redis.Redis.Set(tokenKey, string(tokenContent), conf.Config.TokenTtl); err != nil {
 		log.ErrorWithFields(log.Fields{
@@ -131,6 +143,10 @@ func NewToken(userObj *model.User) string {
 
 // RemoveToken 本地服务::删除Token
 func RemoveToken(token string) {
+	log.Info("local.RemoveToken called.")
+	defer log.Info("local.RemoveToken end.")
+
+	log.DebugWithFields(log.Fields{"token": token}, "Remove token from redis.")
 	if err := redis.Redis.Del(genTokenKey(token)); err != nil {
 		log.ErrorWithFields(log.Fields{
 			"token": token,
@@ -141,6 +157,9 @@ func RemoveToken(token string) {
 
 // RenewalToken 本地服务::续期Token
 func RenewalToken(token string) {
+	log.Info("local.RenewalToken called.")
+	defer log.Info("local.RenewalToken end.")
+
 	if err := redis.Redis.Expire(genTokenKey(token), conf.Config.TokenTtl); err != nil {
 		log.ErrorWithFields(log.Fields{
 			"token": token,
@@ -156,6 +175,10 @@ func VerifyToken(token string) bool {
 
 // GetTokenContent 本地服务::通过Token获得TokenContent
 func GetTokenContent(token string) (*dto.TokenContent, bool) {
+	log.Info("local.GetTokenContent called.")
+	defer log.Info("local.GetTokenContent end.")
+
+	log.InfoWithFields(log.Fields{"token": token}, "Loading token from redis.")
 	if !redis.Redis.HasKey(genTokenKey(token)) {
 		log.WarnWithFields(log.Fields{
 			"token": token,
@@ -171,6 +194,7 @@ func GetTokenContent(token string) (*dto.TokenContent, bool) {
 		return nil, false
 	}
 
+	log.Info("Unmarshal token content.")
 	tc := dto.TokenContent{}
 	if err := json.Unmarshal([]byte(content), &tc); err != nil {
 		log.ErrorWithFields(log.Fields{

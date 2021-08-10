@@ -10,7 +10,9 @@ import (
 
 // VerifyToken RPC服务::验证Token是否有效
 func (as *AuthService) VerifyToken(ctx context.Context, req *auth.Token, res *auth.BoolMsg) error {
-	log.InfoWithFields(log.Fields{"token": req.Token}, "Got rpc call verify token.")
+	log.InfoWithFields(log.Fields{"token": req.Token}, "srv.VerifyToken called.")
+	defer log.Info("srv.VerifyToken end.")
+
 	res.Ok = local.VerifyToken(req.Token)
 	return nil
 }
@@ -19,8 +21,10 @@ func (as *AuthService) VerifyToken(ctx context.Context, req *auth.Token, res *au
 func (as *AuthService) GetTokenContent(ctx context.Context, req *auth.Token, rsp *auth.TokenContent) error {
 	log.InfoWithFields(
 		log.Fields{"token": req.Token},
-		"Got rpc call get token content.",
+		"srv.GetTokenContent called.",
 	)
+	defer log.Info("srv.GetTokenContent end.")
+
 	tc, ok := local.GetTokenContent(req.Token)
 	if !ok || tc == nil {
 		rsp.Ok = false

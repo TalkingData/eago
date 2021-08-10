@@ -4,19 +4,29 @@ package auth;
 option go_package = "proto;auth";
 
 service AuthService {
-
   // Token
   rpc VerifyToken(Token) returns (BoolMsg) {}
   rpc GetTokenContent(Token) returns (TokenContent) {}
 
   // User
-  rpc GetUsers(Ids) returns (Users) {}
+  rpc ListUsers(QueryWithPage) returns (PagedUsers) {}
+  rpc GetUserDepartment(IdQuery) returns (Department) {}
+  rpc ListUserDepartmentUsers(IdQuery) returns (MemberUsers) {}
 
   // Product
-  rpc GetProducts(Ids) returns (Products) {}
+  rpc ListProducts(QueryWithPage) returns (PagedProducts) {}
+  rpc ListProductUsers(IdQuery) returns (MemberUsers) {}
+
+  // Department
+  rpc ListDepartmentUsers(IdQuery) returns (MemberUsers) {}
+  rpc ListParentDepartmentUsers(IdQuery) returns (MemberUsers) {}
 
   // Group
-  rpc GetGroups(Ids) returns (Groups) {}
+  rpc ListGroups(QueryWithPage) returns (PagedGroups) {}
+  rpc ListGroupUsers(IdQuery) returns (MemberUsers) {}
+
+  // Role
+  rpc ListRoleUsers(NameQuery) returns (RoleMemberUsers) {}
 }
 
 message Token {
@@ -44,20 +54,59 @@ message BoolMsg {
   bool ok = 1;
 }
 
-message Ids {
-  repeated int32 ids = 1;
+message NameQuery {
+  string name = 1;
 }
 
-message Users {
+message IdQuery {
+  int32 id = 1;
+}
+
+message QueryWithPage {
+  map<string, string> query = 1;
+  uint32 page = 3;
+  uint32 page_size = 4;
+}
+
+message PagedUsers {
   repeated User users = 1;
+  uint32 page = 2;
+  uint32 pages = 3;
+  uint32 page_size = 4;
+  uint32 total = 5;
 }
 
-message Products {
+message PagedProducts {
   repeated Product products = 1;
+  uint32 page = 2;
+  uint32 pages = 3;
+  uint32 page_size = 4;
+  uint32 total = 5;
 }
 
-message Groups {
+message PagedGroups {
   repeated Group groups = 1;
+  uint32 page = 2;
+  uint32 pages = 3;
+  uint32 page_size = 4;
+  uint32 total = 5;
+}
+
+message MemberUsers {
+  message MemberUser {
+    int32 id = 1;
+    string username = 2;
+    bool is_owner = 5;
+  }
+  repeated MemberUser users = 1;
+}
+
+message RoleMemberUsers {
+  message MemberUser {
+    int32 id = 1;
+    string username = 2;
+  }
+  repeated MemberUser users = 1;
 }
 
 message User {
@@ -77,4 +126,10 @@ message Product {
 message Group {
   int32 id = 1;
   string name = 2;
+}
+
+message Department {
+  int32 id = 1;
+  string name = 2;
+  int32 parent_id = 3;
 }
