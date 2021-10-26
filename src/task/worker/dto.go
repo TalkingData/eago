@@ -3,7 +3,7 @@ package worker
 const (
 	TASK_PANIC_END_STATUS                       = -255 // 任务异常
 	TASK_CALL_ERROR_END_STATUS                  = -202 // 调用错误
-	TASK_NO_WORKER_ERROR_END_STATUS             = -201 // 找不到Worker
+	TASK_NO_WORKER_ERROR_END_STATUS             = -201 // 找不到执行器
 	TASK_WORKER_TASK_NOT_FOUND_ERROR_END_STATUS = -200 // 找不到任务
 	TASK_FAILED_END_STATUS                      = -3   // 任务失败
 	TASK_TIMEOUT_END_STATUS                     = -2   // 任务超时

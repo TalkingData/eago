@@ -1,16 +1,20 @@
 package main
 
 import (
+	"context"
+	"eago/auth/cli"
 	"eago/auth/conf"
-	"eago/auth/model"
-	"eago/auth/util/sso"
+	"eago/auth/dao"
+	perm "eago/common/api-suite/permission"
 	"eago/common/log"
 	"eago/common/orm"
 	"eago/common/redis"
+	"eago/common/tracer"
 	"fmt"
 	"github.com/micro/go-micro/v2/registry"
 	"github.com/micro/go-micro/v2/web"
 	"github.com/micro/go-plugins/registry/etcdv3/v2"
+	"github.com/opentracing/opentracing-go"
 	"os"
 	"os/signal"
 	"runtime"
@@ -19,35 +23,41 @@ import (
 
 func main() {
 	// 初始化DAO
-	model.SetDb(orm.InitMysql(
-		conf.Config.MysqlAddress,
-		conf.Config.MysqlUser,
-		conf.Config.MysqlPassword,
-		conf.Config.MysqlDbName,
+	dao.Init(orm.InitMysql(
+		conf.Conf.MysqlAddress,
+		conf.Conf.MysqlUser,
+		conf.Conf.MysqlPassword,
+		conf.Conf.MysqlDbName,
 	))
 
 	// 初始化Redis
 	redis.InitRedis(
-		conf.Config.RedisAddress,
-		conf.Config.RedisPassword,
-		conf.MODULAR_NAME,
-		conf.Config.RedisDb,
+		conf.Conf.RedisAddress,
+		conf.Conf.RedisPassword,
+		conf.SERVICE_NAME,
+		conf.Conf.RedisDb,
 	)
 
-	// 初始化Crowd
-	if err := sso.InitCrowd(); err != nil {
-		log.Error(err.Error())
-		panic(err)
-	}
+	// 初始化Tracer
+	t, c := tracer.NewTracer(conf.API_REGISTER_KEY, conf.Conf.JaegerAddress)
+	defer c.Close()
 
+	opentracing.SetGlobalTracer(t)
+
+	// 初始化Auth
+	cli.InitAuthCli()
+	perm.SetAuthClient(cli.AuthClient)
+
+	ctx, cancel := context.WithCancel(context.Background())
 	etcdReg := etcdv3.NewRegistry(
-		registry.Addrs(conf.Config.EtcdAddresses...),
-		etcdv3.Auth(conf.Config.EtcdUsername, conf.Config.EtcdPassword),
+		registry.Addrs(conf.Conf.EtcdAddresses...),
+		etcdv3.Auth(conf.Conf.EtcdUsername, conf.Conf.EtcdPassword),
 	)
 	apiV1 := web.NewService(
-		web.Name(conf.API_SERVICE_NAME),
+		web.Name(conf.API_REGISTER_KEY),
 		web.Registry(etcdReg),
-		web.Handler(Engine),
+		web.Handler(NewGinEngine()),
+		web.Context(ctx),
 		web.Version("v1"),
 	)
 
@@ -63,17 +73,18 @@ func main() {
 	for {
 		select {
 		case err := <-e:
-			log.ErrorWithFields(log.Fields{
-				"error": err.Error(),
-			}, "Error when apiV1.Run.")
+			if err != nil {
+				log.ErrorWithFields(log.Fields{
+					"error": err,
+				}, "An error occurred while srv.Run.")
+			}
 			closeAll()
 			return
 		case sig := <-quit:
 			log.InfoWithFields(log.Fields{
 				"signal": sig.String(),
 			}, "Got quit signal.")
-			closeAll()
-			return
+			cancel()
 		}
 	}
 }
@@ -90,9 +101,9 @@ func init() {
 
 	// 加载日志设置
 	err := log.InitLog(
-		conf.Config.LogPath,
-		conf.MODULAR_NAME,
-		conf.Config.LogLevel,
+		conf.Conf.LogPath,
+		conf.SERVICE_NAME,
+		conf.Conf.LogLevel,
 	)
 	if err != nil {
 		fmt.Println("Failed to init logging, error:", err.Error())

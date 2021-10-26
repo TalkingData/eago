@@ -1,16 +1,20 @@
 package main
 
 import (
+	"context"
 	"eago/auth/conf"
-	"eago/auth/model"
+	"eago/auth/dao"
 	"eago/auth/srv/proto"
+	"eago/common/broker"
 	"eago/common/log"
 	"eago/common/orm"
 	"eago/common/redis"
+	"eago/common/tracer"
 	"fmt"
 	"github.com/micro/go-micro/v2"
 	"github.com/micro/go-micro/v2/registry"
 	"github.com/micro/go-plugins/registry/etcdv3/v2"
+	"github.com/micro/go-plugins/wrapper/trace/opentracing/v2"
 	"os"
 	"os/signal"
 	"runtime"
@@ -19,39 +23,48 @@ import (
 
 type AuthService struct{}
 
+var Publisher broker.Publisher
+
 func main() {
 	// 初始化DAO
-	model.SetDb(orm.InitMysql(
-		conf.Config.MysqlAddress,
-		conf.Config.MysqlUser,
-		conf.Config.MysqlPassword,
-		conf.Config.MysqlDbName,
+	dao.Init(orm.InitMysql(
+		conf.Conf.MysqlAddress,
+		conf.Conf.MysqlUser,
+		conf.Conf.MysqlPassword,
+		conf.Conf.MysqlDbName,
 	))
 
 	// 初始化Redis
 	redis.InitRedis(
-		conf.Config.RedisAddress,
-		conf.Config.RedisPassword,
-		conf.MODULAR_NAME,
-		conf.Config.RedisDb,
+		conf.Conf.RedisAddress,
+		conf.Conf.RedisPassword,
+		conf.SERVICE_NAME,
+		conf.Conf.RedisDb,
 	)
 
+	t, c := tracer.NewTracer(conf.RPC_REGISTER_KEY, conf.Conf.JaegerAddress)
+	defer c.Close()
+
+	ctx, cancel := context.WithCancel(context.Background())
 	etcdReg := etcdv3.NewRegistry(
-		registry.Addrs(conf.Config.EtcdAddresses...),
-		etcdv3.Auth(conf.Config.EtcdUsername, conf.Config.EtcdPassword),
+		registry.Addrs(conf.Conf.EtcdAddresses...),
+		etcdv3.Auth(conf.Conf.EtcdUsername, conf.Conf.EtcdPassword),
 	)
 	srv := micro.NewService(
-		micro.Name(conf.RPC_SERVICE_NAME),
+		micro.Name(conf.RPC_REGISTER_KEY),
 		micro.Registry(etcdReg),
+		micro.Broker(broker.NewBroker(conf.Conf.KafkaAddresses)),
+		micro.WrapHandler(opentracing.NewHandlerWrapper(t)),
+		micro.Context(ctx),
 		micro.Version("v1"),
 	)
 
-	_ = auth.RegisterAuthServiceHandler(srv.Server(), &AuthService{})
-
-	if err := srv.Run(); err != nil {
-		log.Error(err.Error())
-		panic(err)
+	// 初始化broker
+	if Publisher == nil {
+		Publisher = broker.NewPublisher(conf.SERVICE_NAME)
 	}
+
+	_ = auth.RegisterAuthServiceHandler(srv.Server(), &AuthService{})
 
 	e := make(chan error)
 	go func() {
@@ -65,17 +78,18 @@ func main() {
 	for {
 		select {
 		case err := <-e:
-			log.ErrorWithFields(log.Fields{
-				"error": err.Error(),
-			}, "Error when srv.Run.")
+			if err != nil {
+				log.ErrorWithFields(log.Fields{
+					"error": err,
+				}, "An error occurred while srv.Run.")
+			}
 			closeAll()
 			return
 		case sig := <-quit:
 			log.InfoWithFields(log.Fields{
 				"signal": sig.String(),
 			}, "Got quit signal.")
-			closeAll()
-			return
+			cancel()
 		}
 	}
 }
@@ -92,9 +106,9 @@ func init() {
 
 	// 加载日志设置
 	err := log.InitLog(
-		conf.Config.LogPath,
-		conf.MODULAR_NAME,
-		conf.Config.LogLevel,
+		conf.Conf.LogPath,
+		conf.SERVICE_NAME,
+		conf.Conf.LogLevel,
 	)
 	if err != nil {
 		fmt.Println("Failed to init logging, error:", err.Error())

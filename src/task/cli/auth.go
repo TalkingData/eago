@@ -13,13 +13,13 @@ var AuthClient auth.AuthService
 // InitAuthCli 启动Auth RPC客户端
 func InitAuthCli() {
 	etcdReg := etcdv3.NewRegistry(
-		registry.Addrs(conf.Config.EtcdAddresses...),
-		etcdv3.Auth(conf.Config.EtcdUsername, conf.Config.EtcdPassword),
+		registry.Addrs(conf.Conf.EtcdAddresses...),
+		etcdv3.Auth(conf.Conf.EtcdUsername, conf.Conf.EtcdPassword),
 	)
 	cli := micro.NewService(
 		micro.Registry(etcdReg),
 		micro.Version("v1"),
 	)
 
-	AuthClient = auth.NewAuthService(conf.AUTH_RPC_SERVICE_NAME, cli.Client())
+	AuthClient = auth.NewAuthService(conf.AUTH_RPC_REGISTER_KEY, cli.Client())
 }

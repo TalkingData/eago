@@ -55,6 +55,7 @@ type worker struct {
 	runList  *taskList
 
 	etcdCli           *clientv3.Client
+	etcdLease         clientv3.Lease
 	taskServiceClient proto.TaskService
 
 	mu sync.RWMutex
@@ -74,8 +75,8 @@ func (w *worker) callTask(req *CallTaskReq) {
 		if err != nil {
 			log.ErrorWithFields(log.Fields{
 				"task_unique_id": req.TaskUniqueId,
-				"error":          err.Error(),
-			}, "Error in taskServiceClient.SetTaskStatus.")
+				"error":          err,
+			}, "An error occurred while taskServiceClient.SetTaskStatus.")
 			return
 		}
 		return
@@ -85,7 +86,7 @@ func (w *worker) callTask(req *CallTaskReq) {
 	if w.runList.Exists(req.TaskUniqueId) {
 		log.ErrorWithFields(log.Fields{
 			"task_unique_id": req.TaskUniqueId,
-		}, "Error in worker.runTask, A duplicate task was called.")
+		}, "An error occurred while worker.runTask, Task already running.")
 		return
 	}
 
@@ -94,8 +95,8 @@ func (w *worker) callTask(req *CallTaskReq) {
 	if err != nil {
 		log.ErrorWithFields(log.Fields{
 			"task_unique_id": req.TaskUniqueId,
-			"error":          err.Error(),
-		}, "Error in taskServiceClient.SetTaskStatus.")
+			"error":          err,
+		}, "An error occurred while taskServiceClient.SetTaskStatus.")
 		// 失败仅记录日志，不跳出
 	}
 
@@ -107,9 +108,9 @@ func (w *worker) callTask(req *CallTaskReq) {
 		task.Cxt, task.Cancel = context.WithCancel(ctx)
 	}
 
-	task.logger = NewLogger(w.opts.LogBufferSize)
+	task.logger = newLogger(w.opts.LogBufferSize)
 
-	param := Param{
+	task.Param = &Param{
 		req.TaskUniqueId,
 		req.Caller,
 		req.Timeout,
@@ -118,7 +119,6 @@ func (w *worker) callTask(req *CallTaskReq) {
 		time.Unix(req.Timestamp, 0),
 		task.logger,
 	}
-	task.Param = &param
 
 	w.runList.New(req.TaskUniqueId, &task)
 	go func() {
@@ -129,7 +129,7 @@ func (w *worker) callTask(req *CallTaskReq) {
 				log.ErrorWithFields(log.Fields{
 					"task_unique_id": req.TaskUniqueId,
 					"panic":          r,
-				}, "Error in task.Run, Task panic.")
+				}, "An error occurred while task.Run, Task panic.")
 				w.callback(&task, TASK_PANIC_END_STATUS)
 			}
 		}()
@@ -139,8 +139,8 @@ func (w *worker) callTask(req *CallTaskReq) {
 		if err != nil {
 			log.ErrorWithFields(log.Fields{
 				"task_unique_id": req.TaskUniqueId,
-				"error":          err.Error(),
-			}, "Error in taskServiceClient.SetTaskStatus.")
+				"error":          err,
+			}, "An error occurred while taskServiceClient.SetTaskStatus.")
 			// 失败仅记录日志，不跳出
 		}
 
@@ -167,7 +167,7 @@ func (w *worker) killTask(taskUniqueId string) {
 	if w.runList.Exists(taskUniqueId) {
 		log.ErrorWithFields(log.Fields{
 			"task_unique_id": taskUniqueId,
-		}, "Error in worker.killTask, Cant kill a task not in running state.")
+		}, "An error occurred while worker.killTask, Task is not in running state.")
 		return
 	}
 
@@ -180,13 +180,15 @@ func (w *worker) killTask(taskUniqueId string) {
 	if err != nil {
 		log.ErrorWithFields(log.Fields{
 			"task_unique_id": taskUniqueId,
-			"error":          err.Error(),
-		}, "Error in taskServiceClient.SetTaskStatus.")
+			"error":          err,
+		}, "An error occurred while taskServiceClient.SetTaskStatus.")
 		// 失败仅记录日志，不跳出
 	}
 
 	// 关闭日志通道
+	t.logger.Wg.Wait()
 	close(t.logger.LogCh)
+
 	// 删除任务
 	w.runList.Del(taskUniqueId)
 }
@@ -196,19 +198,22 @@ func (w *worker) callback(task *Task, status int) {
 	defer func() {
 		// 通过context结束任务
 		task.Cancel()
-		// 关闭日志通道
-		close(task.logger.LogCh)
+
 		// 删除任务
 		w.runList.Del(task.Param.TaskUniqueId)
 	}()
+
+	// 关闭日志通道
+	task.logger.Wg.Wait()
+	close(task.logger.LogCh)
 
 	err := w.setTaskStatus(task.Param.TaskUniqueId, status)
 	if err != nil {
 		log.ErrorWithFields(log.Fields{
 			"task_unique_id": task.Param.TaskUniqueId,
 			"status":         status,
-			"error":          err.Error(),
-		}, "Error in taskServiceClient.SetTaskStatus.")
+			"error":          err,
+		}, "An error occurred while taskServiceClient.SetTaskStatus.")
 		return
 	}
 }
@@ -228,8 +233,8 @@ func (w *worker) logConsumer(task *Task) {
 	if err != nil {
 		log.ErrorWithFields(log.Fields{
 			"task_unique_id": task.Param.TaskUniqueId,
-			"error":          err.Error(),
-		}, "Error in create taskServiceClient.TaskLog stream.")
+			"error":          err,
+		}, "An error occurred while taskServiceClient.TaskLog stream.")
 		return
 	}
 	defer func() { _ = stream.Close() }()
@@ -248,18 +253,21 @@ func (w *worker) logConsumer(task *Task) {
 			if err != nil {
 				log.ErrorWithFields(log.Fields{
 					"task_unique_id": task.Param.TaskUniqueId,
-					"error":          err.Error(),
-				}, "Error in stream.Send.")
+					"error":          err,
+				}, "An error occurred while stream.Send.")
+				task.logger.Wg.Done()
 				return
 			}
 			_, err = stream.Recv()
 			if err != nil {
 				log.ErrorWithFields(log.Fields{
 					"task_unique_id": task.Param.TaskUniqueId,
-					"error":          err.Error(),
-				}, "Error in stream.Recv.")
+					"error":          err,
+				}, "An error occurred while stream.Recv.")
+				task.logger.Wg.Done()
 				return
 			}
+			task.logger.Wg.Done()
 		}
 	}
 }
@@ -273,7 +281,7 @@ func (w *worker) setTaskStatus(taskUniqueId string, status int) error {
 	}
 
 	if !res.Ok {
-		return errors.New("Unsuccessful rpc result.")
+		return errors.New("unsuccessful rpc result")
 	}
 
 	return nil
@@ -296,8 +304,8 @@ func (w *worker) Start() error {
 	err := rpc.Register(&WorkerService{wk: w})
 	if err != nil {
 		log.ErrorWithFields(log.Fields{
-			"error": err.Error(),
-		}, "Error on worker rpc.Register.")
+			"error": err,
+		}, "An error occurred while rpc.Register.")
 		return err
 	}
 
@@ -305,8 +313,8 @@ func (w *worker) Start() error {
 	w.listener, err = net.Listen("tcp", fmt.Sprintf("%s:0", w.opts.WorkerIp))
 	if err != nil {
 		log.ErrorWithFields(log.Fields{
-			"error": err.Error(),
-		}, "Error on worker net.Listen.")
+			"error": err,
+		}, "An error occurred while net.Listen.")
 		return err
 	}
 
@@ -319,8 +327,8 @@ func (w *worker) Start() error {
 			conn, err := w.listener.Accept()
 			if err != nil {
 				log.ErrorWithFields(log.Fields{
-					"error": err.Error(),
-				}, "Error on worker w.listener.Accept.")
+					"error": err,
+				}, "An error occurred while listener.Accept.")
 				continue
 			}
 			// 处理实际请求
@@ -342,7 +350,11 @@ func (w *worker) Start() error {
 // init 初始化Worker
 func (w *worker) init() {
 	// 生成WorkerId
-	w.workerId = fmt.Sprintf("%s.worker-%s", w.opts.Modular, uuid.NewV4().String())
+	if w.opts.MultiInstance {
+		w.workerId = fmt.Sprintf("%s.worker-%s", w.opts.ServiceName, uuid.NewV4().String())
+	} else {
+		w.workerId = fmt.Sprintf("%s.worker-unique", w.opts.ServiceName)
+	}
 
 	w.taskList = &taskList{
 		data: make(map[string]*Task),
@@ -358,14 +370,18 @@ func (w *worker) init() {
 	cli := micro.NewService(micro.Registry(etcdReg))
 	w.taskServiceClient = proto.NewTaskService(w.opts.TaskRpcServiceName, cli.Client())
 
-	etcdCli, err := clientv3.New(clientv3.Config{
+	etcdCfg := clientv3.Config{
 		Endpoints:   w.opts.EtcdAddresses,
+		Username:    w.opts.EtcdUsername,
+		Password:    w.opts.EtcdPassword,
 		DialTimeout: 5 * time.Second,
-	})
+	}
+
+	etcdCli, err := clientv3.New(etcdCfg)
 	if err != nil {
 		log.ErrorWithFields(log.Fields{
-			"error": err.Error(),
-		}, "Error in clientv3.New.")
+			"error": err,
+		}, "An error occurred while clientv3.New.")
 		panic(err)
 	}
 
@@ -390,44 +406,24 @@ func (w *worker) register() {
 	log.Info(fmt.Sprintf("Worker %s register called.", w.workerId))
 	defer log.Info(fmt.Sprintf("Worker %s register end.", w.workerId))
 
-	// 建立etcd租约
-	resp, err := w.etcdCli.Grant(context.Background(), w.opts.RegisterTtl)
-	if err != nil {
-		log.ErrorWithFields(log.Fields{
-			"error": err.Error(),
-		}, "Error in etcdCli.Grant.")
-		panic(err)
-	}
+	ctx := context.TODO()
+
+	// 设置worker开始时间
 	n := time.Now()
 	w.startTime = &n
 
-	// 生成注册Key和Value
-	regK := fmt.Sprintf("%s/%s/%s", WORKER_REGISTER_KEY_PREFFIX, w.opts.Modular, w.workerId)
-	regV, _ := json.Marshal(WorkerInfo{
-		Modular:   w.opts.Modular,
-		Address:   w.endpoint,
-		WorkerId:  w.workerId,
-		StartTime: time.Now().Format("2006-01-02 15:04:05"),
-	})
-
-	// 注册到etcd
-	_, err = w.etcdCli.Put(context.Background(), regK, string(regV), clientv3.WithLease(resp.ID))
+	// 建立etcd租约
+	w.etcdLease = clientv3.NewLease(w.etcdCli)
+	leaseGrantResp, err := w.etcdLease.Grant(ctx, w.opts.RegisterTtl)
 	if err != nil {
 		log.ErrorWithFields(log.Fields{
-			"error": err.Error(),
-		}, "Error in etcdCli.Put.")
+			"error": err,
+		}, "An error occurred while lease.Grant.")
 		panic(err)
 	}
 
-	// 自动续约
-	ch, err := w.etcdCli.KeepAlive(context.Background(), resp.ID)
-	if err != nil {
-		log.ErrorWithFields(log.Fields{
-			"error": err.Error(),
-		}, "Error in etcdCli.KeepAlive.")
-		panic(err)
-	}
-
+	ch, err := w.etcdLease.KeepAlive(ctx, leaseGrantResp.ID)
+	// 续约应答
 	go func() {
 		for {
 			_, ok := <-ch
@@ -437,6 +433,34 @@ func (w *worker) register() {
 			}
 		}
 	}()
+
+	// 生成注册Key和Value
+	regK := fmt.Sprintf("%s/%s/%s", WORKER_REGISTER_KEY_PREFFIX, w.opts.ServiceName, w.workerId)
+	regV, _ := json.Marshal(WorkerInfo{
+		Modular:   w.opts.ServiceName,
+		Address:   w.endpoint,
+		WorkerId:  w.workerId,
+		StartTime: time.Now().Format("2006-01-02 15:04:05"),
+	})
+
+	txn := clientv3.NewKV(w.etcdCli).Txn(ctx)
+	// 注册到etcd
+	txn.If(clientv3.Compare(clientv3.CreateRevision(regK), "=", 0)).
+		Then(clientv3.OpPut(regK, string(regV), clientv3.WithLease(leaseGrantResp.ID))).
+		Else(clientv3.OpGet(regK))
+
+	// 提交事务
+	txnResp, err := txn.Commit()
+	if err != nil {
+		panic(err)
+	}
+
+	if !txnResp.Succeeded {
+		if !w.opts.MultiInstance {
+			panic("another worker instance is already running, and worker not allowed create multi instance")
+		}
+		panic("another worker instance is already running using same worker id")
+	}
 }
 
 // unregister
@@ -444,12 +468,16 @@ func (w *worker) unregister() {
 	log.Info(fmt.Sprintf("Worker %s unregister called.", w.workerId))
 	defer log.Info(fmt.Sprintf("Worker %s unregister end.", w.workerId))
 
-	k := fmt.Sprintf("/%s/%s/%s", WORKER_REGISTER_KEY_PREFFIX, w.opts.Modular, w.workerId)
+	if w.etcdLease != nil {
+		_ = w.etcdLease.Close()
+	}
+
+	k := fmt.Sprintf("/%s/%s/%s", WORKER_REGISTER_KEY_PREFFIX, w.opts.ServiceName, w.workerId)
 	_, err := w.etcdCli.Delete(context.Background(), k)
 	if err != nil {
 		log.ErrorWithFields(log.Fields{
-			"error": err.Error(),
-		}, "Error in etcdCli.Delete.")
+			"error": err,
+		}, "An error occurred while etcdCli.Delete, This error will be ignored.")
 	}
 
 	w.startTime = nil

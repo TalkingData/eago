@@ -24,7 +24,7 @@ func ListPageHelper() gin.HandlerFunc {
 
 		c.Set("Query", c.Query("query"))
 
-		orderBy := strings.Split(c.DefaultQuery("order_by", "-id"), ",")
+		orderBy := strings.Split(c.DefaultQuery("order_by", "id desc"), ",")
 		c.Set("OrderBy", orderBy)
 
 		c.Next()

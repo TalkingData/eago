@@ -1,8 +1,9 @@
 package middleware
 
 import (
-	"eago/auth/api/form"
 	"eago/auth/conf/msg"
+	"eago/auth/dto"
+	w "eago/common/api-suite/writter"
 	"eago/common/log"
 	"github.com/gin-gonic/gin"
 )
@@ -13,20 +14,24 @@ func ReadLoginForm() gin.HandlerFunc { // 登录表单预读
 		log.Info("ReadLoginForm called.")
 		defer log.Info("ReadLoginForm end.")
 
-		var lf form.LoginForm
-
+		var loginFrm dto.Login
 		// 序列化request body获取用户名密码
-		if err := c.ShouldBindJSON(&lf); err != nil {
-			resp := msg.WarnInvalidBody.GenResponse("Field 'username', 'password' required.")
-			log.WarnWithFields(log.Fields{
-				"error": err.Error(),
-			}, resp.String())
-			resp.WriteAndAbort(c)
+		if err := c.ShouldBindJSON(&loginFrm); err != nil {
+			m := msg.SerializeFailed
+			w.WriteAnyAndAbort(c, m.Code(), m.String())
+			return
+		}
+		// 验证数据
+		if err := loginFrm.Validate(); err != nil {
+			// 数据验证未通过
+			m := msg.ValidateFailed
+			log.WarnWithFields(m.LogFields())
+			w.WriteAnyAndAbort(c, m.Code(), m.String())
 			return
 		}
 
 		c.Set("LoginUser", map[string]string{
-			"username": lf.Username, "password": lf.Password,
+			"username": loginFrm.Username, "password": loginFrm.Password,
 		})
 	}
 }

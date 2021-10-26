@@ -6,12 +6,16 @@ import (
 	"time"
 )
 
+const (
+	TIMESTAMP_FORMAT = "2006-01-02 15:04:05"
+)
+
 type LocalTime struct {
 	time.Time
 }
 
 func (t *LocalTime) MarshalJSON() ([]byte, error) {
-	formatted := fmt.Sprintf("\"%s\"", t.Format("2006-01-02 15:04:05"))
+	formatted := fmt.Sprintf("\"%s\"", t.Format(TIMESTAMP_FORMAT))
 	return []byte(formatted), nil
 }
 
@@ -32,4 +36,14 @@ func (t *LocalTime) Scan(v interface{}) error {
 		return nil
 	}
 	return fmt.Errorf("Can not convert %v to timestamp", v)
+}
+
+func (t *LocalTime) UnmarshalJSON(data []byte) (err error) {
+	now, err := time.ParseInLocation(`"`+TIMESTAMP_FORMAT+`"`, string(data), time.Local)
+	*t = LocalTime{Time: now}
+	return
+}
+
+func (t *LocalTime) String() string {
+	return t.Format(TIMESTAMP_FORMAT)
 }

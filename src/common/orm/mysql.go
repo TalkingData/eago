@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
 )
 
 // InitMysql 初始化Mysql
@@ -34,6 +35,16 @@ func InitMysql(address, user, password, dbName string, opts ...DbOption) (d *gor
 
 	db = d
 	return db
+}
+
+// MysqlDefaultLogMode 设置Mysql默认LogMOde
+func MysqlDefaultLogMode(level logger.LogLevel) DbOption {
+	return func(d *gorm.DB) {
+		if d == nil {
+			return
+		}
+		d.Logger = logger.Default.LogMode(level)
+	}
 }
 
 // MysqlMaxIdleConns 设置Mysql最大空闲连接数量

@@ -1,24 +1,39 @@
 package msg
 
 import (
-	m "eago/common/api-suite/message"
+	m "eago/common/message"
 	"net/http"
 )
 
 var (
-	Success = m.Message{0, "Success"}
+	// Default
+	InvalidUriFailed = m.NewMessage(http.StatusBadRequest, "请求错误，请确保Params中包含以下字段:")
+	SerializeFailed  = m.NewMessage(http.StatusBadRequest, "无法读取提交的数据，请确保发送正确的数据格式")
+	ValidateFailed   = m.NewMessage(http.StatusBadRequest, "验证失败，提交的内容不合法")
+	NotFoundFailed   = m.NewMessage(http.StatusNotFound, "操作失败，找不到指定对象")
+	UnknownError     = m.NewMessage(http.StatusInternalServerError, "操作失败，请先尝试重试，若无效请联系管理员")
 
-	WarnLoginFailed = m.Message{http.StatusUnauthorized, "Login failed."}
+	// Login 1000xx
+	LoginInactiveCrowdUserFailed = m.NewMessage(100001, "登录失败，当前用户在Crowd中是禁用状态")
+	LoginDisabledUserFailed      = m.NewMessage(100002, "登录失败，用户处于禁用状态")
+	LoginNoPasswordUserFailed    = m.NewMessage(100003, "登录失败，当前用户没有设置密码")
+	LoginAuthenticationFailed    = m.NewMessage(100004, "登录失败，请检查用户名密码是否正确")
+	LoginNewTokenFailed          = m.NewMessage(100005, "创建Token失败，请联系管理员")
+	LoginUnknownFailed           = m.NewMessage(100099, "登录失败，请联系管理员")
 
-	WarnPermissionDeny = m.Message{http.StatusForbidden, "Permission deny."}
-	WarnInvalidUri     = m.Message{http.StatusBadRequest, "Bad request, invalid Uri."}
-	WarnInvalidParams  = m.Message{http.StatusBadRequest, "Bad request, invalid params."}
-	WarnInvalidBody    = m.Message{http.StatusBadRequest, "Bad request, invalid request body."}
-	WarnDataNotFound   = m.Message{http.StatusNotFound, "Data not found."}
+	// User 1001xx
+	HandoverUnknownError = m.NewMessage(100101, "用户交接处理失败，请联系管理员")
 
-	ErrGenToken = m.Message{http.StatusInternalServerError, "An error occurred in generate token, please contact admin."}
-	ErrGetToken = m.Message{http.StatusInternalServerError, "An error occurred in get token content, please contact admin."}
-	ErrDatabase = m.Message{http.StatusInternalServerError, "An database error occurred, please contact admin."}
+	// Role 1002xx
+	AssociatedRoleFailed = m.NewMessage(100201, "无法执行操作，仍有用户与该角色关联")
 
-	ErrUnknown = m.Message{http.StatusInternalServerError, "Unknown error, please contact admin."}
+	// Role 1003xx
+	AssociatedProductFailed = m.NewMessage(100301, "无法执行操作，仍有用户与该产品线关联")
+
+	// Role 1004xx
+	AssociatedGroupFailed = m.NewMessage(100401, "无法执行操作，仍有用户与该组关联")
+
+	// Role 1005xx
+	AssociatedDepartmentFailed     = m.NewMessage(100501, "无法执行操作，仍有子部门与该部门关联")
+	AssociatedDepartmentUserFailed = m.NewMessage(100502, "无法执行操作，仍有用户与该部门关联")
 )

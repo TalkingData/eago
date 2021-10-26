@@ -2,7 +2,7 @@ package main
 
 import (
 	"context"
-	"eago/auth/srv/local"
+	"eago/auth/srv/builtin"
 	"eago/auth/srv/proto"
 	"eago/common/log"
 	"sync"
@@ -13,7 +13,7 @@ func (as *AuthService) VerifyToken(ctx context.Context, req *auth.Token, res *au
 	log.InfoWithFields(log.Fields{"token": req.Token}, "srv.VerifyToken called.")
 	defer log.Info("srv.VerifyToken end.")
 
-	res.Ok = local.VerifyToken(req.Token)
+	res.Ok = builtin.VerifyToken(req.Token)
 	return nil
 }
 
@@ -25,7 +25,7 @@ func (as *AuthService) GetTokenContent(ctx context.Context, req *auth.Token, rsp
 	)
 	defer log.Info("srv.GetTokenContent end.")
 
-	tc, ok := local.GetTokenContent(req.Token)
+	tc, ok := builtin.GetTokenContent(req.Token)
 	if !ok || tc == nil {
 		rsp.Ok = false
 		return nil
@@ -46,7 +46,7 @@ func (as *AuthService) GetTokenContent(ctx context.Context, req *auth.Token, rsp
 	rsp.Roles = *tc.Roles
 
 	// 加载产品线
-	wg := &sync.WaitGroup{}
+	wg := new(sync.WaitGroup)
 	wg.Add(1)
 	go func(wg *sync.WaitGroup) {
 		defer wg.Done()

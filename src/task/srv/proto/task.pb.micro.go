@@ -43,9 +43,15 @@ func NewTaskServiceEndpoints() []*api.Endpoint {
 
 type TaskService interface {
 	// ListTasks 列出所有任务
-	ListTasks(ctx context.Context, in *Empty, opts ...client.CallOption) (*Tasks, error)
+	ListTasks(ctx context.Context, in *QueryWithPage, opts ...client.CallOption) (*PagedTasks, error)
+	// ListSchedules 列出所有计划任务
+	ListSchedules(ctx context.Context, in *QueryWithPage, opts ...client.CallOption) (*PagedSchedules, error)
+	// GetResult 查看任务结果
+	GetResult(ctx context.Context, in *TaskUniqueId, opts ...client.CallOption) (*Result, error)
 	// CallTask 调用任务
-	CallTask(ctx context.Context, in *CallTaskReq, opts ...client.CallOption) (*CallTaskRsp, error)
+	CallTask(ctx context.Context, in *CallTaskReq, opts ...client.CallOption) (*TaskUniqueId, error)
+	// KillTask 结束任务
+	KillTask(ctx context.Context, in *TaskUniqueId, opts ...client.CallOption) (*BoolMsg, error)
 	// SetTaskStatus 设置任务状态
 	SetTaskStatus(ctx context.Context, in *SetTaskStatusReq, opts ...client.CallOption) (*BoolMsg, error)
 	// AppendTaskLog 追加任务日志
@@ -64,9 +70,9 @@ func NewTaskService(name string, c client.Client) TaskService {
 	}
 }
 
-func (c *taskService) ListTasks(ctx context.Context, in *Empty, opts ...client.CallOption) (*Tasks, error) {
+func (c *taskService) ListTasks(ctx context.Context, in *QueryWithPage, opts ...client.CallOption) (*PagedTasks, error) {
 	req := c.c.NewRequest(c.name, "TaskService.ListTasks", in)
-	out := new(Tasks)
+	out := new(PagedTasks)
 	err := c.c.Call(ctx, req, out, opts...)
 	if err != nil {
 		return nil, err
@@ -74,9 +80,39 @@ func (c *taskService) ListTasks(ctx context.Context, in *Empty, opts ...client.C
 	return out, nil
 }
 
-func (c *taskService) CallTask(ctx context.Context, in *CallTaskReq, opts ...client.CallOption) (*CallTaskRsp, error) {
+func (c *taskService) ListSchedules(ctx context.Context, in *QueryWithPage, opts ...client.CallOption) (*PagedSchedules, error) {
+	req := c.c.NewRequest(c.name, "TaskService.ListSchedules", in)
+	out := new(PagedSchedules)
+	err := c.c.Call(ctx, req, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *taskService) GetResult(ctx context.Context, in *TaskUniqueId, opts ...client.CallOption) (*Result, error) {
+	req := c.c.NewRequest(c.name, "TaskService.GetResult", in)
+	out := new(Result)
+	err := c.c.Call(ctx, req, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *taskService) CallTask(ctx context.Context, in *CallTaskReq, opts ...client.CallOption) (*TaskUniqueId, error) {
 	req := c.c.NewRequest(c.name, "TaskService.CallTask", in)
-	out := new(CallTaskRsp)
+	out := new(TaskUniqueId)
+	err := c.c.Call(ctx, req, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *taskService) KillTask(ctx context.Context, in *TaskUniqueId, opts ...client.CallOption) (*BoolMsg, error) {
+	req := c.c.NewRequest(c.name, "TaskService.KillTask", in)
+	out := new(BoolMsg)
 	err := c.c.Call(ctx, req, out, opts...)
 	if err != nil {
 		return nil, err
@@ -149,9 +185,15 @@ func (x *taskServiceAppendTaskLog) Recv() (*BoolMsg, error) {
 
 type TaskServiceHandler interface {
 	// ListTasks 列出所有任务
-	ListTasks(context.Context, *Empty, *Tasks) error
+	ListTasks(context.Context, *QueryWithPage, *PagedTasks) error
+	// ListSchedules 列出所有计划任务
+	ListSchedules(context.Context, *QueryWithPage, *PagedSchedules) error
+	// GetResult 查看任务结果
+	GetResult(context.Context, *TaskUniqueId, *Result) error
 	// CallTask 调用任务
-	CallTask(context.Context, *CallTaskReq, *CallTaskRsp) error
+	CallTask(context.Context, *CallTaskReq, *TaskUniqueId) error
+	// KillTask 结束任务
+	KillTask(context.Context, *TaskUniqueId, *BoolMsg) error
 	// SetTaskStatus 设置任务状态
 	SetTaskStatus(context.Context, *SetTaskStatusReq, *BoolMsg) error
 	// AppendTaskLog 追加任务日志
@@ -160,8 +202,11 @@ type TaskServiceHandler interface {
 
 func RegisterTaskServiceHandler(s server.Server, hdlr TaskServiceHandler, opts ...server.HandlerOption) error {
 	type taskService interface {
-		ListTasks(ctx context.Context, in *Empty, out *Tasks) error
-		CallTask(ctx context.Context, in *CallTaskReq, out *CallTaskRsp) error
+		ListTasks(ctx context.Context, in *QueryWithPage, out *PagedTasks) error
+		ListSchedules(ctx context.Context, in *QueryWithPage, out *PagedSchedules) error
+		GetResult(ctx context.Context, in *TaskUniqueId, out *Result) error
+		CallTask(ctx context.Context, in *CallTaskReq, out *TaskUniqueId) error
+		KillTask(ctx context.Context, in *TaskUniqueId, out *BoolMsg) error
 		SetTaskStatus(ctx context.Context, in *SetTaskStatusReq, out *BoolMsg) error
 		AppendTaskLog(ctx context.Context, stream server.Stream) error
 	}
@@ -176,12 +221,24 @@ type taskServiceHandler struct {
 	TaskServiceHandler
 }
 
-func (h *taskServiceHandler) ListTasks(ctx context.Context, in *Empty, out *Tasks) error {
+func (h *taskServiceHandler) ListTasks(ctx context.Context, in *QueryWithPage, out *PagedTasks) error {
 	return h.TaskServiceHandler.ListTasks(ctx, in, out)
 }
 
-func (h *taskServiceHandler) CallTask(ctx context.Context, in *CallTaskReq, out *CallTaskRsp) error {
+func (h *taskServiceHandler) ListSchedules(ctx context.Context, in *QueryWithPage, out *PagedSchedules) error {
+	return h.TaskServiceHandler.ListSchedules(ctx, in, out)
+}
+
+func (h *taskServiceHandler) GetResult(ctx context.Context, in *TaskUniqueId, out *Result) error {
+	return h.TaskServiceHandler.GetResult(ctx, in, out)
+}
+
+func (h *taskServiceHandler) CallTask(ctx context.Context, in *CallTaskReq, out *TaskUniqueId) error {
 	return h.TaskServiceHandler.CallTask(ctx, in, out)
+}
+
+func (h *taskServiceHandler) KillTask(ctx context.Context, in *TaskUniqueId, out *BoolMsg) error {
+	return h.TaskServiceHandler.KillTask(ctx, in, out)
 }
 
 func (h *taskServiceHandler) SetTaskStatus(ctx context.Context, in *SetTaskStatusReq, out *BoolMsg) error {

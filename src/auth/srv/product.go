@@ -2,33 +2,62 @@ package main
 
 import (
 	"context"
+	"eago/auth/conf"
 	"eago/auth/conf/msg"
+	"eago/auth/dao"
 	"eago/auth/model"
 	"eago/auth/srv/proto"
 	"eago/common/log"
 )
+
+// GetProductById RPC服务::按Id查找产品线
+func (as *AuthService) GetProductById(ctx context.Context, req *auth.IdQuery, rsp *auth.Product) error {
+	log.Info("srv.GetProductById called.")
+	defer log.Info("srv.GetProductById end.")
+
+	log.Info("Finding product.")
+	prod, ok := dao.GetProduct(dao.Query{"id=?": req.Id})
+	if !ok {
+		m := msg.UnknownError.SetDetail("An error occurred while dao.GetProduct.")
+		log.ErrorWithFields(m.LogFields())
+		return m.RpcError()
+	}
+
+	if prod == nil {
+		log.WarnWithFields(log.Fields{
+			"id": req.Id,
+		}, "Warring, AuthService.GetProductById got a nil product.")
+		return nil
+	}
+
+	rsp.Id = int32(prod.Id)
+	rsp.Name = prod.Name
+	rsp.Alias = prod.Alias
+	rsp.Disabled = *prod.Disabled
+	return nil
+}
 
 // ListProducts RPC服务::列出所有产品线
 func (as *AuthService) ListProducts(ctx context.Context, req *auth.QueryWithPage, rsp *auth.PagedProducts) error {
 	log.Info("srv.ListProducts called.")
 	defer log.Info("srv.ListProducts end.")
 
-	query := make(model.Query)
-	for k, v := range query {
+	query := make(dao.Query)
+	for k, v := range req.Query {
 		query[k] = v
 	}
 
 	log.Info("Finding products.")
-	pagedData, ok := model.PagedListProducts(query, int(req.Page), int(req.PageSize))
+	pagedData, ok := dao.PagedListProducts(query, int(req.Page), int(req.PageSize))
 	if !ok {
-		m := msg.ErrDatabase.SetDetail("Error when AuthService.ListProducts called, in model.PagedListProducts.")
-		log.Error(m.String())
-		return m.Error()
+		m := msg.UnknownError.SetDetail("An error occurred while dao.PagedListProducts.")
+		log.ErrorWithFields(m.LogFields())
+		return m.RpcError()
 	}
 
 	log.Info("Making response.")
 	rsp.Products = make([]*auth.Product, 0)
-	for _, p := range pagedData.Data.([]model.Product) {
+	for _, p := range *pagedData.Data.(*[]model.Product) {
 		newP := auth.Product{}
 		newP.Id = int32(p.Id)
 		newP.Name = p.Name
@@ -51,21 +80,23 @@ func (as *AuthService) ListProductUsers(ctx context.Context, in *auth.IdQuery, o
 	defer log.Info("srv.ListProductUsers end.")
 
 	log.Info("Finding product users.")
-	us, ok := model.ListProductUsers(int(in.Id), model.Query{})
+	us, ok := dao.ListProductUsers(int(in.Id), dao.Query{})
 	if !ok {
-		m := msg.ErrDatabase.GenResponse("Error when AuthService.ListProductUsers called, in model.ListProductUsers.")
-		log.Error(m.String())
-		return m.Error()
+		m := msg.UnknownError.SetDetail("An error occurred while dao.ListProductUsers.")
+		log.ErrorWithFields(m.LogFields())
+		return m.RpcError()
 	}
 
 	log.Info("Making response.")
 	out.Users = make([]*auth.MemberUsers_MemberUser, 0)
 	for _, u := range *us {
-		mUser := auth.MemberUsers_MemberUser{}
-		mUser.Id = int32(u.Id)
-		mUser.Username = u.Username
-		mUser.IsOwner = u.IsOwner
-		out.Users = append(out.Users, &mUser)
+		mUser := &auth.MemberUsers_MemberUser{
+			Id:       int32(u.Id),
+			Username: u.Username,
+			IsOwner:  u.IsOwner,
+			JoinedAt: u.JoinedAt.Format(conf.TIMESTAMP_FORMAT),
+		}
+		out.Users = append(out.Users, mUser)
 	}
 
 	return nil

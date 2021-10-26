@@ -3,32 +3,58 @@ package main
 import (
 	"context"
 	"eago/auth/conf/msg"
+	"eago/auth/dao"
 	"eago/auth/model"
 	"eago/auth/srv/proto"
 	"eago/common/log"
 )
+
+// GetGroupById RPC服务::按Id查找组
+func (as *AuthService) GetGroupById(ctx context.Context, req *auth.IdQuery, rsp *auth.Group) error {
+	log.Info("srv.GetGroupById called.")
+	defer log.Info("srv.GetGroupById end.")
+
+	log.Info("Finding user.")
+	g, ok := dao.GetGroup(dao.Query{"id=?": req.Id})
+	if !ok {
+		m := msg.UnknownError.SetDetail("An error occurred while dao.GetGroup.")
+		log.ErrorWithFields(m.LogFields())
+		return m.RpcError()
+	}
+
+	if g == nil {
+		log.WarnWithFields(log.Fields{
+			"id": req.Id,
+		}, "Warring, AuthService.GetGroupById got a nil group.")
+		return nil
+	}
+
+	rsp.Id = int32(g.Id)
+	rsp.Name = g.Name
+	return nil
+}
 
 // ListGroups RPC服务::列出所有组
 func (as *AuthService) ListGroups(ctx context.Context, req *auth.QueryWithPage, rsp *auth.PagedGroups) error {
 	log.Info("srv.ListGroups called.")
 	defer log.Info("srv.ListGroups end.")
 
-	query := make(model.Query)
-	for k, v := range query {
+	query := make(dao.Query)
+	for k, v := range req.Query {
 		query[k] = v
 	}
 
 	log.Info("Finding groups.")
-	pagedData, ok := model.PagedListGroups(query, int(req.Page), int(req.PageSize))
+	pagedData, ok := dao.PagedListGroups(query, int(req.Page), int(req.PageSize))
 	if !ok {
-		m := msg.ErrDatabase.SetDetail("Error when AuthService.ListGroups called, in model.PagedListGroups.")
-		log.Error(m.String())
-		return m.Error()
+		m := msg.UnknownError.SetDetail("An error occurred while dao.PagedListGroups.")
+		log.ErrorWithFields(m.LogFields())
+		return m.RpcError()
 	}
 
 	log.Info("Making response.")
 	rsp.Groups = make([]*auth.Group, 0)
-	for _, g := range pagedData.Data.([]model.Group) {
+	for _, g := range *pagedData.Data.(*[]model.Group) {
 		newG := auth.Group{}
 		newG.Id = int32(g.Id)
 		newG.Name = g.Name
@@ -49,11 +75,11 @@ func (as *AuthService) ListGroupUsers(ctx context.Context, in *auth.IdQuery, out
 	defer log.Info("srv.ListGroupUsers end.")
 
 	log.Info("Finding group users.")
-	us, ok := model.ListGroupUsers(int(in.Id), model.Query{})
+	us, ok := dao.ListGroupUsers(int(in.Id), dao.Query{})
 	if !ok {
-		m := msg.ErrDatabase.GenResponse("Error when AuthService.ListGroupUsers called, in model.ListGroupUsers.")
-		log.Error(m.String())
-		return m.Error()
+		m := msg.UnknownError.SetDetail("An error occurred while dao.ListGroupUsers.")
+		log.ErrorWithFields(m.LogFields())
+		return m.RpcError()
 	}
 
 	log.Info("Making response.")

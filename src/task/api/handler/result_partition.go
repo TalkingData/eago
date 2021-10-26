@@ -1,66 +1,64 @@
 package handler
 
 import (
-	"database/sql"
+	w "eago/common/api-suite/writter"
 	"eago/common/log"
 	"eago/task/conf/msg"
-	"eago/task/model"
-	"fmt"
+	"eago/task/dao"
+	"eago/task/dto"
 	"github.com/gin-gonic/gin"
 )
 
-// NewResultPartitionsWithCreateTables 新建结果分区并建立结果表和日志表
+// NewResultPartitionsWithCreateTables 新增结果分区并建立结果表和日志表
 // 仅测试用，不对外开放的方法
 func NewResultPartitionsWithCreateTables(c *gin.Context) {
-	var rpForm model.ResultPartition
+	var rpForm dto.NewResultPartition
 
 	// 序列化request body
 	if err := c.ShouldBindJSON(&rpForm); err != nil {
-		resp := msg.WarnInvalidBody.GenResponse("Field 'partition' required.")
-		log.WarnWithFields(log.Fields{
-			"error": err.Error(),
-		}, resp.String())
-		resp.Write(c)
+		m := msg.SerializeFailed.SetError(err)
+		log.WarnWithFields(m.LogFields())
+		m.WriteRest(c)
+		return
+	}
+	// 验证数据
+	if m := rpForm.Validate(); m != nil {
+		// 数据验证未通过
+		log.WarnWithFields(m.LogFields())
+		m.WriteRest(c)
 		return
 	}
 
-	rp := model.NewResultPartitionWithCreateTables(rpForm.Partition)
+	// 新建
+	rp := dao.NewResultPartitionWithCreateTables(rpForm.Partition)
+	// 新建失败
 	if rp == nil {
-		resp := msg.ErrDatabase.GenResponse("Error in model.NewResultPartitionWithCreateTables.")
-		log.Error(resp.String())
-		resp.Write(c)
+		m := msg.UnknownError
+		log.WarnWithFields(m.LogFields())
+		m.WriteRest(c)
 		return
 	}
 
-	resp := msg.Success.GenResponse().SetPayload("result_partition", rp)
-	resp.Write(c)
-	return
+	w.WriteSuccessPayload(c, "result_partition", rp)
 }
 
 // ListResultPartitions 列出所有结果分区
-// @Summary 列出所有结果分区
-// @Tags 结果分区
-// @Param token header string true "Token"
-// @Success 200 {string} string "{"code":0,"message":"Success","result_partitions":[{"id":32,"partition":"202103"}]}"
-// @Router /result_partitions [GET]
 func ListResultPartitions(c *gin.Context) {
-	var query = model.Query{}
-
-	q := c.GetString("Query")
-	if q != "" {
-		likeQuery := fmt.Sprintf("%%%s%%", q)
-		query["partition LIKE @query"] = sql.Named("query", likeQuery)
-
+	query := dao.Query{}
+	// 设置查询filter
+	lrp := dto.ListResultPartitionsQuery{}
+	if c.ShouldBindQuery(&lrp) == nil {
+		_ = lrp.UpdateQuery(query)
 	}
 
-	rp, ok := model.ListResultPartitions(query)
+	// 列出所有分区
+	rp, ok := dao.ListResultPartitions(query)
 	if !ok {
-		resp := msg.ErrDatabase.GenResponse("Error in model.ListResultPartitions.")
-		log.Error(resp.String())
-		resp.Write(c)
+		m := msg.UnknownError
+		log.WarnWithFields(m.LogFields())
+		m.WriteRest(c)
 		return
 	}
 
-	resp := msg.Success.GenResponse().SetPayload("result_partitions", rp)
-	resp.Write(c)
+	w.WriteSuccessPayload(c, "result_partitions", rp)
 }

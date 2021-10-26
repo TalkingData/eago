@@ -1,7 +1,7 @@
 [main]
 secret_key = eago_default_secret_key
 token_ttl = 900
-admin_role_name = auth_admin
+gin_mode = release
 
 [log]
 level = debug
@@ -9,8 +9,8 @@ path = ./logs
 
 [etcd]
 addresses = 127.0.0.1:2379,127.0.0.1:2379,127.0.0.1:2379
-username = root
-password = root
+username =
+password =
 
 [iam]
 iam_url = https://127.0.0.1/auth
@@ -32,3 +32,9 @@ max_idle_connections = 20
 address = 127.0.0.1:6379
 password = redis
 db = 1
+
+[kafka]
+addresses = 127.0.0.1:9092,127.0.0.1:9092,127.0.0.1:9092
+
+[tracer]
+jaeger_address = 127.0.0.1:5775

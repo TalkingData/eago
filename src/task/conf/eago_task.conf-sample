@@ -1,11 +1,14 @@
+[main]
+gin_mode = release
+
 [log]
 level = debug
 path = ../logs
 
 [etcd]
 addresses = 127.0.0.1:2379,127.0.0.1:2379,127.0.0.1:2379
-username = root
-password = root
+username =
+password =
 
 [mysql]
 address = 127.0.0.1:3306
@@ -14,3 +17,6 @@ user = root
 password = root
 max_open_connections = 5
 max_idle_connections = 20
+
+[tracer]
+jaeger_address = 127.0.0.1:5775

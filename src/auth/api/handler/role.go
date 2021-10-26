@@ -1,263 +1,225 @@
 package handler
 
 import (
-	"database/sql"
 	"eago/auth/conf/msg"
-	"eago/auth/model"
+	"eago/auth/dao"
+	"eago/auth/dto"
+	w "eago/common/api-suite/writter"
 	"eago/common/log"
-	"fmt"
 	"github.com/gin-gonic/gin"
 	"strconv"
 )
 
-// NewRole 新建角色
-// @Summary 新建角色
-// @Tags 角色
-// @Param token header string true "Token"
-// @Param data body model.Role true "body"
-// @Success 200 {string} string "{"code":0,"message":"Success","role":{"id":2,"name":"new_role"}}"
-// @Router /roles [POST]
+// NewRole 新建角
 func NewRole(c *gin.Context) {
-	var role model.Role
-
+	var newRoleFrm dto.NewRole
 	// 序列化request body
-	if err := c.ShouldBindJSON(&role); err != nil {
-		resp := msg.WarnInvalidBody.GenResponse("Field 'name' required.")
-		log.WarnWithFields(log.Fields{
-			"error": err.Error(),
-		}, resp.String())
-		resp.Write(c)
+	if err := c.ShouldBindJSON(&newRoleFrm); err != nil {
+		m := msg.SerializeFailed.SetError(err)
+		log.WarnWithFields(m.LogFields())
+		m.WriteRest(c)
+		return
+	}
+	// 验证数据
+	if m := newRoleFrm.Validate(); m != nil {
+		// 数据验证未通过
+		log.WarnWithFields(m.LogFields())
+		m.WriteRest(c)
 		return
 	}
 
-	r := model.NewRole(role.Name)
-	if r == nil {
-		resp := msg.ErrDatabase.GenResponse("Error in model.NewRole.")
-		log.Error(resp.String())
-		resp.Write(c)
+	r, err := dao.NewRole(newRoleFrm.Name, *newRoleFrm.Description)
+	if err != nil {
+		m := msg.UnknownError.SetError(err)
+		log.WarnWithFields(m.LogFields())
+		m.WriteRest(c)
 		return
 	}
 
-	resp := msg.Success.GenResponse().SetPayload("role", r)
-	resp.Write(c)
+	w.WriteSuccessPayload(c, "role", r)
 }
 
 // RemoveRole 删除角色
-// @Summary 删除角色
-// @Tags 角色
-// @Param token header string true "Token"
-// @Param role_id path string true "角色ID"
-// @Success 200 {string} string "{"code":0,"message":"Success"}"
-// @Router /roles/{role_id} [DELETE]
 func RemoveRole(c *gin.Context) {
 	roleId, err := strconv.Atoi(c.Param("role_id"))
 	if err != nil {
-		resp := msg.WarnInvalidUri.GenResponse("Field 'role_id' required.")
-		log.WarnWithFields(log.Fields{
-			"error": err.Error(),
-		}, resp.String())
-		resp.Write(c)
+		m := msg.InvalidUriFailed.SetError(err, "role_id")
+		log.WarnWithFields(m.LogFields())
+		m.WriteRest(c)
 		return
 	}
 
-	if ok := model.RemoveRole(roleId); !ok {
-		resp := msg.ErrDatabase.GenResponse("Error in model.RemoveRole.")
-		log.Error(resp.String())
-		resp.Write(c)
+	// 验证数据
+	var removeRoleFrm dto.RemoveRole
+	if m := removeRoleFrm.Validate(roleId); m != nil {
+		// 数据验证未通过
+		m.WriteRest(c)
 		return
 	}
 
-	resp := msg.Success.GenResponse()
-	resp.Write(c)
+	// 删除
+	if dbErr := dao.RemoveRole(roleId); dbErr != nil {
+		m := msg.UnknownError
+		log.WarnWithFields(m.LogFields())
+		m.WriteRest(c)
+		return
+	}
+
+	w.WriteSuccess(c)
 }
 
 // SetRole 更新角色
-// @Summary 更新角色
-// @Tags 角色
-// @Param token header string true "Token"
-// @Param role_id path string true "角色ID"
-// @Param data body model.Role true "body"
-// @Success 200 {string} string "{"code":0,"message":"Success","role":{"id":2,"name":"tester"}}"
-// @Router /roles/{role_id} [PUT]
 func SetRole(c *gin.Context) {
-	var roleFm model.Role
-
 	roleId, err := strconv.Atoi(c.Param("role_id"))
 	if err != nil {
-		resp := msg.WarnInvalidUri.GenResponse("Field 'role_id' required.")
-		log.WarnWithFields(log.Fields{
-			"error": err.Error(),
-		}, resp.String())
-		resp.Write(c)
+		m := msg.InvalidUriFailed
+		log.WarnWithFields(m.LogFields())
+		m.WriteRest(c)
 		return
 	}
 
+	var setRoleFrm dto.SetRole
 	// 序列化request body
-	if err := c.ShouldBindJSON(&roleFm); err != nil {
-		resp := msg.WarnInvalidBody.GenResponse("Field 'name' required.")
-		log.WarnWithFields(log.Fields{
-			"error": err.Error(),
-		}, resp.String())
-		resp.Write(c)
+	if err = c.ShouldBindJSON(&setRoleFrm); err != nil {
+		m := msg.SerializeFailed.SetError(err)
+		log.WarnWithFields(m.LogFields())
+		m.WriteRest(c)
+		return
+	}
+	// 验证数据
+	if m := setRoleFrm.Validate(roleId); m != nil {
+		// 数据验证未通过
+		log.WarnWithFields(m.LogFields())
+		m.WriteRest(c)
 		return
 	}
 
-	role, ok := model.SetRole(roleId, roleFm.Name)
-	if !ok {
-		resp := msg.ErrDatabase.GenResponse("Error in model.SetRole.")
-		log.Error(resp.String())
-		resp.Write(c)
+	role, err := dao.SetRole(roleId, setRoleFrm.Name, *setRoleFrm.Description)
+	if err != nil {
+		m := msg.UnknownError
+		log.WarnWithFields(m.LogFields())
+		m.WriteRest(c)
 		return
 	}
 
-	resp := msg.Success.GenResponse().SetPayload("role", role)
-	resp.Write(c)
+	w.WriteSuccessPayload(c, "role", role)
 }
 
 // ListRoles 列出所有角色
-// @Summary 列出所有角色
-// @Tags 角色
-// @Param token header string true "Token"
-// @Param query query string false "过滤条件"
-// @Param order_by query string false "排序字段(多个间逗号分割)"
-// @Param page query string false "页数"
-// @Param page_size query string false "页尺寸"
-// @Success 200 {string} string "{"code":0,"message":"Success","page":1,"page_size":50,"pages":1,"roles":[{"id":1,"name":"auth_admin"},{"id":2,"name":"tester"}],"total":2}"
-// @Router /roles [GET]
 func ListRoles(c *gin.Context) {
-	var query model.Query
-	q := c.GetString("Query")
-	if q != "" {
-		likeQuery := fmt.Sprintf("%%%s%%", q)
-		query = model.Query{"name LIKE @query OR id LIKE @query": sql.Named("query", likeQuery)}
+	query := dao.Query{}
+	// 设置查询filter
+	lrq := dto.ListRolesQuery{}
+	if c.ShouldBindQuery(&lrq) == nil {
+		_ = lrq.UpdateQuery(query)
 	}
 
-	paged, ok := model.PagedListRoles(
+	paged, ok := dao.PagedListRoles(
 		query,
 		c.GetInt("Page"),
 		c.GetInt("PageSize"),
 		c.GetStringSlice("OrderBy")...,
 	)
 	if !ok {
-		resp := msg.ErrDatabase.GenResponse("Error in model.PageListRoles.")
-		log.Error(resp.String())
-		resp.Write(c)
+		m := msg.UnknownError
+		log.WarnWithFields(m.LogFields())
+		m.WriteRest(c)
 		return
 	}
 
-	resp := msg.Success.GenResponse().SetPagedPayload(paged, "roles")
-	resp.Write(c)
+	w.WriteSuccessPayload(c, "roles", paged)
 }
 
 // AddUser2Role 添加用户至角色
-// @Summary 添加用户至角色
-// @Tags 角色
-// @Param token header string true "Token"
-// @Param role_id path string true "角色ID"
-// @Param data body model.UserRole true "body"
-// @Success 200 {string} string "{"code":0,"message":"Success"}"
-// @Router /roles/{role_id}/users [POST]
 func AddUser2Role(c *gin.Context) {
-	var uRole model.UserRole
-
 	roleId, err := strconv.Atoi(c.Param("role_id"))
 	if err != nil {
-		resp := msg.WarnInvalidUri.GenResponse("Field 'role_id' required.")
-		log.WarnWithFields(log.Fields{
-			"error": err.Error(),
-		}, resp.String())
-		resp.Write(c)
+		m := msg.InvalidUriFailed.SetError(err, "role_id")
+		log.WarnWithFields(m.LogFields())
+		m.WriteRest(c)
 		return
 	}
 
+	var aurFrm dto.AddUser2Role
 	// 序列化request body
-	if err := c.ShouldBindJSON(&uRole); err != nil {
-		resp := msg.WarnInvalidBody.GenResponse("Field 'user_id' required, and it must greater than 0.")
-		log.WarnWithFields(log.Fields{
-			"error": err.Error(),
-		}, resp.String())
-		resp.Write(c)
+	if err = c.ShouldBindJSON(&aurFrm); err != nil {
+		m := msg.SerializeFailed.SetError(err)
+		log.WarnWithFields(m.LogFields())
+		m.WriteRest(c)
+		return
+	}
+	// 验证数据
+	if m := aurFrm.Validate(roleId); m != nil {
+		// 数据验证未通过
+		log.WarnWithFields(m.LogFields())
+		m.WriteRest(c)
 		return
 	}
 
-	if !model.AddRoleUser(uRole.UserId, roleId) {
-		resp := msg.ErrDatabase.GenResponse("Error in model.AddRoleUser.")
-		log.Error(resp.String())
-		resp.Write(c)
+	if !dao.AddRoleUser(roleId, aurFrm.UserId) {
+		m := msg.UnknownError
+		log.WarnWithFields(m.LogFields())
+		m.WriteRest(c)
 		return
 	}
 
-	resp := msg.Success.GenResponse()
-	resp.Write(c)
+	w.WriteSuccess(c)
 }
 
 // RemoveRoleUser 移除角色中用户
-// @Summary 移除角色中用户
-// @Tags 角色
-// @Param token header string true "Token"
-// @Param role_id path string true "角色ID"
-// @Param user_id path string true "用户ID"
-// @Success 200 {string} string "{"code":0,"message":"Success"}"
-// @Router /roles/{role_id}/users/{user_id} [DELETE]
 func RemoveRoleUser(c *gin.Context) {
 	roleId, err := strconv.Atoi(c.Param("role_id"))
 	if err != nil {
-		resp := msg.WarnInvalidUri.GenResponse("Field 'role_id' required.")
-		log.WarnWithFields(log.Fields{
-			"error": err.Error(),
-		}, resp.String())
-		resp.Write(c)
+		m := msg.InvalidUriFailed.SetError(err, "role_id")
+		log.WarnWithFields(m.LogFields())
+		m.WriteRest(c)
 		return
 	}
 
 	userId, err := strconv.Atoi(c.Param("user_id"))
 	if err != nil {
-		resp := msg.WarnInvalidUri.GenResponse("Field 'user_id' required, and it must greater than 0.")
-		log.WarnWithFields(log.Fields{
-			"error": err.Error(),
-		}, resp.String())
-		resp.Write(c)
+		m := msg.InvalidUriFailed.SetError(err, "user_id")
+		log.WarnWithFields(m.LogFields())
+		m.WriteRest(c)
 		return
 	}
 
-	if !model.RemoveRoleUser(userId, roleId) {
-		resp := msg.ErrDatabase.GenResponse("Error in model.RemoveRoleUser.")
-		log.Error(resp.String())
-		resp.Write(c)
+	var rruFrm dto.RemoveRoleUser
+	// 验证数据
+	if m := rruFrm.Validate(roleId, userId); m != nil {
+		// 数据验证未通过
+		log.WarnWithFields(m.LogFields())
+		m.WriteRest(c)
 		return
 	}
 
-	resp := msg.Success.GenResponse()
-	resp.Write(c)
+	if !dao.RemoveRoleUser(roleId, userId) {
+		m := msg.UnknownError
+		log.WarnWithFields(m.LogFields())
+		m.WriteRest(c)
+		return
+	}
+
+	w.WriteSuccess(c)
 }
 
 // ListRoleUsers 列出角色所有用户
-// @Summary 列出角色所有用户
-// @Tags 角色
-// @Param token header string true "Token"
-// @Param role_id path string true "角色ID"
-// @Success 200 {string} string "{"code":0,"message":"Success"}"
-// @Router /roles/{role_id}/users [GET]
 func ListRoleUsers(c *gin.Context) {
 	roleId, err := strconv.Atoi(c.Param("role_id"))
 	if err != nil {
-		resp := msg.WarnInvalidUri.GenResponse("Field 'role_id' required")
-		log.WarnWithFields(log.Fields{
-			"error": err.Error(),
-		}, resp.String())
-
-		resp.Write(c)
+		m := msg.InvalidUriFailed.SetError(err, "role_id")
+		log.WarnWithFields(m.LogFields())
+		m.WriteRest(c)
 		return
 	}
 
-	u, ok := model.ListRoleUsers(roleId)
+	u, ok := dao.ListRoleUsers(roleId)
 	if !ok {
-		resp := msg.ErrDatabase.GenResponse("Error in model.ListUsers")
-		log.Error(resp.String())
-		resp.Write(c)
+		m := msg.UnknownError
+		log.WarnWithFields(m.LogFields())
+		m.WriteRest(c)
 		return
 	}
 
-	resp := msg.Success.GenResponse().SetPayload("users", u)
-	resp.Write(c)
+	w.WriteSuccessPayload(c, "users", u)
 }

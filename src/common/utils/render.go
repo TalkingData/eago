@@ -5,6 +5,7 @@ import (
 	"html/template"
 )
 
+// RenderString
 func RenderString(tpl string, vars interface{}) (string, error) {
 	t, err := template.New("tpl").Parse(tpl)
 
@@ -14,6 +15,7 @@ func RenderString(tpl string, vars interface{}) (string, error) {
 	return process(t, vars)
 }
 
+// process
 func process(t *template.Template, vars interface{}) (string, error) {
 	var tmplBytes bytes.Buffer
 

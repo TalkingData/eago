@@ -3,7 +3,7 @@ package main
 import (
 	"context"
 	"eago/auth/conf/msg"
-	"eago/auth/model"
+	"eago/auth/dao"
 	"eago/auth/srv/proto"
 	"eago/common/log"
 )
@@ -14,19 +14,19 @@ func (as *AuthService) ListRoleUsers(ctx context.Context, in *auth.NameQuery, ou
 	defer log.Info("srv.ListRoleUsers end.")
 
 	log.Info("Finding role.")
-	r, ok := model.GetRole(model.Query{"name=?": in.Name})
+	r, ok := dao.GetRole(dao.Query{"name=?": in.Name})
 	if !ok {
-		m := msg.ErrDatabase.GenResponse("Error when AuthService.ListRoleUsers called, in model.GetRole.")
-		log.Error(m.String())
-		return m.Error()
+		m := msg.UnknownError.SetDetail("An error occurred while dao.GetRole.")
+		log.ErrorWithFields(m.LogFields())
+		return m.RpcError()
 	}
 
 	log.Info("Finding role users.")
-	us, ok := model.ListRoleUsers(r.Id)
+	us, ok := dao.ListRoleUsers(r.Id)
 	if !ok {
-		m := msg.ErrDatabase.GenResponse("Error when AuthService.ListRoleUsers called, in model.ListRoleUsers.")
-		log.Error(m.String())
-		return m.Error()
+		m := msg.UnknownError.SetDetail("An error occurred while dao.ListRoleUsers.")
+		log.ErrorWithFields(m.LogFields())
+		return m.RpcError()
 	}
 
 	log.Info("Making response.")

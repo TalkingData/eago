@@ -25,11 +25,11 @@ DROP TABLE IF EXISTS `result_partitions`;
 CREATE TABLE `result_partitions`
 (
     `id`        int(11) NOT NULL AUTO_INCREMENT,
-    `partition` varchar(100) NOT NULL,
+    `partition` varchar(10) NOT NULL,
     PRIMARY KEY (`id`),
     UNIQUE KEY `result_partitions_id_uindex` (`id`),
     UNIQUE KEY `result_partitions_partition_uindex` (`partition`)
-) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -41,17 +41,19 @@ DROP TABLE IF EXISTS `schedules`;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `schedules`
 (
-    `id`         int(11) NOT NULL AUTO_INCREMENT,
-    `task_id`    int(11) NOT NULL,
-    `expression` varchar(20)  NOT NULL,
-    `created_at` datetime     NOT NULL,
-    `created_by` varchar(100) NOT NULL DEFAULT '',
-    `updated_at` datetime              DEFAULT NULL,
-    `updated_by` varchar(100) NOT NULL DEFAULT '',
+    `id`            int(11) NOT NULL AUTO_INCREMENT,
+    `task_codename` varchar(100) NOT NULL,
+    `expression`    varchar(50)  NOT NULL,
+    `timeout`       int(11) NOT NULL DEFAULT '0',
+    `arguments`     json         NOT NULL,
+    `disabled`      tinyint(1) NOT NULL DEFAULT '0',
+    `description`   varchar(500) NOT NULL DEFAULT '',
+    `created_at`    datetime     NOT NULL,
+    `created_by`    varchar(100) NOT NULL DEFAULT '',
+    `updated_at`    datetime              DEFAULT NULL,
+    `updated_by`    varchar(100) NOT NULL DEFAULT '',
     PRIMARY KEY (`id`),
-    UNIQUE KEY `schedules_id_uindex` (`id`),
-    KEY          `schedules_tasks_id_fk` (`task_id`),
-    CONSTRAINT `schedules_tasks_id_fk` FOREIGN KEY (`task_id`) REFERENCES `tasks` (`id`)
+    UNIQUE KEY `schedules_id_uindex` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -64,20 +66,20 @@ DROP TABLE IF EXISTS `tasks`;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `tasks`
 (
-    `id`          int(11) NOT NULL AUTO_INCREMENT,
-    `category`    int(11) NOT NULL,
-    `codename`    varchar(100)  NOT NULL,
-    `description` varchar(500)  NOT NULL DEFAULT '',
-    `arguments`   varchar(2000) NOT NULL DEFAULT '',
-    `disabled`    tinyint(1) NOT NULL DEFAULT '0',
-    `created_at`  datetime      NOT NULL,
-    `created_by`  varchar(100)  NOT NULL DEFAULT '',
-    `updated_at`  datetime               DEFAULT NULL,
-    `updated_by`  varchar(100)  NOT NULL DEFAULT '',
+    `id`            int(11) NOT NULL AUTO_INCREMENT,
+    `category`      int(11) NOT NULL,
+    `codename`      varchar(100) NOT NULL,
+    `description`   varchar(500) NOT NULL DEFAULT '',
+    `formal_params` json         NOT NULL,
+    `disabled`      tinyint(1) NOT NULL DEFAULT '0',
+    `created_at`    datetime     NOT NULL,
+    `created_by`    varchar(100) NOT NULL DEFAULT '',
+    `updated_at`    datetime              DEFAULT NULL,
+    `updated_by`    varchar(100) NOT NULL DEFAULT '',
     PRIMARY KEY (`id`),
     UNIQUE KEY `tasks_id_uindex` (`id`),
     UNIQUE KEY `tasks_codename_uindex` (`codename`)
-) ENGINE=InnoDB AUTO_INCREMENT=15 DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 

@@ -9,19 +9,24 @@ service AuthService {
   rpc GetTokenContent(Token) returns (TokenContent) {}
 
   // User
+  rpc GetUserById(IdQuery) returns (User) {}
   rpc ListUsers(QueryWithPage) returns (PagedUsers) {}
-  rpc GetUserDepartment(IdQuery) returns (Department) {}
+  rpc GetUserDepartment(IdQuery) returns (UserDepartment) {}
   rpc ListUserDepartmentUsers(IdQuery) returns (MemberUsers) {}
+  rpc MakeUserHandover(HandoverRequest) returns (BoolMsg) {}
 
   // Product
+  rpc GetProductById(IdQuery) returns (Product) {}
   rpc ListProducts(QueryWithPage) returns (PagedProducts) {}
   rpc ListProductUsers(IdQuery) returns (MemberUsers) {}
 
   // Department
+  rpc GetDepartmentById(IdQuery) returns (Department) {}
   rpc ListDepartmentUsers(IdQuery) returns (MemberUsers) {}
   rpc ListParentDepartmentUsers(IdQuery) returns (MemberUsers) {}
 
   // Group
+  rpc GetGroupById(IdQuery) returns (Group) {}
   rpc ListGroups(QueryWithPage) returns (PagedGroups) {}
   rpc ListGroupUsers(IdQuery) returns (MemberUsers) {}
 
@@ -62,10 +67,23 @@ message IdQuery {
   int32 id = 1;
 }
 
+message HandoverRequest {
+  int32 user_id = 1;
+  int32 target_user_id = 2;
+}
+
 message QueryWithPage {
   map<string, string> query = 1;
-  uint32 page = 3;
-  uint32 page_size = 4;
+  uint32 page = 2;
+  uint32 page_size = 3;
+}
+
+message UserDepartment {
+  int32 id = 1;
+  string name = 2;
+  int32 parent_id = 3;
+  bool is_owner = 4;
+  string joined_at = 5;
 }
 
 message PagedUsers {
@@ -96,9 +114,10 @@ message MemberUsers {
   message MemberUser {
     int32 id = 1;
     string username = 2;
-    bool is_owner = 5;
+    bool is_owner = 3;
+    string joined_at = 4;
   }
-  repeated MemberUser users = 1;
+  repeated MemberUser users = 5;
 }
 
 message RoleMemberUsers {

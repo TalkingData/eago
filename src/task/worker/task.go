@@ -8,6 +8,7 @@ import (
 
 type TaskFunc func(ctx context.Context, param *Param) error
 
+// Param struct
 type Param struct {
 	TaskUniqueId    string
 	Caller          string
@@ -18,6 +19,7 @@ type Param struct {
 	Log             Logger
 }
 
+// Task struct
 type Task struct {
 	Codename string
 	Param    *Param
@@ -39,6 +41,7 @@ func (t *Task) Run(callback func(ok bool)) {
 	callback(true)
 }
 
+// Info
 func (t *Task) Info() string {
 	return fmt.Sprintf("TaskCodename: %s.", t.Codename)
 }

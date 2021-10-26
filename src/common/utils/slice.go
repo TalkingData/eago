@@ -24,7 +24,7 @@ func IsInSlice(haystack, needle interface{}) (bool, error) {
 
 // MergeStringSlice 合并除空出串外的字符串切片
 func MergeStringSlice(ss ...[]string) []string {
-	newS := []string{}
+	var newS []string
 	for _, s := range ss {
 		for _, ele := range s {
 			if ele != "" {
@@ -38,7 +38,7 @@ func MergeStringSlice(ss ...[]string) []string {
 
 // RemoveStringSliceElement 删除字符串切片中指定元素
 func RemoveStringSliceElement(s []string, ele string) []string {
-	final := []string{}
+	var final []string
 	for _, e := range s {
 		if e == ele {
 			continue

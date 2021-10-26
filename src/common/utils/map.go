@@ -1,6 +1,6 @@
 package utils
 
-// MergeMapStringInterface 合并多个MapStringInterfaceø
+// MergeMapStringInterface 合并多个MapStringInterface
 func MergeMapStringInterface(mObj ...map[string]interface{}) map[string]interface{} {
 	newObj := make(map[string]interface{})
 	for _, m := range mObj {

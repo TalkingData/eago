@@ -6,19 +6,23 @@ import (
 
 const WORKER_REGISTER_KEY_PREFFIX = "/td/eago/workers"
 
+// Options struct
 type Options struct {
 	EtcdAddresses      []string
 	EtcdUsername       string
 	EtcdPassword       string
 	TaskRpcServiceName string
 
-	WorkerIp string
-	Modular  string
+	WorkerIp    string
+	ServiceName string
+
+	MultiInstance bool
 
 	RegisterTtl   int64
 	LogBufferSize uint
 }
 
+// newOptions
 func newOptions(opts ...Option) Options {
 	opt := Options{
 		EtcdAddresses:      []string{"127.0.0.1:2379", "127.0.0.1:2379", "127.0.0.1:2379"},
@@ -26,8 +30,10 @@ func newOptions(opts ...Option) Options {
 		EtcdPassword:       "",
 		TaskRpcServiceName: "eago.srv.task",
 
-		WorkerIp: ipv4.LocalIP(),
-		Modular:  "task",
+		WorkerIp:    ipv4.LocalIP(),
+		ServiceName: "task",
+
+		MultiInstance: true,
 
 		RegisterTtl:   WORKER_REGISTER_TTL,
 		LogBufferSize: WORKER_LOGGER_BUFFER_SIZE,
@@ -70,10 +76,24 @@ func TaskRpcServiceName(srvName string) Option {
 	}
 }
 
-// Modular 设置Worker模块
+// Deprecated: Modular 设置Worker服务名，旧方法
 func Modular(m string) Option {
 	return func(o *Options) {
-		o.Modular = m
+		o.ServiceName = m
+	}
+}
+
+// ServiceName 设置Worker服务名
+func ServiceName(s string) Option {
+	return func(o *Options) {
+		o.ServiceName = s
+	}
+}
+
+// MultiInstance 设置是否允许运行多个Worker实例
+func MultiInstance(b bool) Option {
+	return func(o *Options) {
+		o.MultiInstance = b
 	}
 }
 

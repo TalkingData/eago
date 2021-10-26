@@ -6,10 +6,19 @@ option go_package = "proto;task";
 service TaskService {
 
   // ListTasks 列出所有任务
-  rpc ListTasks(Empty) returns (Tasks) {}
+  rpc ListTasks(QueryWithPage) returns (PagedTasks) {}
+
+  // ListSchedules 列出所有计划任务
+  rpc ListSchedules(QueryWithPage) returns (PagedSchedules) {}
+
+  // GetResult 查看任务结果
+  rpc GetResult(TaskUniqueId) returns (Result) {}
 
   // CallTask 调用任务
-  rpc CallTask(CallTaskReq) returns (CallTaskRsp) {}
+  rpc CallTask(CallTaskReq) returns (TaskUniqueId) {}
+
+  // KillTask 结束任务
+  rpc KillTask(TaskUniqueId) returns (BoolMsg) {}
 
   // SetTaskStatus 设置任务状态
   rpc SetTaskStatus(SetTaskStatusReq) returns (BoolMsg) {}
@@ -18,26 +27,61 @@ service TaskService {
   rpc AppendTaskLog(stream AppendTaskLogReq) returns (stream BoolMsg) {}
 }
 
-message Tasks {
+message QueryWithPage {
+  map<string, string> query = 1;
+  uint32 page = 2;
+  uint32 page_size = 3;
+}
+
+message PagedTasks {
   repeated Task tasks = 1;
+  uint32 page = 2;
+  uint32 pages = 3;
+  uint32 page_size = 4;
+  uint32 total = 5;
+}
+
+message PagedSchedules {
+  repeated Schedule schedules = 1;
+  uint32 page = 2;
+  uint32 pages = 3;
+  uint32 page_size = 4;
+  uint32 total = 5;
 }
 
 message Task {
   int32 id = 1;
   string codename = 2;
-  string arguments = 3;
+  string formal_params = 3;
   string description = 4;
+}
+
+message Schedule {
+  int32 id = 1;
+  string task_codename = 2;
+  string expression = 3;
+  int64 timeout = 4;
+  string arguments = 5;
+  bool disabled = 6;
+}
+
+message Result {
+  string task_codename = 1;
+  int32 status = 2;
+  string caller = 3;
+  string worker = 4;
+  string start_at = 5;
+  string end_at = 6;
 }
 
 message CallTaskReq {
   string task_codename = 1;
-
-  int64 timeout = 3;
-  string arguments = 2;
-  string caller = 4;
+  int64 timeout = 2;
+  string caller = 3;
+  bytes arguments = 4;
 }
 
-message CallTaskRsp {
+message TaskUniqueId {
   string task_unique_id = 1;
 }
 
@@ -55,4 +99,3 @@ message BoolMsg {
   bool ok = 1;
 }
 
-message Empty {}

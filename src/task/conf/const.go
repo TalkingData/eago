@@ -1,11 +1,11 @@
 package conf
 
 const (
-	MODULAR_NAME     = "eago-task"
-	RPC_SERVICE_NAME = "eago.srv.task"
-	API_SERVICE_NAME = "eago.api.task"
+	SERVICE_NAME     = "eago-task"
+	RPC_REGISTER_KEY = "eago.srv.task"
+	API_REGISTER_KEY = "eago.api.task"
 
-	AUTH_RPC_SERVICE_NAME = "eago.srv.auth"
+	AUTH_RPC_REGISTER_KEY = "eago.srv.auth"
 
 	ADMIN_ROLE_NAME = "task_admin"
 

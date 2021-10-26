@@ -9,7 +9,7 @@ var Crowd *crowd.Crowd
 
 // InitCrowd 初始化Crowd
 func InitCrowd() error {
-	client, err := crowd.New(conf.Config.CrowdAppName, conf.Config.CrowdAppPassword, conf.Config.CrowdAddress)
+	client, err := crowd.New(conf.Conf.CrowdAppName, conf.Conf.CrowdAppPassword, conf.Conf.CrowdAddress)
 
 	if err != nil {
 		return err

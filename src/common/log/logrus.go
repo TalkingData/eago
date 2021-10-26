@@ -12,12 +12,15 @@ import (
 )
 
 const (
+	MAX_LOG_SIZE       = 10
+	MAX_LOG_AGE        = 3
+	TIMESTAMP_FORMAT   = "2006-01-02 15:04:05"
 	LOG_DATA_SEPARATOR = "; "
 )
 
 var (
 	logger    *logrus.Logger
-	skipFiles int = 2
+	skipFiles = 2
 	fw        *lumberjack.Logger
 )
 
@@ -32,13 +35,13 @@ func InitLog(path, srvName, level string) error {
 	fw = &lumberjack.Logger{
 		Filename:  logPathName,
 		LocalTime: true,
-		MaxSize:   10,
-		MaxAge:    3,
+		MaxSize:   MAX_LOG_SIZE,
+		MaxAge:    MAX_LOG_AGE,
 	}
 	logger.SetOutput(io.MultiWriter(os.Stdout, fw))
 
 	logger.SetFormatter(&logrus.JSONFormatter{
-		TimestampFormat: "2006-01-02 15:04:05",
+		TimestampFormat: TIMESTAMP_FORMAT,
 	})
 
 	logLvl, err := logrus.ParseLevel(level)
@@ -171,7 +174,7 @@ func fileInfo(skip int) string {
 
 // String 将logger.Fields转换为字符串形式
 func (f Fields) String() string {
-	data := []string{}
+	var data []string
 	for k, v := range f {
 		data = append(data, fmt.Sprintf("%s=%v", k, v))
 	}
@@ -183,8 +186,19 @@ func (f Fields) String() string {
 func (f Fields) RusFields() logrus.Fields {
 	res := logrus.Fields{}
 
+	if f["code"] != nil {
+		res["code"] = f["code"]
+		delete(f, "code")
+	}
+
 	if f["error"] != nil {
-		res["error"] = f["error"]
+		switch errType := f["error"].(type) {
+		case error:
+			res["error"] = errType.Error()
+
+		default:
+			res["error"] = f["error"]
+		}
 		delete(f, "error")
 	}
 

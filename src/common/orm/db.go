@@ -1,6 +1,8 @@
 package orm
 
-import "gorm.io/gorm"
+import (
+	"gorm.io/gorm"
+)
 
 var db *gorm.DB
 

@@ -1,159 +1,55 @@
 package handler
 
 import (
+	w "eago/common/api-suite/writter"
 	"eago/common/log"
-	"eago/task/conf"
 	"eago/task/conf/msg"
-	"eago/task/model"
-	"eago/task/worker"
-	"fmt"
+	"eago/task/dao"
 	"github.com/gin-gonic/gin"
-	"github.com/gorilla/websocket"
-	"net/http"
 	"strconv"
-	"time"
 )
 
 // ListLogs 按分区列出所有结果日志
-// @Summary 按分区列出所有结果日志
-// @Tags 结果日志
-// @Param token header string true "Token"
-// @Param result_partition_id path string true "结果分区ID"
-// @Param result_id path string true "结果ID"
-// @Success 200 {string} string "{"code":0,"message":"Success","logs":[{"id":4,"result_id":1,"content":"Task 1, done.","CreatedAt":"2021-03-23 10:48:22"}]}"
-// @Router /logs/{result_partition_id}/{result_id} [GET]
 func ListLogs(c *gin.Context) {
-	var query = model.Query{}
 
 	// 获得分区ID
 	rpId, err := strconv.Atoi(c.Param("result_partition_id"))
 	if err != nil {
-		resp := msg.WarnInvalidUri.GenResponse("Field 'result_partition_id' required.")
-		log.WarnWithFields(log.Fields{
-			"error": err.Error(),
-		}, resp.String())
-
-		resp.Write(c)
+		m := msg.InvalidUriFailed.SetError(err, "result_partition_id")
+		log.WarnWithFields(m.LogFields())
+		m.WriteRest(c)
 		return
 	}
 
-	tableSuffix, ok := model.GetResultPartitionsPartition(rpId)
+	// 根据分区获取结果表前缀
+	tableSuffix, ok := dao.GetResultPartitionsPartition(rpId)
 	if !ok {
-		resp := msg.WarnNotFound.GenResponse("Find record from model.GetResultPartitionTableSuffix.")
-		log.WarnWithFields(log.Fields{
-			"result_partition_id": rpId,
-		}, resp.String())
-		resp.Write(c)
+		m := msg.ListLogsPartNotFoundFailed
+		log.WarnWithFields(m.LogFields())
+		m.WriteRest(c)
 		return
 	}
 
 	// 获得结果ID
 	resultId, err := strconv.Atoi(c.Param("result_id"))
 	if err != nil {
-		resp := msg.WarnInvalidUri.GenResponse("Field 'result_id' required.")
-		log.WarnWithFields(log.Fields{
-			"error": err.Error(),
-		}, resp.String())
-
-		resp.Write(c)
+		m := msg.InvalidUriFailed.SetError(err, "result_id")
+		log.WarnWithFields(m.LogFields())
+		m.WriteRest(c)
 		return
 	}
+
+	query := dao.Query{}
+	// 查询结果日志
 	query["result_id"] = resultId
-
-	logs, ok := model.ListLogs(query, tableSuffix)
+	logs, ok := dao.ListLogs(query, tableSuffix)
+	// 查询失败
 	if !ok {
-		resp := msg.ErrDatabase.GenResponse("Error in model.ListLogs.")
-		log.Error(resp.String())
-		resp.Write(c)
+		m := msg.UnknownError
+		log.WarnWithFields(m.LogFields())
+		m.WriteRest(c)
 		return
 	}
 
-	resp := msg.Success.GenResponse().SetPayload("logs", logs)
-	resp.Write(c)
-}
-
-// WsListLogs 以WebSocket方式按分区ID列出所有结果日志
-// @Summary 以WebSocket方式按分区ID列出所有结果日志
-// @Tags 结果日志
-// @Param token header string true "Token"
-// @Router /logs/{result_partition_id}/{result_id}/ws [GET]
-func WsListLogs(c *gin.Context) {
-	var query = model.Query{}
-
-	// 获得分区ID
-	rpId, err := strconv.Atoi(c.Param("result_partition_id"))
-	if err != nil {
-		resp := msg.WarnInvalidUri.GenResponse("Field 'result_partition_id' required.")
-		log.WarnWithFields(log.Fields{
-			"error": err.Error(),
-		}, resp.String())
-
-		resp.Write(c)
-		return
-	}
-
-	partition, ok := model.GetResultPartitionsPartition(rpId)
-	if !ok {
-		resp := msg.WarnNotFound.GenResponse("Find record from model.GetResultPartitionTableSuffix.")
-		log.WarnWithFields(log.Fields{
-			"result_partition_id": rpId,
-		}, resp.String())
-		resp.Write(c)
-		return
-	}
-
-	// 获得结果ID
-	resultId, err := strconv.Atoi(c.Param("result_id"))
-	if err != nil {
-		resp := msg.WarnInvalidUri.GenResponse("Field 'result_id' required.")
-		log.WarnWithFields(log.Fields{
-			"error": err.Error(),
-		}, resp.String())
-
-		resp.Write(c)
-		return
-	}
-	query["result_id"] = resultId
-	query["id>?"] = 0
-
-	upGrader := websocket.Upgrader{
-		CheckOrigin: func(r *http.Request) bool {
-			return true
-		},
-	}
-	ws, err := upGrader.Upgrade(c.Writer, c.Request, nil)
-	if err != nil {
-		return
-	}
-	defer func() {
-		_ = ws.Close()
-	}()
-
-	_, _, _ = ws.ReadMessage()
-
-	for {
-		logs, ok := model.ListLogs(query, partition)
-		if !ok {
-			break
-		}
-
-		for _, l := range *logs {
-			m := fmt.Sprintf("[%s] %s", l.CreatedAt.Format(conf.TIMESTAMP_FORMAT), l.Content)
-			err = ws.WriteMessage(1, []byte(m))
-			if err != nil {
-				break
-			}
-			query["id>?"] = l.Id
-		}
-
-		r, ok := model.GetResult(partition, resultId)
-		if !ok {
-			break
-		}
-		if r.Status <= worker.TASK_SUCCESS_END_STATUS {
-			break
-		}
-
-		time.Sleep(100 * time.Millisecond)
-	}
+	w.WriteSuccessPayload(c, "logs", logs)
 }

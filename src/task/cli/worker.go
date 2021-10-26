@@ -3,6 +3,7 @@ package cli
 import (
 	"context"
 	"eago/common/log"
+	"eago/common/tracer"
 	"eago/task/conf"
 	"eago/task/worker"
 	"encoding/json"
@@ -22,30 +23,31 @@ type workerClient struct {
 // InitWorkerCli 启动Worker客户端
 func InitWorkerCli() {
 	etcdCli, err := clientv3.New(clientv3.Config{
-		Endpoints:   conf.Config.EtcdAddresses,
+		Endpoints:   conf.Conf.EtcdAddresses,
 		DialTimeout: 5 * time.Second,
 	})
 	if err != nil {
 		log.ErrorWithFields(log.Fields{
-			"error": err.Error(),
-		}, "Error in clientv3.New.")
+			"error": err,
+		}, "An error occurred while clientv3.New.")
 		panic(err)
 	}
 
 	WorkerClient = &workerClient{etcdCli}
-
 }
 
 // List 列出所有活跃的Worker
-func (wc *workerClient) List() []*worker.WorkerInfo {
+func (wc *workerClient) List(ctx context.Context) []*worker.WorkerInfo {
+	sp, c := tracer.StartSpanFromContext(ctx)
+	defer sp.Finish()
 	workers := make([]*worker.WorkerInfo, 0)
 
-	resp, err := wc.etcdCli.Get(context.Background(), worker.WORKER_REGISTER_KEY_PREFFIX, clientv3.WithPrefix())
+	resp, err := wc.etcdCli.Get(c, worker.WORKER_REGISTER_KEY_PREFFIX, clientv3.WithPrefix())
 	if err != nil {
 		log.ErrorWithFields(log.Fields{
-			"error": err.Error(),
-		}, "Error in etcdCli.GetUser.")
-		return nil
+			"error": err,
+		}, "An error occurred while etcdCli.GetUser.")
+		return workers
 	}
 
 	for _, ev := range resp.Kvs {
@@ -53,8 +55,8 @@ func (wc *workerClient) List() []*worker.WorkerInfo {
 
 		if err := json.Unmarshal(ev.Value, wk); err != nil {
 			log.ErrorWithFields(log.Fields{
-				"error": err.Error(),
-			}, "Error in json.Unmarshal.")
+				"error": err,
+			}, "An error occurred while json.Unmarshal for worker info.")
 			continue
 		}
 		workers = append(workers, wk)
@@ -67,7 +69,7 @@ func (wc *workerClient) List() []*worker.WorkerInfo {
 func (wc *workerClient) ListByModular(m string) []*worker.WorkerInfo {
 	workers := make([]*worker.WorkerInfo, 0)
 
-	for _, wk := range wc.List() {
+	for _, wk := range wc.List(context.Background()) {
 		if wk.Modular != m {
 			continue
 		}
@@ -79,7 +81,7 @@ func (wc *workerClient) ListByModular(m string) []*worker.WorkerInfo {
 
 // GetWorkerById 获得指定Worker
 func (wc *workerClient) GetWorkerById(wkId string) *worker.WorkerInfo {
-	for _, wk := range wc.List() {
+	for _, wk := range wc.List(context.Background()) {
 		if wk.WorkerId == wkId {
 			return wk
 		}
@@ -116,7 +118,7 @@ func (wc *workerClient) CallTask(wk *worker.WorkerInfo, codename, uniqueId, argu
 		log.ErrorWithFields(log.Fields{
 			"ok":      wkRsp.Ok,
 			"message": wkRsp.Message,
-		}, "Error in workerClient.CallTask, worker returned not ok status.")
+		}, "An error occurred while workerClient.CallTask, Worker returned not ok status.")
 		return err
 	}
 
@@ -147,7 +149,7 @@ func (wc *workerClient) KillTask(wk *worker.WorkerInfo, taskUniqueId string) err
 		log.ErrorWithFields(log.Fields{
 			"ok":      wkRsp.Ok,
 			"message": wkRsp.Message,
-		}, "Error in workerClient.CallTask, worker returned not ok status.")
+		}, "An error occurred while workerClient.CallTask, Worker returned not ok status.")
 		return err
 	}
 
@@ -160,16 +162,16 @@ func (wc *workerClient) connWorker(wk *worker.WorkerInfo) (*rpc.Client, error) {
 	conn, err := jsonrpc.Dial("tcp", wk.Address)
 	if err != nil {
 		log.ErrorWithFields(log.Fields{
-			"error": err.Error(),
-		}, "Error in call task jsonrpc.Dial.")
+			"error": err,
+		}, "An error occurred while jsonrpc.Dial.")
 		return nil, err
 	}
 
 	if conn == nil {
-		err = errors.New("Got an nil connection.")
+		err = errors.New("got an nil connection")
 		log.ErrorWithFields(log.Fields{
-			"error": err.Error(),
-		}, "Error in call task jsonrpc.Dial.")
+			"error": err,
+		}, "An error occurred while jsonrpc.Dial.")
 		return nil, err
 	}
 
