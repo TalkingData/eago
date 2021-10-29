@@ -129,3 +129,33 @@ func ListCategories(c *gin.Context) {
 
 	w.WriteSuccessPayload(c, "categories", cs)
 }
+
+// ListCategoryFlows 列出指定类别中所关联流程
+func ListCategoryFlows(c *gin.Context) {
+	cId, err := strconv.Atoi(c.Param("category_id"))
+	if err != nil {
+		m := msg.InvalidUriFailed.SetError(err, "category_id")
+		log.WarnWithFields(m.LogFields())
+		m.WriteRest(c)
+		return
+	}
+
+	var lcfFrm dto.ListCategoriesRelations
+	// 验证数据
+	if m := lcfFrm.Validate(cId); m != nil {
+		// 数据验证未通过
+		log.WarnWithFields(m.LogFields())
+		m.WriteRest(c)
+		return
+	}
+
+	fl, ok := dao.ListFlows(dao.Query{"categories_id=?": cId})
+	if !ok {
+		m := msg.UnknownError
+		log.WarnWithFields(m.LogFields())
+		m.WriteRest(c)
+		return
+	}
+
+	w.WriteSuccessPayload(c, "flows", fl)
+}

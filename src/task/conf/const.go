@@ -16,3 +16,10 @@ const (
 
 	TASK_UNIQUE_ID_SEPARATOR = "::"
 )
+
+// 任务类别
+const (
+	BUTILIN_TASK_CATEGORY = 1   // 内置任务
+	BASH_TASK_CATEGORY    = 100 // Bash任务
+	PYTHON_TASK_CATEGORY  = 101 // Python任务
+)

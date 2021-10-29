@@ -4,12 +4,6 @@ import (
 	"eago/common/utils"
 )
 
-const (
-	BUTILIN_TASK_CATEGORY = 1   // 内置任务
-	BASH_TASK_CATEGORY    = 100 // Bash任务
-	PYTHON_TASK_CATEGORY  = 101 // Python任务
-)
-
 // Task struct
 type Task struct {
 	Id           int              `json:"id"`

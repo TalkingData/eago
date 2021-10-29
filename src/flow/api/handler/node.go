@@ -130,7 +130,7 @@ func SetNode(c *gin.Context) {
 
 // GetNodeChain 列出指定节点链
 func GetNodeChain(c *gin.Context) {
-	nID, err := strconv.Atoi(c.Param("node_id"))
+	nId, err := strconv.Atoi(c.Param("node_id"))
 	if err != nil {
 		m := msg.InvalidUriFailed.SetError(err, "node_id")
 		log.WarnWithFields(m.LogFields())
@@ -139,7 +139,7 @@ func GetNodeChain(c *gin.Context) {
 	}
 
 	// 查找根节点
-	node, ok := dao.GetNode(dao.Query{"id=?": nID})
+	node, ok := dao.GetNode(dao.Query{"id=?": nId})
 	if !ok {
 		m := msg.UnknownError
 		log.ErrorWithFields(m.LogFields())
@@ -156,7 +156,7 @@ func GetNodeChain(c *gin.Context) {
 	root := dao.Node2Chain(node)
 	if ok = dao.GetNodeChain(root); !ok {
 		m := msg.UnknownError
-		log.WarnWithFields(log.Fields{"node_id": nID}, m.String())
+		log.WarnWithFields(log.Fields{"node_id": nId}, m.String())
 		m.WriteRest(c)
 		return
 	}
@@ -191,7 +191,7 @@ func ListNodes(c *gin.Context) {
 
 // AddTrigger2Node 添加触发器至节点
 func AddTrigger2Node(c *gin.Context) {
-	nID, err := strconv.Atoi(c.Param("node_id"))
+	nId, err := strconv.Atoi(c.Param("node_id"))
 	if err != nil {
 		m := msg.InvalidUriFailed.SetError(err, "node_id")
 		log.WarnWithFields(m.LogFields())
@@ -208,7 +208,7 @@ func AddTrigger2Node(c *gin.Context) {
 		return
 	}
 	// 验证数据
-	if m := atnFrm.Validate(nID); m != nil {
+	if m := atnFrm.Validate(nId); m != nil {
 		// 数据验证未通过
 		log.WarnWithFields(m.LogFields())
 		m.WriteRest(c)
@@ -216,7 +216,7 @@ func AddTrigger2Node(c *gin.Context) {
 	}
 
 	tc := c.GetStringMap("TokenContent")
-	if !dao.AddNodeTrigger(nID, atnFrm.TriggerId, tc["Username"].(string)) {
+	if !dao.AddNodeTrigger(nId, atnFrm.TriggerId, tc["Username"].(string)) {
 		m := msg.UnknownError
 		log.WarnWithFields(m.LogFields())
 		m.WriteRest(c)
@@ -228,7 +228,7 @@ func AddTrigger2Node(c *gin.Context) {
 
 // RemoveNodeTrigger 移除节点中触发器
 func RemoveNodeTrigger(c *gin.Context) {
-	nID, err := strconv.Atoi(c.Param("node_id"))
+	nId, err := strconv.Atoi(c.Param("node_id"))
 	if err != nil {
 		m := msg.InvalidUriFailed.SetError(err, "node_id")
 		log.WarnWithFields(m.LogFields())
@@ -246,14 +246,14 @@ func RemoveNodeTrigger(c *gin.Context) {
 
 	var rntFrm dto.RemoveNodeTrigger
 	// 验证数据
-	if m := rntFrm.Validate(nID, tId); m != nil {
+	if m := rntFrm.Validate(nId, tId); m != nil {
 		// 数据验证未通过
 		log.WarnWithFields(m.LogFields())
 		m.WriteRest(c)
 		return
 	}
 
-	if !dao.RemoveNodeTrigger(nID, tId) {
+	if !dao.RemoveNodeTrigger(nId, tId) {
 		m := msg.UnknownError
 		log.WarnWithFields(m.LogFields())
 		m.WriteRest(c)
@@ -265,7 +265,7 @@ func RemoveNodeTrigger(c *gin.Context) {
 
 // ListNodeTriggers 列出节点中所有触发器
 func ListNodeTriggers(c *gin.Context) {
-	nID, err := strconv.Atoi(c.Param("node_id"))
+	nId, err := strconv.Atoi(c.Param("node_id"))
 	if err != nil {
 		m := msg.InvalidUriFailed.SetError(err, "node_id")
 		log.WarnWithFields(m.LogFields())
@@ -273,7 +273,16 @@ func ListNodeTriggers(c *gin.Context) {
 		return
 	}
 
-	u, ok := dao.ListNodeTriggers(nID)
+	var lntFrm dto.ListNodeRelations
+	// 验证数据
+	if m := lntFrm.Validate(nId); m != nil {
+		// 数据验证未通过
+		log.WarnWithFields(m.LogFields())
+		m.WriteRest(c)
+		return
+	}
+
+	u, ok := dao.ListNodeTriggers(nId)
 	if !ok {
 		m := msg.UnknownError
 		log.WarnWithFields(m.LogFields())
@@ -282,4 +291,34 @@ func ListNodeTriggers(c *gin.Context) {
 	}
 
 	w.WriteSuccessPayload(c, "triggers", u)
+}
+
+// ListNodeFlows 列出节点所关联流程
+func ListNodeFlows(c *gin.Context) {
+	nId, err := strconv.Atoi(c.Param("node_id"))
+	if err != nil {
+		m := msg.InvalidUriFailed.SetError(err, "node_id")
+		log.WarnWithFields(m.LogFields())
+		m.WriteRest(c)
+		return
+	}
+
+	var lntFrm dto.ListNodeRelations
+	// 验证数据
+	if m := lntFrm.Validate(nId); m != nil {
+		// 数据验证未通过
+		log.WarnWithFields(m.LogFields())
+		m.WriteRest(c)
+		return
+	}
+
+	fl, ok := dao.ListFlows(dao.Query{"first_node_id=?": nId})
+	if !ok {
+		m := msg.UnknownError
+		log.WarnWithFields(m.LogFields())
+		m.WriteRest(c)
+		return
+	}
+
+	w.WriteSuccessPayload(c, "flows", fl)
 }

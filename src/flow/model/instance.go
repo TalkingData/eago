@@ -4,16 +4,6 @@ import (
 	"eago/common/utils"
 )
 
-const ASSIGNEES_SPILT_TAG = ","
-
-const (
-	INSTANCE_PANIC_END_STATUS    = 200 // 系统异常
-	INSTANCE_REJECTED_END_STATUS = -1  // 被驳回
-	INSTANCE_APPROVED_END_STATUS = 0   // 审批通过
-	INSTANCE_PENDING_STATUS      = 1   // 系统处理中
-	INSTANCE_RUNNING_STATUS      = 2   // 流转中
-)
-
 // Instance struct
 type Instance struct {
 	Id                int              `json:"id"`

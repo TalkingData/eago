@@ -175,3 +175,31 @@ func PagedListTriggers(query Query, page, pageSize int, orderBy ...string) (*pag
 
 	return pg, true
 }
+
+// ListTriggerNodes 关联表操作::列出触发器所关联节点
+func ListTriggerNodes(tId int) ([]model.TriggersNode, bool) {
+	log.Info("dao.ListTriggerNodes called.")
+	defer log.Info("dao.ListTriggerNodes end.")
+
+	var d = db.Model(&model.Node{})
+	tns := make([]model.TriggersNode, 0)
+
+	res := d.Select("nodes.id AS id, nodes.name AS name, nodes.parent_id AS parent_id").
+		Joins("LEFT JOIN node_triggers AS nt ON nodes.id = nt.node_id").
+		Where("nt.trigger_id=?", tId).
+		Find(&tns)
+	if res.Error != nil {
+		if errors.Is(res.Error, gorm.ErrRecordNotFound) {
+			log.WarnWithFields(log.Fields{
+				"error": res.Error,
+			}, "Record not found")
+			return tns, true
+		}
+		log.ErrorWithFields(log.Fields{
+			"error": res.Error,
+		}, "An error occurred while db.Where.Find.")
+		return nil, false
+	}
+
+	return tns, true
+}

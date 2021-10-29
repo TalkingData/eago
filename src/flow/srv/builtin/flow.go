@@ -3,6 +3,7 @@ package builtin
 import (
 	"eago/common/log"
 	"eago/common/utils"
+	"eago/flow/conf"
 	"eago/flow/dao"
 	"eago/flow/model"
 	"encoding/json"
@@ -88,7 +89,7 @@ func InstantiateFlow(flowId int, fromData, createdBy string) (int, error) {
 	// 创建流程实例
 	ins := dao.NewInstance(
 		flow.FormId,
-		model.INSTANCE_PENDING_STATUS,
+		conf.INSTANCE_PENDING_STATUS,
 		renderInstanceName(flow.Name, mapData),
 		fromData,
 		chainStr,

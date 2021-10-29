@@ -2,7 +2,6 @@ package model
 
 import (
 	"eago/common/utils"
-	"github.com/beego/beego/v2/core/validation"
 )
 
 type Department struct {
@@ -27,36 +26,4 @@ type UserDepartment struct {
 	DepartmentId int              `json:"department_id"`
 	IsOwner      *bool            `json:"is_owner" valid:"Required"`
 	JoinedAt     *utils.LocalTime `json:"joined_at" gorm:"type:datetime;not null;autoCreateTime"`
-}
-
-// Validate
-func (d *Department) Validate() (err interface{}) {
-	valid := validation.Validation{}
-	// 验证数据
-	ok, err := valid.Valid(d)
-	if err != nil {
-		return
-	}
-	// 数据验证未通过
-	if !ok {
-		return valid.Errors
-	}
-
-	return
-}
-
-// Validate
-func (ud *UserDepartment) Validate() (err interface{}) {
-	valid := validation.Validation{}
-	// 验证数据
-	ok, err := valid.Valid(ud)
-	if err != nil {
-		return
-	}
-	// 数据验证未通过
-	if !ok {
-		return valid.Errors
-	}
-
-	return
 }

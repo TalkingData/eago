@@ -30,7 +30,7 @@ func HandleInstance(ins *model.Instance, hdIns *dto.HandleInstance) error {
 		log.Info("The HandleInstance result is rejected.")
 		dao.SetHandleInstance(
 			ins.Id,
-			model.INSTANCE_REJECTED_END_STATUS,
+			conf.INSTANCE_REJECTED_END_STATUS,
 			-1,
 			0,
 			*ins.FormData,
@@ -42,7 +42,7 @@ func HandleInstance(ins *model.Instance, hdIns *dto.HandleInstance) error {
 	}
 
 	// 反序列化Assignees
-	currAss := strings.Split(ins.CurrentAssignees, model.ASSIGNEES_SPILT_TAG)
+	currAss := strings.Split(ins.CurrentAssignees, conf.ASSIGNEES_SPILT_TAG)
 	// 为CurrentAssignees去除已审批人
 	log.Info("Exclude current user from CurrentAssignees.")
 	currAss = utils.RemoveStringSliceElement(currAss, hdIns.CreatedBy)
@@ -52,11 +52,11 @@ func HandleInstance(ins *model.Instance, hdIns *dto.HandleInstance) error {
 		log.Info("The HandleInstance go next step, Final Set instance status is model.INSTANCE_PENDING_STATUS.")
 		dao.SetHandleInstance(
 			ins.Id,
-			model.INSTANCE_PENDING_STATUS,
+			conf.INSTANCE_PENDING_STATUS,
 			ins.CurrentStep,
 			0,
 			*ins.FormData,
-			strings.Join(currAss, model.ASSIGNEES_SPILT_TAG),
+			strings.Join(currAss, conf.ASSIGNEES_SPILT_TAG),
 			appendPassedAssignees(ins.PassedAssignees, hdIns.CreatedBy),
 			hdIns.CreatedBy,
 		)
@@ -67,11 +67,11 @@ func HandleInstance(ins *model.Instance, hdIns *dto.HandleInstance) error {
 	log.Info("Final Set instance status is still model.INSTANCE_RUNNING_STATUS.")
 	dao.SetHandleInstance(
 		ins.Id,
-		model.INSTANCE_RUNNING_STATUS,
+		conf.INSTANCE_RUNNING_STATUS,
 		ins.CurrentStep,
 		ins.AssigneesRequired-1,
 		*ins.FormData,
-		strings.Join(currAss, model.ASSIGNEES_SPILT_TAG),
+		strings.Join(currAss, conf.ASSIGNEES_SPILT_TAG),
 		appendPassedAssignees(ins.PassedAssignees, hdIns.CreatedBy),
 		hdIns.CreatedBy,
 	)
@@ -85,7 +85,7 @@ func InstanceNextStep(insId int) error {
 	defer log.Info("builtin.InstanceNextStep end.")
 
 	// 查找流程实例
-	ins, err := dao.GetInstance(dao.Query{"id=?": insId, "status=?": model.INSTANCE_PENDING_STATUS})
+	ins, err := dao.GetInstance(dao.Query{"id=?": insId, "status=?": conf.INSTANCE_PENDING_STATUS})
 	if err != nil {
 		log.ErrorWithFields(log.Fields{
 			"instance_id": insId,
@@ -117,7 +117,7 @@ func InstanceNextStep(insId int) error {
 		if currNode.SubNode == nil || currNode.SubNode.Id == 0 {
 			dao.SetInstance(
 				insId,
-				model.INSTANCE_APPROVED_END_STATUS,
+				conf.INSTANCE_APPROVED_END_STATUS,
 				-1,
 				0,
 				*ins.FlowChain,
@@ -152,13 +152,13 @@ func InstanceNextStep(insId int) error {
 
 	assReq := 0
 	switch currNode.Category {
-	case model.ANY:
+	case conf.ANY:
 		// 或签
 		assReq = 1
-	case model.ALL:
+	case conf.ALL:
 		// 会签
 		assReq = len(currNode.Assignees)
-	case model.INFORM:
+	case conf.INFORM:
 		// 知会
 		assReq = 0
 	}
@@ -184,7 +184,7 @@ func InstanceNextStep(insId int) error {
 	if assReq < 1 || len(currNode.Assignees) < 1 {
 		dao.SetInstance(
 			insId,
-			model.INSTANCE_PENDING_STATUS,
+			conf.INSTANCE_PENDING_STATUS,
 			currStep,
 			assReq,
 			*ins.FlowChain,
@@ -198,11 +198,11 @@ func InstanceNextStep(insId int) error {
 	// 找到审批人且不是知会节点，则直接至状态为审批中
 	dao.SetInstance(
 		insId,
-		model.INSTANCE_RUNNING_STATUS,
+		conf.INSTANCE_RUNNING_STATUS,
 		currStep,
 		assReq,
 		*ins.FlowChain,
-		strings.Join(currNode.Assignees, model.ASSIGNEES_SPILT_TAG),
+		strings.Join(currNode.Assignees, conf.ASSIGNEES_SPILT_TAG),
 		appendPassedAssignees(ins.CurrentAssignees, ins.PassedAssignees),
 		"",
 	)
@@ -229,11 +229,11 @@ func getAssignees(currNode *model.NodeChain, data map[string]interface{}) error 
 	log.DebugWithFields(log.Fields{"assignee_condition": ac}, "Before switch ac.Condition.")
 	// 处理具体的Condition
 	switch ac.Condition {
-	case model.INITIATOR:
+	case conf.INITIATOR:
 		log.Info("The ac.Condition match to model.INITIATOR.")
 		currNode.Assignees = append(currNode.Assignees, data["initiator"].(string))
 
-	case model.INITIATORS_DEPARTMENTS_OWNER:
+	case conf.INITIATORS_DEPARTMENTS_OWNER:
 		log.Info("The ac.Condition match to model.INITIATORS_DEPARTMENTS_OWNER.")
 		req := auth.IdQuery{Id: int32(data["initiator_id"].(int))}
 		memUsers, err := cli.AuthClient.ListUserDepartmentUsers(ctx, &req)
@@ -253,7 +253,7 @@ func getAssignees(currNode *model.NodeChain, data map[string]interface{}) error 
 			currNode.Assignees = append(currNode.Assignees, u.Username)
 		}
 
-	case model.INITIATORS_PARENT_DEPARTMENTS_OWNER:
+	case conf.INITIATORS_PARENT_DEPARTMENTS_OWNER:
 		log.Info("The ac.Condition match to model.INITIATORS_PARENT_DEPARTMENTS_OWNER.")
 		// 获得用户所在部门
 		dept, err := cli.AuthClient.GetUserDepartment(ctx, &auth.IdQuery{Id: int32(data["initiator_id"].(int))})
@@ -287,11 +287,11 @@ func getAssignees(currNode *model.NodeChain, data map[string]interface{}) error 
 			currNode.Assignees = append(currNode.Assignees, u.Username)
 		}
 
-	case model.SPECIFIED_USERS:
+	case conf.SPECIFIED_USERS:
 		log.Info("The ac.Condition match to model.SPECIFIED_USERS.")
 		currNode.Assignees = strings.Split(getter(&ac, data).(string), ",")
 
-	case model.SPECIFIED_PRODUCT_OWNER:
+	case conf.SPECIFIED_PRODUCT_OWNER:
 		log.Info("The ac.Condition match to model.SPECIFIED_PRODUCT_OWNER.")
 		req := auth.IdQuery{Id: int32(getter(&ac, data).(int))}
 		memUsers, err := cli.AuthClient.ListProductUsers(ctx, &req)
@@ -311,7 +311,7 @@ func getAssignees(currNode *model.NodeChain, data map[string]interface{}) error 
 			currNode.Assignees = append(currNode.Assignees, u.Username)
 		}
 
-	case model.SPECIFIED_GROUP_OWNER:
+	case conf.SPECIFIED_GROUP_OWNER:
 		log.Info("The ac.Condition match to model.SPECIFIED_GROUP_OWNER.")
 		req := auth.IdQuery{Id: int32(getter(&ac, data).(int))}
 		memUsers, err := cli.AuthClient.ListGroupUsers(ctx, &req)
@@ -331,7 +331,7 @@ func getAssignees(currNode *model.NodeChain, data map[string]interface{}) error 
 			currNode.Assignees = append(currNode.Assignees, u.Username)
 		}
 
-	case model.SPECIFIED_DEPARTMENT_OWNER:
+	case conf.SPECIFIED_DEPARTMENT_OWNER:
 		log.Info("The ac.Condition match to model.SPECIFIED_DEPARTMENT_OWNER.")
 		req := auth.IdQuery{Id: int32(getter(&ac, data).(int))}
 		memUsers, err := cli.AuthClient.ListDepartmentUsers(ctx, &req)
@@ -351,7 +351,7 @@ func getAssignees(currNode *model.NodeChain, data map[string]interface{}) error 
 			currNode.Assignees = append(currNode.Assignees, u.Username)
 		}
 
-	case model.SPECIFIED_ROLE:
+	case conf.SPECIFIED_ROLE:
 		log.Info("The ac.Condition match to model.SPECIFIED_ROLE.")
 		req := auth.NameQuery{Name: getter(&ac, data).(string)}
 		memUsers, err := cli.AuthClient.ListRoleUsers(ctx, &req)
@@ -458,10 +458,10 @@ func appendPassedAssignees(currAss, passedAss string) string {
 	defer log.Info("builtin.appendPassedAssignees end.")
 
 	passedAssignees := utils.MergeStringSlice(
-		strings.Split(passedAss, model.ASSIGNEES_SPILT_TAG),
-		strings.Split(currAss, model.ASSIGNEES_SPILT_TAG),
+		strings.Split(passedAss, conf.ASSIGNEES_SPILT_TAG),
+		strings.Split(currAss, conf.ASSIGNEES_SPILT_TAG),
 	)
-	return strings.Join(passedAssignees, model.ASSIGNEES_SPILT_TAG)
+	return strings.Join(passedAssignees, conf.ASSIGNEES_SPILT_TAG)
 }
 
 // 通知审批人

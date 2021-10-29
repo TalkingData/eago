@@ -2,7 +2,6 @@ package model
 
 import (
 	"eago/common/utils"
-	"github.com/beego/beego/v2/core/validation"
 )
 
 // Schedule struct
@@ -18,20 +17,4 @@ type Schedule struct {
 	CreatedBy    string           `json:"created_by"`
 	UpdatedAt    *utils.LocalTime `json:"updated_at"`
 	UpdatedBy    *string          `json:"updated_by" gorm:"default:''"`
-}
-
-// Validate
-func (s *Schedule) Validate() (err interface{}) {
-	valid := validation.Validation{}
-	// 验证数据
-	ok, err := valid.Valid(s)
-	if err != nil {
-		return
-	}
-	// 数据验证未通过
-	if !ok {
-		return valid.Errors
-	}
-
-	return
 }

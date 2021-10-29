@@ -5,6 +5,7 @@ import (
 	"eago/common/log"
 	"eago/common/message"
 	"eago/common/utils"
+	"eago/flow/conf"
 	"eago/flow/conf/msg"
 	"eago/flow/dao"
 	"eago/flow/model"
@@ -26,7 +27,7 @@ type HandleInstance struct {
 // Validate
 func (hi *HandleInstance) Validate(iId int, currUname string) *message.Message {
 	// 验证实例是否存在
-	q := dao.Query{"id=?": iId, "status=?": model.INSTANCE_RUNNING_STATUS}
+	q := dao.Query{"id=?": iId, "status=?": conf.INSTANCE_RUNNING_STATUS}
 	insObj, err := dao.GetInstance(q)
 	if err != nil {
 		m := msg.UnknownError.SetDetail("查找流程时失败")
@@ -56,7 +57,7 @@ func (hi *HandleInstance) Validate(iId int, currUname string) *message.Message {
 
 	// 准备验证审批权限
 	// 反序列化Assignees
-	assignees := strings.Split(insObj.CurrentAssignees, model.ASSIGNEES_SPILT_TAG)
+	assignees := strings.Split(insObj.CurrentAssignees, conf.ASSIGNEES_SPILT_TAG)
 
 	// 判断当前用户是否有权限审批
 	res, err := utils.IsInSlice(assignees, hi.CreatedBy)
@@ -84,23 +85,73 @@ type ListInstancesQuery struct {
 	Status *int    `json:"status"`
 }
 
-// UpdateQuery
-func (q *ListInstancesQuery) UpdateQuery(query dao.Query, currUname string) error {
+// DefaultUpdateQuery
+func (q *ListInstancesQuery) DefaultUpdateQuery(query dao.Query, currUname string) error {
 	// 通用Query
 	if q.Query != nil && *q.Query != "" {
 		likeQuery := fmt.Sprintf("%%%s%%", *q.Query)
 		query["(name LIKE @query OR id LIKE @query)"] = sql.Named("query", likeQuery)
 	}
 
-	// 默认筛选1：当前用户发起的流程
-	query["created_by=?"] = currUname
-	// 默认筛选2：当前审批人是当前用户或者已审批人是当前用户的
-	likeQuery := fmt.Sprintf("%%%s%%", q)
-	query["(current_assignees LIKE @query OR passed_assignees LIKE @query)"] = sql.Named("query", likeQuery)
+	if q.Status != nil {
+		query["status=?"] = *q.Status
+	}
+
+	return nil
+}
+
+// MyInstancesUpdateQuery
+func (q *ListInstancesQuery) MyInstancesUpdateQuery(query dao.Query, currUname string) error {
+	// 通用Query
+	if q.Query != nil && *q.Query != "" {
+		likeQuery := fmt.Sprintf("%%%s%%", *q.Query)
+		query["(name LIKE @query OR id LIKE @query)"] = sql.Named("query", likeQuery)
+	}
 
 	if q.Status != nil {
 		query["status=?"] = *q.Status
 	}
+
+	// 筛选当前用户发起的流程
+	query["created_by=?"] = currUname
+
+	return nil
+}
+
+// TodoInstancesUpdateQuery
+func (q *ListInstancesQuery) TodoInstancesUpdateQuery(query dao.Query, currUname string) error {
+	// 通用Query
+	if q.Query != nil && *q.Query != "" {
+		likeQuery := fmt.Sprintf("%%%s%%", *q.Query)
+		query["(name LIKE @query OR id LIKE @query)"] = sql.Named("query", likeQuery)
+	}
+
+	if q.Status != nil {
+		query["status=?"] = *q.Status
+	}
+
+	// 筛选当前审批人包含当前用户的流程
+	likeQuery := fmt.Sprintf("%%%s%%", q)
+	query["(current_assignees LIKE @query)"] = sql.Named("query", likeQuery)
+
+	return nil
+}
+
+// DoneInstancesUpdateQuery
+func (q *ListInstancesQuery) DoneInstancesUpdateQuery(query dao.Query, currUname string) error {
+	// 通用Query
+	if q.Query != nil && *q.Query != "" {
+		likeQuery := fmt.Sprintf("%%%s%%", *q.Query)
+		query["(name LIKE @query OR id LIKE @query)"] = sql.Named("query", likeQuery)
+	}
+
+	if q.Status != nil {
+		query["status=?"] = *q.Status
+	}
+
+	// 已审批人包含当前用户的流程
+	likeQuery := fmt.Sprintf("%%%s%%", q)
+	query["(passed_assignees LIKE @query)"] = sql.Named("query", likeQuery)
 
 	return nil
 }

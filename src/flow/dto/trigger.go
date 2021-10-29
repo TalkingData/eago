@@ -107,3 +107,16 @@ func (ltq *ListTriggersQuery) UpdateQuery(query dao.Query) error {
 
 	return nil
 }
+
+// ListTriggerNodes struct
+type ListTriggerNodes struct{}
+
+// Validate
+func (*ListTriggerNodes) Validate(tId int) *message.Message {
+	// 验证触发器是否存在
+	if ct, _ := dao.GetTriggerCount(dao.Query{"id=?": tId}); ct < 1 {
+		return msg.NotFoundFailed.SetDetail("触发器不存在")
+	}
+
+	return nil
+}

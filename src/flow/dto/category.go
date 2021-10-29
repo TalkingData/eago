@@ -41,14 +41,14 @@ func (n *NewCategory) Validate() *message.Message {
 type RemoveCategory struct{}
 
 // Validate
-func (*RemoveCategory) Validate(tId int) *message.Message {
+func (*RemoveCategory) Validate(cId int) *message.Message {
 	// 验证类别是否存在
-	if ct, _ := dao.GetCategoriesCount(dao.Query{"id=?": tId}); ct < 1 {
+	if ct, _ := dao.GetCategoriesCount(dao.Query{"id=?": cId}); ct < 1 {
 		return msg.NotFoundFailed.SetDetail("类别不存在")
 	}
 
 	// 验证类别与流程关联
-	if ct, _ := dao.GetFlowCount(dao.Query{"id=?": tId}); ct > 0 {
+	if ct, _ := dao.GetFlowCount(dao.Query{"id=?": cId}); ct > 0 {
 		return msg.AssociatedCategoryFlowFailed
 	}
 
@@ -97,6 +97,19 @@ func (q *ListCategoriesQuery) UpdateQuery(query dao.Query) error {
 	if q.Query != nil && *q.Query != "" {
 		likeQuery := fmt.Sprintf("%%%s%%", *q.Query)
 		query["name LIKE @query OR id LIKE @query OR created_by LIKE @query OR updated_by LIKE @query"] = sql.Named("query", likeQuery)
+	}
+
+	return nil
+}
+
+// ListCategoriesRelations struct
+type ListCategoriesRelations struct{}
+
+// Validate
+func (*ListCategoriesRelations) Validate(cId int) *message.Message {
+	// 验证类别是否存在
+	if ct, _ := dao.GetCategoriesCount(dao.Query{"id=?": cId}); ct < 1 {
+		return msg.NotFoundFailed.SetDetail("类别不存在")
 	}
 
 	return nil

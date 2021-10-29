@@ -2,7 +2,6 @@ package model
 
 import (
 	"eago/common/utils"
-	"github.com/beego/beego/v2/core/validation"
 )
 
 type Group struct {
@@ -19,36 +18,4 @@ type UserGroup struct {
 	GroupId  int              `json:"group_id"`
 	IsOwner  *bool            `json:"is_owner" valid:"Required"`
 	JoinedAt *utils.LocalTime `json:"joined_at" gorm:"type:datetime;not null;autoCreateTime"`
-}
-
-// Validate
-func (g *Group) Validate() (err interface{}) {
-	valid := validation.Validation{}
-	// 验证数据
-	ok, err := valid.Valid(g)
-	if err != nil {
-		return
-	}
-	// 数据验证未通过
-	if !ok {
-		return valid.Errors
-	}
-
-	return
-}
-
-// Validate
-func (ug *UserGroup) Validate() (err interface{}) {
-	valid := validation.Validation{}
-	// 验证数据
-	ok, err := valid.Valid(ug)
-	if err != nil {
-		return
-	}
-	// 数据验证未通过
-	if !ok {
-		return valid.Errors
-	}
-
-	return
 }

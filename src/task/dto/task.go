@@ -3,9 +3,9 @@ package dto
 import (
 	"database/sql"
 	"eago/common/message"
+	"eago/task/conf"
 	"eago/task/conf/msg"
 	"eago/task/dao"
-	"eago/task/model"
 	"fmt"
 	"github.com/beego/beego/v2/core/validation"
 )
@@ -56,7 +56,7 @@ type NewTask struct {
 
 // Valid
 func (n *NewTask) Valid(v *validation.Validation) {
-	if n.Category != nil && *n.Category > model.BUTILIN_TASK_CATEGORY {
+	if n.Category != nil && *n.Category > conf.BUTILIN_TASK_CATEGORY {
 		_ = v.SetError("Category", "目前仅支持内置任务")
 	}
 

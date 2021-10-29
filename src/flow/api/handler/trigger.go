@@ -132,3 +132,33 @@ func ListTriggers(c *gin.Context) {
 
 	w.WriteSuccessPayload(c, "triggers", paged)
 }
+
+// ListTriggerNodes 列出触发器所关联节点
+func ListTriggerNodes(c *gin.Context) {
+	tId, err := strconv.Atoi(c.Param("trigger_id"))
+	if err != nil {
+		m := msg.InvalidUriFailed.SetError(err, "trigger_id")
+		log.WarnWithFields(m.LogFields())
+		m.WriteRest(c)
+		return
+	}
+
+	var ltnFrm dto.ListTriggerNodes
+	// 验证数据
+	if m := ltnFrm.Validate(tId); m != nil {
+		// 数据验证未通过
+		log.WarnWithFields(m.LogFields())
+		m.WriteRest(c)
+		return
+	}
+
+	u, ok := dao.ListTriggerNodes(tId)
+	if !ok {
+		m := msg.UnknownError
+		log.WarnWithFields(m.LogFields())
+		m.WriteRest(c)
+		return
+	}
+
+	w.WriteSuccessPayload(c, "nodes", u)
+}

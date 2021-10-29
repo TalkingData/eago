@@ -170,4 +170,15 @@ func (*RemoveNodeTrigger) Validate(nId, tId int) *message.Message {
 	return nil
 }
 
-// TODO: Done this
+// ListNodeRelations struct
+type ListNodeRelations struct{}
+
+// Validate
+func (*ListNodeRelations) Validate(nId int) *message.Message {
+	// 验证节点是否存在
+	if ct, _ := dao.GetNodeCount(dao.Query{"id=?": nId}); ct < 1 {
+		return msg.NotFoundFailed.SetDetail("节点不存在")
+	}
+
+	return nil
+}

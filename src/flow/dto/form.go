@@ -51,7 +51,7 @@ type SetForm struct {
 
 // Valid
 func (s *SetForm) Valid(v *validation.Validation) {
-	if ct, _ := dao.GetFormCount(dao.Query{"name=?": s.Name, "id<>": s.formId}); ct > 0 {
+	if ct, _ := dao.GetFormCount(dao.Query{"name=?": s.Name, "id<>?": s.formId}); ct > 0 {
 		_ = v.SetError("Name", "表单名称已存在")
 	}
 }
@@ -73,6 +73,19 @@ func (s *SetForm) Validate(frmId int) *message.Message {
 	return nil
 }
 
+// GetForm struct
+type GetForm struct{}
+
+// Validate
+func (*GetForm) Validate(frmId int) *message.Message {
+	// 验证表单是否存在
+	if ct, _ := dao.GetFormCount(dao.Query{"id=?": frmId}); ct < 1 {
+		return msg.NotFoundFailed.SetDetail("表单不存在")
+	}
+
+	return nil
+}
+
 // ListFormsQuery struct
 type ListFormsQuery struct {
 	Query *string `form:"query"`
@@ -84,6 +97,19 @@ func (q *ListFormsQuery) UpdateQuery(query dao.Query) error {
 	if q.Query != nil && *q.Query != "" {
 		likeQuery := fmt.Sprintf("%%%s%%", *q.Query)
 		query["name LIKE @query OR description LIKE @query OR id LIKE @query OR created_by LIKE @query OR updated_by LIKE @query"] = sql.Named("query", likeQuery)
+	}
+
+	return nil
+}
+
+// ListFormRelations struct
+type ListFormRelations struct{}
+
+// Validate
+func (*ListFormRelations) Validate(frmId int) *message.Message {
+	// 验证表单是否存在
+	if ct, _ := dao.GetFormCount(dao.Query{"id=?": frmId}); ct < 1 {
+		return msg.NotFoundFailed.SetDetail("表单不存在")
 	}
 
 	return nil

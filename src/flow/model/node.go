@@ -4,25 +4,6 @@ import (
 	"eago/common/utils"
 )
 
-// AssigneeConditions 取值枚举范围
-const (
-	INITIATOR                           = "initiator"                          // 发起人
-	INITIATORS_DEPARTMENTS_OWNER        = "initiators_department_owner"        // 发起人所属部门Owner
-	INITIATORS_PARENT_DEPARTMENTS_OWNER = "initiators_parent_department_owner" // 发起人所属上级部门Owner
-	SPECIFIED_USERS                     = "specified_users"                    // 指定用户（多个）
-	SPECIFIED_PRODUCT_OWNER             = "specified_product_owner"            // 指定产品线Owner
-	SPECIFIED_GROUP_OWNER               = "specified_group_owner"              // 指定组Owner
-	SPECIFIED_DEPARTMENT_OWNER          = "specified_department_owner"         // 指定部门Owner
-	SPECIFIED_ROLE                      = "specified_role"                     // 指定角色
-)
-
-// Category 取值枚举范围
-const (
-	ANY    = iota // 或签
-	ALL           // 会签
-	INFORM        // 知会
-)
-
 type Node struct {
 	Id                int              `json:"id"`
 	Name              string           `json:"name"`

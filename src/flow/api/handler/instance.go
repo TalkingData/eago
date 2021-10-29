@@ -59,9 +59,55 @@ func ListInstances(c *gin.Context) {
 	// 设置查询filter
 	liq := dto.ListInstancesQuery{}
 	if c.ShouldBindQuery(&liq) == nil {
-		_ = liq.UpdateQuery(query, tc["Username"].(string))
+		_ = liq.DefaultUpdateQuery(query, tc["Username"].(string))
 	}
+	listInstances(c, query)
+}
 
+// ListMyInstances 列出我发起的流程实例
+func ListMyInstances(c *gin.Context) {
+	// 取出TokenContent
+	tc := c.GetStringMap("TokenContent")
+
+	query := dao.Query{}
+	// 设置查询filter
+	liq := dto.ListInstancesQuery{}
+	if c.ShouldBindQuery(&liq) == nil {
+		_ = liq.MyInstancesUpdateQuery(query, tc["Username"].(string))
+	}
+	listInstances(c, query)
+}
+
+// ListTodoInstances 列出我代办的流程实例
+func ListTodoInstances(c *gin.Context) {
+	// 取出TokenContent
+	tc := c.GetStringMap("TokenContent")
+
+	query := dao.Query{}
+	// 设置查询filter
+	liq := dto.ListInstancesQuery{}
+	if c.ShouldBindQuery(&liq) == nil {
+		_ = liq.TodoInstancesUpdateQuery(query, tc["Username"].(string))
+	}
+	listInstances(c, query)
+}
+
+// ListDoneInstances 列出我已办的流程实例
+func ListDoneInstances(c *gin.Context) {
+	// 取出TokenContent
+	tc := c.GetStringMap("TokenContent")
+
+	query := dao.Query{}
+	// 设置查询filter
+	liq := dto.ListInstancesQuery{}
+	if c.ShouldBindQuery(&liq) == nil {
+		_ = liq.DoneInstancesUpdateQuery(query, tc["Username"].(string))
+	}
+	listInstances(c, query)
+}
+
+// listInstances 列出所有流程实例
+func listInstances(c *gin.Context, query dao.Query) {
 	paged, ok := dao.PagedListInstances(
 		query,
 		c.GetInt("Page"),

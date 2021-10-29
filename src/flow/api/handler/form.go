@@ -80,6 +80,43 @@ func SetForm(c *gin.Context) {
 	w.WriteSuccessPayload(c, "form", f)
 }
 
+// GetForm 获取指定表单
+func GetForm(c *gin.Context) {
+	frmId, err := strconv.Atoi(c.Param("form_id"))
+	if err != nil {
+		m := msg.InvalidUriFailed.SetError(err, "form_id")
+		log.WarnWithFields(m.LogFields())
+		m.WriteRest(c)
+		return
+	}
+
+	var gFrm dto.GetForm
+	// 序列化request body
+	if err := c.ShouldBindJSON(&gFrm); err != nil {
+		m := msg.SerializeFailed
+		log.WarnWithFields(m.LogFields())
+		m.WriteRest(c)
+		return
+	}
+	// 验证数据
+	if m := gFrm.Validate(frmId); m != nil {
+		// 数据验证未通过
+		log.WarnWithFields(m.LogFields())
+		m.WriteRest(c)
+		return
+	}
+
+	f, ok := dao.GetForm(dao.Query{"id=?": frmId})
+	if !ok {
+		m := msg.UnknownError
+		log.WarnWithFields(m.LogFields())
+		m.WriteRest(c)
+		return
+	}
+
+	w.WriteSuccessPayload(c, "form", f)
+}
+
 // ListForms 列出所有表单
 func ListForms(c *gin.Context) {
 	query := dao.Query{}
@@ -103,4 +140,34 @@ func ListForms(c *gin.Context) {
 	}
 
 	w.WriteSuccessPayload(c, "forms", paged)
+}
+
+// ListFormFlows 列出表单所关联流程
+func ListFormFlows(c *gin.Context) {
+	frmId, err := strconv.Atoi(c.Param("form_id"))
+	if err != nil {
+		m := msg.InvalidUriFailed.SetError(err, "form_id")
+		log.WarnWithFields(m.LogFields())
+		m.WriteRest(c)
+		return
+	}
+
+	var lfrFrm dto.ListFormRelations
+	// 验证数据
+	if m := lfrFrm.Validate(frmId); m != nil {
+		// 数据验证未通过
+		log.WarnWithFields(m.LogFields())
+		m.WriteRest(c)
+		return
+	}
+
+	fl, ok := dao.ListFlows(dao.Query{"form_id=?": frmId})
+	if !ok {
+		m := msg.UnknownError
+		log.WarnWithFields(m.LogFields())
+		m.WriteRest(c)
+		return
+	}
+
+	w.WriteSuccessPayload(c, "flows", fl)
 }
