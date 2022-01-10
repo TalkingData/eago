@@ -52,11 +52,14 @@ func main() {
 	)
 	srv := micro.NewService(
 		micro.Name(conf.RPC_REGISTER_KEY),
-		micro.Registry(etcdReg),
-		micro.Broker(broker.NewBroker(conf.Conf.KafkaAddresses)),
-		micro.WrapHandler(opentracing.NewHandlerWrapper(t)),
-		micro.Context(ctx),
+		micro.Address(conf.Conf.SrvListen),
 		micro.Version("v1"),
+		micro.Registry(etcdReg),
+		micro.RegisterTTL(conf.Conf.RegisterTtl),
+		micro.RegisterInterval(conf.Conf.RegisterInterval),
+		micro.Context(ctx),
+		micro.WrapHandler(opentracing.NewHandlerWrapper(t)),
+		micro.Broker(broker.NewBroker(conf.Conf.KafkaAddresses)),
 	)
 
 	// 初始化broker

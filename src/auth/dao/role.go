@@ -211,7 +211,9 @@ func RemoveUserRoles(userId int) bool {
 // GetRoleUserCount 关联表操作::列出角色中用户数量
 func GetRoleUserCount(query Query) (count int64, ok bool) {
 	d := db.Model(&model.User{}).
-		Select("users.id AS id, users.username AS username, ur.joined_at AS joined_at").
+		Select("users.id AS id, " +
+			"users.username AS username, " +
+			"ur.joined_at AS joined_at").
 		Joins("LEFT JOIN user_roles AS ur ON users.id = ur.user_id")
 
 	for k, v := range query {
@@ -235,7 +237,9 @@ func ListRoleUsers(roleId int) (*[]model.RoleUser, bool) {
 	rus := make([]model.RoleUser, 0)
 
 	res := db.Model(&model.User{}).
-		Select("users.id AS id, users.username AS username, ur.joined_at AS joined_at").
+		Select("users.id AS id, "+
+			"users.username AS username, "+
+			"ur.joined_at AS joined_at").
 		Joins("LEFT JOIN user_roles AS ur ON users.id = ur.user_id").
 		Where("role_id=?", roleId).
 		Find(&rus)

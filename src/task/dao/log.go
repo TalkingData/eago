@@ -14,15 +14,15 @@ import (
 // NewLog 新建日志
 func NewLog(partition string, resultId int, content *string) *model.Log {
 	var (
-		d = db.Table(GetLogTableNameByPartition(partition))
-		l = model.Log{
+		d  = db.Table(GetLogTableNameByPartition(partition))
+		lg = model.Log{
 			ResultId: resultId,
 			Content:  *content,
 		}
 	)
 
 	// 创建记录
-	if res := d.Create(&l); res.Error != nil {
+	if res := d.Create(&lg); res.Error != nil {
 		log.ErrorWithFields(log.Fields{
 			"partition": partition,
 			"error":     res.Error,
@@ -30,14 +30,14 @@ func NewLog(partition string, resultId int, content *string) *model.Log {
 		return nil
 	}
 
-	return &l
+	return &lg
 }
 
 // PagedListLogsByPartition 列出日志（需指定分区）-分页
 func PagedListLogsByPartition(query Query, partition string, page, pageSize int, orderBy ...string) (*pagination.Paginator, bool) {
 	var (
-		tableName = GetLogTableNameByPartition(partition)
-		d         = db.Table(tableName)
+		tbName = GetLogTableNameByPartition(partition)
+		d      = db.Table(tbName)
 	)
 	ls := make([]model.Log, 0)
 
@@ -52,7 +52,7 @@ func PagedListLogsByPartition(query Query, partition string, page, pageSize int,
 	}, &ls)
 	if err != nil {
 		log.ErrorWithFields(log.Fields{
-			"table_name": tableName,
+			"table_name": tbName,
 			"query":      fmt.Sprintf("%v", query),
 			"error":      err,
 		}, "An error occurred while pagination.GormPaging.")
@@ -65,8 +65,8 @@ func PagedListLogsByPartition(query Query, partition string, page, pageSize int,
 // ListLogs 查询任务
 func ListLogs(query Query, partition string) (*[]model.Log, bool) {
 	var (
-		tableName = GetLogTableNameByPartition(partition)
-		d         = db.Table(tableName)
+		tbName = GetLogTableNameByPartition(partition)
+		d      = db.Table(tbName)
 	)
 	ls := make([]model.Log, 0)
 

@@ -12,7 +12,7 @@ import (
 
 // NewSchedule 新建计划任务
 func NewSchedule(tCodeName, expr, args, description string, timeout int64, disabled bool, createdBy string) *model.Schedule {
-	var s = model.Schedule{
+	var sch = model.Schedule{
 		TaskCodename: tCodeName,
 		Expression:   expr,
 		Description:  &description,
@@ -22,7 +22,7 @@ func NewSchedule(tCodeName, expr, args, description string, timeout int64, disab
 		CreatedBy:    createdBy,
 	}
 
-	if res := db.Create(&s); res.Error != nil {
+	if res := db.Create(&sch); res.Error != nil {
 		log.ErrorWithFields(log.Fields{
 			"task_codename": tCodeName,
 			"expression":    expr,
@@ -35,7 +35,7 @@ func NewSchedule(tCodeName, expr, args, description string, timeout int64, disab
 		return nil
 	}
 
-	return &s
+	return &sch
 }
 
 // RemoveSchedule 删除计划任务
@@ -54,7 +54,7 @@ func RemoveSchedule(schId int) bool {
 
 // SetSchedule 更新计划任务
 func SetSchedule(id int, tCodeName, expr, args, description string, timeout int64, disabled bool, updatedBy string) (*model.Schedule, bool) {
-	var s = model.Schedule{}
+	var sch = model.Schedule{}
 
 	res := db.Model(&model.Schedule{}).
 		Where("id=?", id).
@@ -67,7 +67,7 @@ func SetSchedule(id int, tCodeName, expr, args, description string, timeout int6
 			"description":   description,
 			"updated_by":    updatedBy,
 		}).
-		First(&s)
+		First(&sch)
 	if res.Error != nil {
 		log.ErrorWithFields(log.Fields{
 			"id":            id,
@@ -83,20 +83,20 @@ func SetSchedule(id int, tCodeName, expr, args, description string, timeout int6
 		return nil, false
 	}
 
-	return &s, true
+	return &sch, true
 }
 
 // GetSchedule 查询单个计划任务
 func GetSchedule(query Query) (*model.Schedule, bool) {
 	var (
-		s = model.Schedule{}
-		d = db
+		d   = db
+		sch = model.Schedule{}
 	)
 
 	for k, v := range query {
 		d = d.Where(k, v)
 	}
-	if res := d.First(&s); res.Error != nil {
+	if res := d.First(&sch); res.Error != nil {
 		if errors.Is(res.Error, gorm.ErrRecordNotFound) {
 			log.WarnWithFields(log.Fields{
 				"query": fmt.Sprintf("%v", query),
@@ -111,7 +111,7 @@ func GetSchedule(query Query) (*model.Schedule, bool) {
 		return nil, false
 	}
 
-	return &s, true
+	return &sch, true
 }
 
 // GetScheduleCount 查询计划任务数量

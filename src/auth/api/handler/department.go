@@ -60,7 +60,7 @@ func RemoveDepartment(c *gin.Context) {
 		return
 	}
 
-	if ok := dao.RemoveDepartment(deptId); !ok {
+	if !dao.RemoveDepartment(deptId) {
 		m := msg.UnknownError
 		log.WarnWithFields(m.LogFields())
 		m.WriteRest(c)

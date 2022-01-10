@@ -15,6 +15,7 @@ func main() {
 		EtcdAddresses(conf.Conf.EtcdAddresses),
 		EtcdUsername(conf.Conf.EtcdUsername),
 		EtcdPassword(conf.Conf.EtcdPassword),
+		TaskRpcRegisterKey(conf.RPC_REGISTER_KEY),
 	)
 
 	go scheduler.Start()

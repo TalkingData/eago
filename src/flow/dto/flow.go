@@ -29,6 +29,10 @@ func (i *InstantiateFlow) Validate(fId int) *message.Message {
 		return msg.NotFoundFailed.SetDetail("流程不存在")
 	}
 
+	if *flow.Disabled {
+		return msg.NotFoundFailed.SetDetail("无法发起一个禁用的流程")
+	}
+
 	i.Name = flow.Name
 	i.FormId = flow.Id
 
@@ -47,18 +51,23 @@ func (i *InstantiateFlow) Validate(fId int) *message.Message {
 }
 
 type NewFlow struct {
-	Name         string  `json:"name" valid:"Required;MinSize(3);MaxSize(200)"`
-	CategoriesId *int    `json:"categories_id"`
-	Disabled     *bool   `json:"disabled" valid:"Required"`
-	Description  *string `json:"description" valid:"MinSize(0);MaxSize(500)"`
-	FormId       int     `json:"form_id" valid:"Required"`
-	FirstNodeId  int     `json:"first_node_id" valid:"Required"`
+	Name          string  `json:"name" valid:"Required;MinSize(3);MaxSize(100)"`
+	InstanceTitle string  `json:"instance_title" valid:"Required;MinSize(3);MaxSize(200)"`
+	CategoriesId  *int    `json:"categories_id"`
+	Disabled      *bool   `json:"disabled" valid:"Required"`
+	Description   *string `json:"description" valid:"MinSize(0);MaxSize(500)"`
+	FormId        int     `json:"form_id" valid:"Required"`
+	FirstNodeId   int     `json:"first_node_id" valid:"Required"`
 }
 
 // Valid
 func (n *NewFlow) Valid(v *validation.Validation) {
 	if ct, _ := dao.GetFlowCount(dao.Query{"name=?": n.Name}); ct > 0 {
 		_ = v.SetError("Name", "流程名称已存在")
+	}
+
+	if ct, _ := dao.GetFormCount(dao.Query{"id=?": n.FormId, "disabled=?": false}); ct < 1 {
+		_ = v.SetError("FormId", "找不到所选表单，请确定该表单存在并且不是禁用状态")
 	}
 }
 
@@ -95,18 +104,23 @@ func (*RemoveFlow) Validate(tId int) *message.Message {
 type SetFlow struct {
 	flowId int
 
-	Name         string  `json:"name" valid:"Required;MinSize(3);MaxSize(200)"`
-	CategoriesId *int    `json:"categories_id"`
-	Disabled     *bool   `json:"disabled" valid:"Required"`
-	Description  *string `json:"description" valid:"MinSize(0);MaxSize(500)"`
-	FormId       int     `json:"form_id" valid:"Required"`
-	FirstNodeId  int     `json:"first_node_id" valid:"Required"`
+	Name          string  `json:"name" valid:"Required;MinSize(3);MaxSize(100)"`
+	InstanceTitle string  `json:"instance_title" valid:"Required;MinSize(3);MaxSize(200)"`
+	CategoriesId  *int    `json:"categories_id"`
+	Disabled      *bool   `json:"disabled" valid:"Required"`
+	Description   *string `json:"description" valid:"MinSize(0);MaxSize(500)"`
+	FormId        int     `json:"form_id" valid:"Required"`
+	FirstNodeId   int     `json:"first_node_id" valid:"Required"`
 }
 
 // Valid
 func (s *SetFlow) Valid(v *validation.Validation) {
 	if ct, _ := dao.GetFlowCount(dao.Query{"name=?": s.Name, "id<>?": s.flowId}); ct > 0 {
 		_ = v.SetError("Name", "流程名称已存在")
+	}
+
+	if ct, _ := dao.GetFormCount(dao.Query{"id=?": s.FormId, "disabled=?": false}); ct < 1 {
+		_ = v.SetError("FormId", "找不到所选表单，请确定该表单存在并且不是禁用状态")
 	}
 }
 
@@ -131,7 +145,7 @@ func (s *SetFlow) Validate(flId int) *message.Message {
 type ListFlowsQuery struct {
 	Query        *string `form:"query"`
 	Disabled     *bool   `form:"disabled"`
-	CategoriesId *int    `json:"categories_id"`
+	CategoriesId *int    `form:"categories_id"`
 }
 
 // UpdateQuery
@@ -139,15 +153,19 @@ func (q *ListFlowsQuery) UpdateQuery(query dao.Query) error {
 	// 通用Query
 	if q.Query != nil && *q.Query != "" {
 		likeQuery := fmt.Sprintf("%%%s%%", *q.Query)
-		query["(name LIKE @query OR description LIKE @query OR id LIKE @query OR created_by LIKE @query OR updated_by LIKE @query)"] = sql.Named("query", likeQuery)
+		query["(flows.id LIKE @query OR "+
+			"flows.name LIKE @query OR "+
+			"flows.description LIKE @query OR "+
+			"flows.created_by LIKE @query OR "+
+			"flows.updated_by LIKE @query)"] = sql.Named("query", likeQuery)
 	}
 
 	if q.Disabled != nil {
-		query["disabled=?"] = *q.Disabled
+		query["flows.disabled=?"] = *q.Disabled
 	}
 
 	if q.CategoriesId != nil {
-		query["categories_id=?"] = *q.CategoriesId
+		query["flows.categories_id=?"] = *q.CategoriesId
 	}
 
 	return nil

@@ -13,7 +13,7 @@ import (
 type NewTrigger struct {
 	Name         string  `json:"name" valid:"Required;MinSize(3);MaxSize(100);Match(/^[a-zA-Z0-9-\u4e00-\u9fa5]+$/)"`
 	Description  *string `json:"description" valid:"MinSize(0);MaxSize(500)"`
-	TaskCodename string  `json:"task_codename" valid:"Required;MaxSize(100);Match(/^[a-zA-Z][a-zA-Z0-9._]{1,}$/)"`
+	TaskCodename string  `json:"task_codename" valid:"Required;MinSize(3);MaxSize(100);Match(/^[a-zA-Z][a-zA-Z0-9._]{1,}$/)"`
 	Arguments    string  `json:"arguments" valid:"Required;MinSize(2);MaxSize(4000)"`
 }
 

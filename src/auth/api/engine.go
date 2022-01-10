@@ -114,21 +114,21 @@ func NewGinEngine() *gin.Engine {
 		}
 
 		// Role模块
-		rr := aGroup.Group("/roles", perm.MustRole(conf.ADMIN_ROLE_NAME))
+		rr := aGroup.Group("/roles")
 		{
 			// 新建角色
-			rr.POST("", h.NewRole)
+			rr.POST("", perm.MustRole(conf.ADMIN_ROLE_NAME), h.NewRole)
 			// 删除角色
-			rr.DELETE("/:role_id", h.RemoveRole)
+			rr.DELETE("/:role_id", perm.MustRole(conf.ADMIN_ROLE_NAME), h.RemoveRole)
 			// 更新角色
-			rr.PUT("/:role_id", h.SetRole)
+			rr.PUT("/:role_id", perm.MustRole(conf.ADMIN_ROLE_NAME), h.SetRole)
 			// 列出所有角色
 			rr.GET("", pg.ListPageHelper(), h.ListRoles)
 
 			// 添加用户至角色
-			rr.POST("/:role_id/users", h.AddUser2Role)
+			rr.POST("/:role_id/users", perm.MustRole(conf.ADMIN_ROLE_NAME), h.AddUser2Role)
 			// 移除角色中用户
-			rr.DELETE("/:role_id/users/:user_id", h.RemoveRoleUser)
+			rr.DELETE("/:role_id/users/:user_id", perm.MustRole(conf.ADMIN_ROLE_NAME), h.RemoveRoleUser)
 			// 列出角色所有用户
 			rr.GET("/:role_id/users", h.ListRoleUsers)
 		}

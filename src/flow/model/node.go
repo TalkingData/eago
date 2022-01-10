@@ -19,6 +19,22 @@ type Node struct {
 	UpdatedBy         *string          `json:"updated_by" gorm:"default:''"`
 }
 
+type ListNodes struct {
+	Id                int              `json:"id"`
+	Name              string           `json:"name"`
+	ParentId          *int             `json:"parent_id"`
+	ParentName        string           `json:"parent_name"`
+	Category          int              `json:"category"`
+	EntryCondition    *string          `json:"entry_condition" gorm:"default:'{}'"`
+	AssigneeCondition *string          `json:"assignee_condition" gorm:"default:'{}'"`
+	VisibleFields     string           `json:"visible_fields"`
+	EditableFields    string           `json:"editable_fields"`
+	CreatedAt         *utils.LocalTime `json:"created_at"`
+	CreatedBy         string           `json:"created_by"`
+	UpdatedAt         *utils.LocalTime `json:"updated_at"`
+	UpdatedBy         *string          `json:"updated_by" gorm:"default:''"`
+}
+
 type NodeChain struct {
 	Id                int            `json:"id"`
 	Name              string         `json:"name"`

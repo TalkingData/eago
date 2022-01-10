@@ -47,10 +47,13 @@ func main() {
 	)
 	apiV1 := web.NewService(
 		web.Name(conf.API_REGISTER_KEY),
-		web.Registry(etcdReg),
-		web.Handler(NewGinEngine()),
-		web.Context(ctx),
+		web.Address(conf.Conf.ApiListen),
 		web.Version("v1"),
+		web.Handler(NewGinEngine()),
+		web.Registry(etcdReg),
+		web.RegisterTTL(conf.Conf.RegisterTtl),
+		web.RegisterInterval(conf.Conf.RegisterInterval),
+		web.Context(ctx),
 	)
 
 	e := make(chan error)

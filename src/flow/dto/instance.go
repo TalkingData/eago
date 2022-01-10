@@ -14,7 +14,7 @@ import (
 	"strings"
 )
 
-// 处理流程实例的数据结构
+// HandleInstance struct 处理流程实例的数据结构
 type HandleInstance struct {
 	CreatedBy string
 	Instance  *model.Instance
@@ -27,7 +27,7 @@ type HandleInstance struct {
 // Validate
 func (hi *HandleInstance) Validate(iId int, currUname string) *message.Message {
 	// 验证实例是否存在
-	q := dao.Query{"id=?": iId, "status=?": conf.INSTANCE_RUNNING_STATUS}
+	q := dao.Query{"id=?": iId, "status=?": conf.INSTANCE_STATUS_RUNNING}
 	insObj, err := dao.GetInstance(q)
 	if err != nil {
 		m := msg.UnknownError.SetDetail("查找流程时失败")
@@ -41,11 +41,12 @@ func (hi *HandleInstance) Validate(iId int, currUname string) *message.Message {
 		return msg.NotFoundFailed.SetDetail("流程实例不存在或状态不为流转中")
 	}
 
+	hi.Instance = insObj
 	// 装载CreatedBy
 	hi.CreatedBy = currUname
 	// 一般验证
 	valid := validation.Validation{}
-	// 验证数据¬
+	// 验证数据
 	ok, err := valid.Valid(hi)
 	if err != nil {
 		return msg.ValidateFailed.SetError(err)
@@ -82,11 +83,11 @@ func (hi *HandleInstance) Validate(iId int, currUname string) *message.Message {
 // ListInstancesQuery struct
 type ListInstancesQuery struct {
 	Query  *string `form:"query"`
-	Status *int    `json:"status"`
+	Status *int    `form:"status"`
 }
 
-// DefaultUpdateQuery
-func (q *ListInstancesQuery) DefaultUpdateQuery(query dao.Query, currUname string) error {
+// UpdateDefaultQuery
+func (q *ListInstancesQuery) UpdateDefaultQuery(query dao.Query, currUname string) error {
 	// 通用Query
 	if q.Query != nil && *q.Query != "" {
 		likeQuery := fmt.Sprintf("%%%s%%", *q.Query)
@@ -100,8 +101,8 @@ func (q *ListInstancesQuery) DefaultUpdateQuery(query dao.Query, currUname strin
 	return nil
 }
 
-// MyInstancesUpdateQuery
-func (q *ListInstancesQuery) MyInstancesUpdateQuery(query dao.Query, currUname string) error {
+// UpdateMyInstancesQuery
+func (q *ListInstancesQuery) UpdateMyInstancesQuery(query dao.Query, currUname string) error {
 	// 通用Query
 	if q.Query != nil && *q.Query != "" {
 		likeQuery := fmt.Sprintf("%%%s%%", *q.Query)
@@ -118,8 +119,8 @@ func (q *ListInstancesQuery) MyInstancesUpdateQuery(query dao.Query, currUname s
 	return nil
 }
 
-// TodoInstancesUpdateQuery
-func (q *ListInstancesQuery) TodoInstancesUpdateQuery(query dao.Query, currUname string) error {
+// UpdateTodoInstancesQuery
+func (q *ListInstancesQuery) UpdateTodoInstancesQuery(query dao.Query, currUname string) error {
 	// 通用Query
 	if q.Query != nil && *q.Query != "" {
 		likeQuery := fmt.Sprintf("%%%s%%", *q.Query)
@@ -131,14 +132,14 @@ func (q *ListInstancesQuery) TodoInstancesUpdateQuery(query dao.Query, currUname
 	}
 
 	// 筛选当前审批人包含当前用户的流程
-	likeQuery := fmt.Sprintf("%%%s%%", q)
+	likeQuery := fmt.Sprintf("%%%s%%", currUname)
 	query["(current_assignees LIKE @query)"] = sql.Named("query", likeQuery)
 
 	return nil
 }
 
-// DoneInstancesUpdateQuery
-func (q *ListInstancesQuery) DoneInstancesUpdateQuery(query dao.Query, currUname string) error {
+// UpdateDoneInstancesQuery
+func (q *ListInstancesQuery) UpdateDoneInstancesQuery(query dao.Query, currUname string) error {
 	// 通用Query
 	if q.Query != nil && *q.Query != "" {
 		likeQuery := fmt.Sprintf("%%%s%%", *q.Query)
@@ -150,7 +151,7 @@ func (q *ListInstancesQuery) DoneInstancesUpdateQuery(query dao.Query, currUname
 	}
 
 	// 已审批人包含当前用户的流程
-	likeQuery := fmt.Sprintf("%%%s%%", q)
+	likeQuery := fmt.Sprintf("%%%s%%", currUname)
 	query["(passed_assignees LIKE @query)"] = sql.Named("query", likeQuery)
 
 	return nil

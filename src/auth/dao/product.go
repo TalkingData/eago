@@ -242,7 +242,10 @@ func SetProductUserIsOwner(productId, userId int, isOwner bool) bool {
 // GetProductUserCount 关联表操作::列出产品线中用户数量
 func GetProductUserCount(query Query) (count int64, ok bool) {
 	d := db.Model(&model.User{}).
-		Select("users.id AS id, users.username AS username, up.is_owner AS is_owner, up.joined_at AS joined_at").
+		Select("users.id AS id, " +
+			"users.username AS username, " +
+			"up.is_owner AS is_owner, " +
+			"up.joined_at AS joined_at").
 		Joins("LEFT JOIN user_products AS up ON users.id = up.user_id")
 
 	for k, v := range query {
@@ -269,7 +272,10 @@ func ListProductUsers(productId int, query Query) (*[]model.MemberUser, bool) {
 	for k, v := range query {
 		d = d.Where(k, v)
 	}
-	res := d.Select("users.id AS id, users.username AS username, up.is_owner AS is_owner, up.joined_at AS joined_at").
+	res := d.Select("users.id AS id, "+
+		"users.username AS username, "+
+		"up.is_owner AS is_owner, "+
+		"up.joined_at AS joined_at").
 		Joins("LEFT JOIN user_products AS up ON users.id = up.user_id").
 		Where("product_id=?", productId).
 		Find(&mus)

@@ -10,6 +10,9 @@ import (
 
 // NewLog 新增审批日志
 func NewLog(insId int, result bool, content, createdBy string) *model.Log {
+	log.Info("dao.NewLog called.")
+	defer log.Info("dao.NewLog end.")
+
 	l := model.Log{
 		InstanceId: insId,
 		Result:     result,

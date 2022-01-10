@@ -12,7 +12,7 @@ require (
 	github.com/go-basic/ipv4 v1.0.0
 	github.com/go-redis/redis/v8 v8.10.0
 	github.com/golang/protobuf v1.5.2
-	github.com/gorilla/websocket v1.4.2 // indirect
+	github.com/gorilla/websocket v1.4.2
 	github.com/jda/go-crowd v0.0.0-20180225080536-9c6f17811dc6
 	github.com/micro/go-micro/v2 v2.9.1
 	github.com/micro/go-plugins/broker/kafka/v2 v2.9.1

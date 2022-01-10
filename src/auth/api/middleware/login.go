@@ -17,7 +17,7 @@ func ReadLoginForm() gin.HandlerFunc { // 登录表单预读
 		var loginFrm dto.Login
 		// 序列化request body获取用户名密码
 		if err := c.ShouldBindJSON(&loginFrm); err != nil {
-			m := msg.SerializeFailed
+			m := msg.SerializeFailed.SetError(err)
 			w.WriteAnyAndAbort(c, m.Code(), m.String())
 			return
 		}

@@ -10,7 +10,7 @@ import (
 // NewLog struct
 type NewLog struct {
 	Result  bool    `json:"result" valid:"Required"`
-	Content *string `json:"content" valid:"MinSize(0)"`
+	Content *string `json:"content" valid:"MinSize(0);MaxSize(500)"`
 }
 
 // Validate

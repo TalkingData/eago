@@ -16,7 +16,7 @@ func NewForm(c *gin.Context) {
 
 	// 序列化request body
 	if err := c.ShouldBindJSON(&frm); err != nil {
-		m := msg.SerializeFailed
+		m := msg.SerializeFailed.SetError(err)
 		log.WarnWithFields(m.LogFields())
 		m.WriteRest(c)
 		return
@@ -55,7 +55,7 @@ func SetForm(c *gin.Context) {
 	var setFrm dto.SetForm
 	// 序列化request body
 	if err := c.ShouldBindJSON(&setFrm); err != nil {
-		m := msg.SerializeFailed
+		m := msg.SerializeFailed.SetError(err)
 		log.WarnWithFields(m.LogFields())
 		m.WriteRest(c)
 		return
@@ -91,13 +91,6 @@ func GetForm(c *gin.Context) {
 	}
 
 	var gFrm dto.GetForm
-	// 序列化request body
-	if err := c.ShouldBindJSON(&gFrm); err != nil {
-		m := msg.SerializeFailed
-		log.WarnWithFields(m.LogFields())
-		m.WriteRest(c)
-		return
-	}
 	// 验证数据
 	if m := gFrm.Validate(frmId); m != nil {
 		// 数据验证未通过

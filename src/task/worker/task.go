@@ -30,15 +30,18 @@ type Task struct {
 }
 
 // Run 运行任务
-func (t *Task) Run(callback func(ok bool)) {
+func (t *Task) Run(callback func(err error)) {
 	err := t.fn(t.Cxt, t.Param)
-	if err != nil {
-		t.Param.Log.Error("Task \"%s-%s\" failed with returned error \"%s\".", t.Codename, t.Param.TaskUniqueId, err.Error())
-		callback(false)
+	if t.Cxt.Err() != nil {
+		t.Param.Log.Error("Task '%s-%s' failed with context error: '%s'.", t.Codename, t.Param.TaskUniqueId, t.Cxt.Err())
+		callback(t.Cxt.Err())
 		return
 	}
 
-	callback(true)
+	if err != nil {
+		t.Param.Log.Error("Task '%s-%s' failed with returned error: '%s'.", t.Codename, t.Param.TaskUniqueId, err.Error())
+	}
+	callback(err)
 }
 
 // Info

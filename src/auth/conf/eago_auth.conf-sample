@@ -1,7 +1,11 @@
 [main]
-secret_key = eago_default_secret_key
+srv_listen = 127.0.0.1:0
+api_listen = 127.0.0.1:0
+gin_mode = debug
+register_ttl = 10
+register_interval = 3
 token_ttl = 900
-gin_mode = release
+secret_key = eago_default_secret_key
 
 [log]
 level = debug
@@ -38,3 +42,14 @@ addresses = 127.0.0.1:9092,127.0.0.1:9092,127.0.0.1:9092
 
 [tracer]
 jaeger_address = 127.0.0.1:5775
+
+[wework]
+agent_id = 1000000
+corp_id = corp_id
+corp_secret = corp_secret
+
+[eagle]
+address = 127.0.0.1:3306
+db_name = eagle
+user = root
+password = root

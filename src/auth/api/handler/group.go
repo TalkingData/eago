@@ -59,7 +59,7 @@ func RemoveGroup(c *gin.Context) {
 		return
 	}
 
-	if ok := dao.RemoveGroup(gId); !ok {
+	if !dao.RemoveGroup(gId) {
 		m := msg.UnknownError
 		log.WarnWithFields(m.LogFields())
 		m.WriteRest(c)

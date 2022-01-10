@@ -47,7 +47,7 @@ func (s *Scheduler) init() {
 		etcdv3.Auth(s.opts.EtcdUsername, s.opts.EtcdPassword),
 	)
 	cli := micro.NewService(micro.Registry(etcdReg))
-	s.taskSrvClient = proto.NewTaskService(s.opts.TaskRpcServiceName, cli.Client())
+	s.taskSrvClient = proto.NewTaskService(s.opts.TaskRpcRegisterKey, cli.Client())
 
 	etcdCli, err := clientv3.New(clientv3.Config{
 		Endpoints:   s.opts.EtcdAddresses,
@@ -74,7 +74,8 @@ func (s *Scheduler) Start() {
 	defer log.Info("Scheduler started.")
 
 	// 循环创建计划任务
-	for _, sch := range s.getScheduleTask() {
+	for _, tmp := range s.getScheduleTask() {
+		var sch = tmp
 		// 创建计划任务
 		err := s.cron.AddFunc(sch.Expression, func() {
 			ctx := context.Background()

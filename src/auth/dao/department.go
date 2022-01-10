@@ -51,11 +51,26 @@ func EmptyDepartment() bool {
 		}, "An error occurred while db.Session.Delete.")
 		return false
 	}
+	res = db.Model(&model.UserDepartment{}).Exec("ALTER TABLE user_departments AUTO_INCREMENT=1")
+	if res.Error != nil {
+		log.ErrorWithFields(log.Fields{
+			"error": res.Error,
+		}, "An error occurred while db.Raw.")
+		return false
+	}
+
 	res = db.Session(&gorm.Session{AllowGlobalUpdate: true}).Delete(&model.Department{})
 	if res.Error != nil {
 		log.ErrorWithFields(log.Fields{
 			"error": res.Error,
 		}, "An error occurred while db.Session.Delete.")
+		return false
+	}
+	res = db.Model(&model.Department{}).Exec("ALTER TABLE departments AUTO_INCREMENT=1")
+	if res.Error != nil {
+		log.ErrorWithFields(log.Fields{
+			"error": res.Error,
+		}, "An error occurred while db.Raw.")
 		return false
 	}
 	return true
@@ -67,7 +82,7 @@ func SetDepartment(id int, name string, parentId *int) (*model.Department, error
 
 	ud := map[string]interface{}{"name": name}
 	if parentId != nil {
-		ud["department_id"] = *parentId
+		ud["parent_id"] = *parentId
 	}
 
 	res := db.Model(&model.Department{}).
@@ -77,10 +92,10 @@ func SetDepartment(id int, name string, parentId *int) (*model.Department, error
 
 	if res.Error != nil {
 		log.ErrorWithFields(log.Fields{
-			"id":       id,
-			"name":     name,
-			"parentId": parentId,
-			"error":    res.Error,
+			"id":        id,
+			"name":      name,
+			"parent_id": parentId,
+			"error":     res.Error,
 		}, "An error occurred while db.SetDepartment.")
 		return nil, res.Error
 	}
@@ -295,7 +310,10 @@ func SetDepartmentUserIsOwner(deptId, userId int, isOwner bool) bool {
 // GetDepartmentUserCount 关联表操作::列出部门中所有用户数量
 func GetDepartmentUserCount(query Query) (count int64, ok bool) {
 	d := db.Model(&model.User{}).
-		Select("users.id AS id, users.username AS username, ud.is_owner AS is_owner, ud.joined_at AS joined_at").
+		Select("users.id AS id, " +
+			"users.username AS username, " +
+			"ud.is_owner AS is_owner, " +
+			"ud.joined_at AS joined_at").
 		Joins("LEFT JOIN user_departments AS ud ON users.id = ud.user_id")
 
 	for k, v := range query {
@@ -323,7 +341,10 @@ func ListDepartmentUsers(deptId int, query Query) (*[]model.MemberUser, bool) {
 	for k, v := range query {
 		d = d.Where(k, v)
 	}
-	res := d.Select("users.id AS id, users.username AS username, ud.is_owner AS is_owner, ud.joined_at AS joined_at").
+	res := d.Select("users.id AS id, "+
+		"users.username AS username, "+
+		"ud.is_owner AS is_owner, "+
+		"ud.joined_at AS joined_at").
 		Joins("LEFT JOIN user_departments AS ud ON users.id = ud.user_id").
 		Where("department_id=?", deptId).
 		Find(&mus)

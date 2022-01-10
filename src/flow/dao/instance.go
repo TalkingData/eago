@@ -3,6 +3,7 @@ package dao
 import (
 	"eago/common/api-suite/pagination"
 	"eago/common/log"
+	"eago/flow/conf"
 	"eago/flow/model"
 	"errors"
 	"fmt"
@@ -14,12 +15,18 @@ func NewInstance(formId, status int, name, formData, flowChain, createdBy string
 	log.Info("dao.NewInstance called.")
 	defer log.Info("dao.NewInstance end.")
 
+	// 保证流程实例名称不超过表最大长度
+	if len(name) > conf.INSTANCE_NAME_MAX_LENGTH {
+		name = name[:conf.INSTANCE_NAME_MAX_LENGTH]
+	}
+
 	i := model.Instance{
 		Name:      name,
 		Status:    status,
 		FormId:    formId,
 		FormData:  &formData,
 		FlowChain: &flowChain,
+		CreatedBy: createdBy,
 	}
 
 	if res := db.Create(&i); res.Error != nil {

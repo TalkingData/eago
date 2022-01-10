@@ -235,7 +235,10 @@ func SetGroupUserIsOwner(groupId, userId int, isOwner bool) bool {
 // GetGroupUserCount 关联表操作::列出组中所有用户数量
 func GetGroupUserCount(query Query) (count int64, ok bool) {
 	d := db.Model(&model.User{}).
-		Select("users.id AS id, users.username AS username, ug.is_owner AS is_owner, ug.joined_at AS joined_at").
+		Select("users.id AS id, " +
+			"users.username AS username, " +
+			"ug.is_owner AS is_owner, " +
+			"ug.joined_at AS joined_at").
 		Joins("LEFT JOIN user_groups AS ug ON users.id = ug.user_id")
 
 	for k, v := range query {
@@ -263,7 +266,10 @@ func ListGroupUsers(groupId int, query Query) (*[]model.MemberUser, bool) {
 	for k, v := range query {
 		d = d.Where(k, v)
 	}
-	res := d.Select("users.id AS id, users.username AS username, ug.is_owner AS is_owner, ug.joined_at AS joined_at").
+	res := d.Select("users.id AS id, "+
+		"users.username AS username, "+
+		"ug.is_owner AS is_owner, "+
+		"ug.joined_at AS joined_at").
 		Joins("LEFT JOIN user_groups AS ug ON users.id = ug.user_id").
 		Where("group_id=?", groupId).
 		Find(&mus)

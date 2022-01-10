@@ -177,8 +177,22 @@ func PagedListNodes(query Query, page, pageSize int, orderBy ...string) (*pagina
 	log.Info("dao.PagedListNodes called.")
 	defer log.Info("dao.PagedListNodes end.")
 
-	var d = db.Model(&model.Node{})
-	ns := make([]model.Node, 0)
+	var d = db.Model(&model.Node{}).Select(
+		"nodes.id, " +
+			"nodes.name, " +
+			"nodes.parent_id, " +
+			"p.name AS parent_name, " +
+			"nodes.category, " +
+			"nodes.entry_condition, " +
+			"nodes.assignee_condition, " +
+			"nodes.visible_fields, " +
+			"nodes.editable_fields, " +
+			"nodes.created_at, " +
+			"nodes.created_by, " +
+			"nodes.updated_at, " +
+			"nodes.updated_by",
+	).Joins("LEFT JOIN nodes AS p ON p.id = nodes.parent_id")
+	ns := make([]model.ListNodes, 0)
 
 	for k, v := range query {
 		d = d.Where(k, v)
@@ -282,7 +296,10 @@ func RemoveNodeTrigger(nodeId, triggerId int) bool {
 // GetNodeTriggerCount 关联表操作::获得节点中所有触发器数量
 func GetNodeTriggerCount(query Query) (count int64, ok bool) {
 	d := db.Model(&model.Trigger{}).
-		Select("triggers.id AS id, triggers.name AS name, triggers.description AS description, triggers.arguments AS arguments").
+		Select("triggers.id AS id, " +
+			"triggers.name AS name, " +
+			"triggers.description AS description, " +
+			"triggers.arguments AS arguments").
 		Joins("LEFT JOIN node_triggers AS nt ON triggers.id = nt.trigger_id")
 
 	for k, v := range query {
@@ -309,7 +326,10 @@ func ListNodeTriggers(nodeId int) ([]model.NodesTrigger, bool) {
 	var d = db.Model(&model.Trigger{})
 	nts := make([]model.NodesTrigger, 0)
 
-	res := d.Select("triggers.id AS id, triggers.name AS name, triggers.description AS description, triggers.arguments AS arguments").
+	res := d.Select("triggers.id AS id, "+
+		"triggers.name AS name, "+
+		"triggers.description AS description, "+
+		"triggers.arguments AS arguments").
 		Joins("LEFT JOIN node_triggers AS nt ON triggers.id = nt.trigger_id").
 		Where("nt.node_id=?", nodeId).
 		Find(&nts)

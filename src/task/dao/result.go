@@ -15,10 +15,10 @@ import (
 // NewResult 新建结果
 func NewResult(taskCodename, caller, arguments string, timeout int64, status int) *model.Result {
 	var (
-		t         = time.Now()
-		partition = t.Format(conf.TASK_PARTITION_TIMESTAMP_FORMAT)
-		d         = db.Table(GetResultTableNameByPartition(partition))
-		r         = model.Result{
+		t    = time.Now()
+		part = t.Format(conf.TASK_PARTITION_TIMESTAMP_FORMAT)
+		d    = db.Table(GetResultTableNameByPartition(part))
+		r    = model.Result{
 			TaskCodename: taskCodename,
 			Caller:       caller,
 			Status:       status,
@@ -30,11 +30,11 @@ func NewResult(taskCodename, caller, arguments string, timeout int64, status int
 	)
 
 	// 检测分区是否存在
-	p, ok := GetResultPartition(Query{"partition": partition})
+	p, ok := GetResultPartition(Query{"partition": part})
 	// 获取分区错误
 	if !ok {
 		log.ErrorWithFields(log.Fields{
-			"partition": partition,
+			"partition": part,
 		}, "An error occurred while GetResultPartition.")
 		return nil
 	}
@@ -42,9 +42,9 @@ func NewResult(taskCodename, caller, arguments string, timeout int64, status int
 	// 如果获取不到分区，则创建
 	if p == nil {
 		// 检测创建是否成功
-		if nil == NewResultPartitionWithCreateTables(partition) {
+		if nil == NewResultPartitionWithCreateTables(part) {
 			log.ErrorWithFields(log.Fields{
-				"partition": partition,
+				"partition": part,
 			}, "An error occurred while NewResultPartitionWithCreateTables.")
 			return nil
 		}
@@ -53,7 +53,7 @@ func NewResult(taskCodename, caller, arguments string, timeout int64, status int
 	// 创建记录
 	if res := d.Create(&r); res.Error != nil {
 		log.ErrorWithFields(log.Fields{
-			"partition": partition,
+			"partition": part,
 			"error":     res.Error,
 		}, "An error occurred while db.Create.")
 		return nil
@@ -103,8 +103,8 @@ func SetResultWorker(partition string, id int, worker string) bool {
 // GetResult 查询单个结果
 func GetResult(partition string, id int) (*model.Result, bool) {
 	var (
-		d = db.Table(GetResultTableNameByPartition(partition))
 		r = model.Result{}
+		d = db.Table(GetResultTableNameByPartition(partition))
 	)
 
 	if res := d.Where("id=?", id).First(&r); res.Error != nil {
@@ -130,8 +130,8 @@ func GetResult(partition string, id int) (*model.Result, bool) {
 // PagedListResultsByPartition 列出结果（需指定分区）-分页
 func PagedListResultsByPartition(query Query, partition string, page, pageSize int, orderBy ...string) (*pagination.Paginator, bool) {
 	var (
-		tableName = GetResultTableNameByPartition(partition)
-		d         = db.Table(tableName)
+		tbName = GetResultTableNameByPartition(partition)
+		d      = db.Table(tbName)
 	)
 	rs := make([]model.Result, 0)
 
@@ -146,7 +146,7 @@ func PagedListResultsByPartition(query Query, partition string, page, pageSize i
 	}, &rs)
 	if err != nil {
 		log.ErrorWithFields(log.Fields{
-			"table_name": tableName,
+			"table_name": tbName,
 			"query":      fmt.Sprintf("%v", query),
 			"error":      err,
 		}, "An error occurred while pagination.GormPaging.")

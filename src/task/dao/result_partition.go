@@ -11,12 +11,12 @@ import (
 
 // NewResultPartition 新建结果分区
 func NewResultPartition(partition string) *model.ResultPartition {
-	rp := model.ResultPartition{
+	rPart := model.ResultPartition{
 		Partition: partition,
 	}
 
 	// 创建记录
-	if res := db.Create(&rp); res.Error != nil {
+	if res := db.Create(&rPart); res.Error != nil {
 		log.ErrorWithFields(log.Fields{
 			"partition": partition,
 			"error":     res.Error,
@@ -24,22 +24,22 @@ func NewResultPartition(partition string) *model.ResultPartition {
 		return nil
 	}
 
-	return &rp
+	return &rPart
 }
 
 // NewResultPartitionWithCreateTables 新建结果分区并建立结果表和日志表
 func NewResultPartitionWithCreateTables(partition string) *model.ResultPartition {
 	var (
-		r  = new(model.Result)
-		l  = new(model.Log)
-		rp = model.ResultPartition{
+		r     = new(model.Result)
+		lg    = new(model.Log)
+		rPart = model.ResultPartition{
 			Partition: partition,
 		}
 	)
 	tx := db.Begin()
 
 	// 创建记录
-	if res := tx.Create(&rp); res.Error != nil {
+	if res := tx.Create(&rPart); res.Error != nil {
 		tx.Rollback()
 		log.ErrorWithFields(log.Fields{
 			"partition": partition,
@@ -79,10 +79,10 @@ func NewResultPartitionWithCreateTables(partition string) *model.ResultPartition
 	}
 
 	// 2. 创建Log表
-	// 判断默认名称的Result表是否存在
-	if !tx.Migrator().HasTable(l) {
+	// 判断默认名称的Log表是否存在
+	if !tx.Migrator().HasTable(lg) {
 		// 如果不存在，则创建默认名称的Result表
-		if err := tx.Migrator().CreateTable(l); err != nil {
+		if err := tx.Migrator().CreateTable(lg); err != nil {
 			tx.Rollback()
 			log.ErrorWithFields(log.Fields{
 				"partition": partition,
@@ -94,8 +94,8 @@ func NewResultPartitionWithCreateTables(partition string) *model.ResultPartition
 		}
 	}
 
-	// 将建默认名称的Result表改名为当前新建分区对应的表Result名
-	if err := tx.Migrator().RenameTable(l.TableName(), GetLogTableNameByPartition(partition)); err != nil {
+	// 将建默认名称的Log表改名为当前新建分区对应的表Log名
+	if err := tx.Migrator().RenameTable(lg.TableName(), GetLogTableNameByPartition(partition)); err != nil {
 		tx.Rollback()
 		log.ErrorWithFields(log.Fields{
 			"partition": partition,
@@ -107,20 +107,20 @@ func NewResultPartitionWithCreateTables(partition string) *model.ResultPartition
 	}
 
 	tx.Commit()
-	return &rp
+	return &rPart
 }
 
 // GetResultPartition 查询单个结果分区
 func GetResultPartition(query Query) (*model.ResultPartition, bool) {
 	var (
-		d  = db
-		rt model.ResultPartition
+		d     = db
+		rPart model.ResultPartition
 	)
 
 	for k, v := range query {
 		d = d.Where(k, v)
 	}
-	if res := d.First(&rt); res.Error != nil {
+	if res := d.First(&rPart); res.Error != nil {
 		if errors.Is(res.Error, gorm.ErrRecordNotFound) {
 			log.WarnWithFields(log.Fields{
 				"query": fmt.Sprintf("%v", query),
@@ -135,15 +135,15 @@ func GetResultPartition(query Query) (*model.ResultPartition, bool) {
 		return nil, false
 	}
 
-	return &rt, true
+	return &rPart, true
 }
 
 // GetResultPartitionsPartition 获得结果分区名
 func GetResultPartitionsPartition(id int) (string, bool) {
-	rt, ok := GetResultPartition(Query{"id=?": id})
-	if ok && rt != nil {
+	rPart, ok := GetResultPartition(Query{"id=?": id})
+	if ok && rPart != nil {
 
-		return rt.Partition, true
+		return rPart.Partition, true
 	}
 
 	return "", false
@@ -152,19 +152,19 @@ func GetResultPartitionsPartition(id int) (string, bool) {
 // ListResultPartitions 查询结果分区-分页
 func ListResultPartitions(query Query) (*[]model.ResultPartition, bool) {
 	var d = db
-	rp := make([]model.ResultPartition, 0)
+	rParts := make([]model.ResultPartition, 0)
 
 	for k, v := range query {
 		d = d.Where(k, v)
 	}
 
-	if res := d.Find(&rp); res.Error != nil {
+	if res := d.Find(&rParts); res.Error != nil {
 		if errors.Is(res.Error, gorm.ErrRecordNotFound) {
 			log.WarnWithFields(log.Fields{
 				"query": fmt.Sprintf("%v", query),
 				"error": res.Error,
 			}, "Record not found.")
-			return &rp, true
+			return &rParts, true
 		}
 		log.ErrorWithFields(log.Fields{
 			"query": fmt.Sprintf("%v", query),
@@ -173,13 +173,13 @@ func ListResultPartitions(query Query) (*[]model.ResultPartition, bool) {
 		return nil, false
 	}
 
-	return &rp, true
+	return &rParts, true
 }
 
-// PagedListUsers 查询结果分区-分页
+// PagedListResultPartitions 查询结果分区-分页
 func PagedListResultPartitions(query Query, page, pageSize int, orderBy ...string) (*pagination.Paginator, bool) {
 	var d = db.Model(&model.ResultPartition{})
-	rts := make([]model.ResultPartition, 0)
+	rParts := make([]model.ResultPartition, 0)
 
 	for k, v := range query {
 		d = d.Where(k, v)
@@ -189,7 +189,7 @@ func PagedListResultPartitions(query Query, page, pageSize int, orderBy ...strin
 		Page:     page,
 		PageSize: pageSize,
 		OrderBy:  orderBy,
-	}, &rts)
+	}, &rParts)
 	if err != nil {
 		log.ErrorWithFields(log.Fields{
 			"query": fmt.Sprintf("%v", query),

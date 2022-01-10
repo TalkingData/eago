@@ -3,13 +3,20 @@ package conf
 import (
 	"github.com/Unknwon/goconfig"
 	"strings"
+	"time"
 )
 
 const (
-	_DEFAULT_GIN_MODEL = "release"
+	_DEFAULT_API_LISTEN        = "127.0.0.1:0"
+	_DEFAULT_GIN_MODEL         = "release"
+	_DEFAULT_REGISTER_TTL      = 10
+	_DEFAULT_REGISTER_INTERVAL = 3
 
 	_DEFAULT_LOG_LEVEL = "debug"
 	_DEFAULT_LOG_PATH  = "./logs"
+
+	_DEFAULT_NOTIFY_TITLE    = "[CMDB-Eago]Flow notify"
+	_DEFAULT_NOTIFY_BASE_URL = "https://eago.tendcloud.com"
 
 	// Etcd默认配置
 	_DEFAULT_ETCD_ADDRESSES = "127.0.0.1:2379,127.0.0.1:2379,127.0.0.1:2379"
@@ -30,10 +37,16 @@ const (
 
 // conf 配置
 type conf struct {
-	GinMode string
+	ApiListen        string
+	GinMode          string
+	RegisterTtl      time.Duration
+	RegisterInterval time.Duration
 
 	LogLevel string
 	LogPath  string
+
+	NotifyTitle   string
+	NotifyBaseUrl string
 
 	EtcdAddresses []string
 	EtcdUsername  string
@@ -57,10 +70,16 @@ func newLocalConf() *conf {
 	}
 
 	return &conf{
-		GinMode: cfg.MustValue("main", "gin_mode", _DEFAULT_GIN_MODEL),
+		ApiListen:        cfg.MustValue("main", "api_listen", _DEFAULT_API_LISTEN),
+		GinMode:          cfg.MustValue("main", "gin_mode", _DEFAULT_GIN_MODEL),
+		RegisterTtl:      time.Duration(cfg.MustInt("main", "register_ttl", _DEFAULT_REGISTER_TTL)) * time.Second,
+		RegisterInterval: time.Duration(cfg.MustInt("main", "register_interval", _DEFAULT_REGISTER_INTERVAL)) * time.Second,
 
 		LogLevel: cfg.MustValue("log", "level", _DEFAULT_LOG_LEVEL),
 		LogPath:  cfg.MustValue("log", "path", _DEFAULT_LOG_PATH),
+
+		NotifyTitle:   cfg.MustValue("notify", "title", _DEFAULT_NOTIFY_TITLE),
+		NotifyBaseUrl: cfg.MustValue("notify", "base_url", _DEFAULT_NOTIFY_BASE_URL),
 
 		EtcdAddresses: strings.Split(cfg.MustValue("etcd", "addresses", _DEFAULT_ETCD_ADDRESSES), ","),
 		EtcdUsername:  cfg.MustValue("etcd", "username", _DEFAULT_ETCD_USERNAME),

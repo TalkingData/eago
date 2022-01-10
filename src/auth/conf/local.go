@@ -7,10 +7,13 @@ import (
 )
 
 const (
-	_DEFAULT_SECRET_KEY = "eago_default_secret_key"
-	// Token生命周期默认配置，秒
-	_DEFAULT_TOKEN_TTL = 900
-	_DEFAULT_GIN_MODEL = "release"
+	_DEFAULT_SRV_LISTEN        = "127.0.0.1:0"
+	_DEFAULT_API_LISTEN        = "127.0.0.1:0"
+	_DEFAULT_GIN_MODEL         = "release"
+	_DEFAULT_REGISTER_TTL      = 10
+	_DEFAULT_REGISTER_INTERVAL = 3
+	_DEFAULT_TOKEN_TTL         = 900
+	_DEFAULT_SECRET_KEY        = "eago_default_secret_key"
 
 	// Etcd默认配置
 	_DEFAULT_ETCD_ADDRESSES = "127.0.0.1:2379,127.0.0.1:2379,127.0.0.1:2379"
@@ -50,10 +53,16 @@ const (
 
 // conf 配置
 type conf struct {
-	LogLevel  string
-	SecretKey string
-	TokenTtl  time.Duration
-	GinMode   string
+	SrvListen        string
+	ApiListen        string
+	GinMode          string
+	RegisterTtl      time.Duration
+	RegisterInterval time.Duration
+	TokenTtl         time.Duration
+	SecretKey        string
+
+	LogLevel string
+	LogPath  string
 
 	EtcdAddresses []string
 	EtcdUsername  string
@@ -90,8 +99,6 @@ type conf struct {
 	EagleDbName   string
 	EagleUser     string
 	EaglePassword string
-
-	LogPath string
 }
 
 // newLocalConf 载入本地配置文件
@@ -102,9 +109,13 @@ func newLocalConf() *conf {
 	}
 
 	return &conf{
-		SecretKey: cfg.MustValue("main", "secret_key", _DEFAULT_SECRET_KEY),
-		TokenTtl:  time.Duration(cfg.MustInt64("main", "token_ttl", _DEFAULT_TOKEN_TTL)) * time.Second,
-		GinMode:   cfg.MustValue("main", "gin_mode", _DEFAULT_GIN_MODEL),
+		SrvListen:        cfg.MustValue("main", "srv_listen", _DEFAULT_SRV_LISTEN),
+		ApiListen:        cfg.MustValue("main", "api_listen", _DEFAULT_API_LISTEN),
+		GinMode:          cfg.MustValue("main", "gin_mode", _DEFAULT_GIN_MODEL),
+		RegisterTtl:      time.Duration(cfg.MustInt("main", "register_ttl", _DEFAULT_REGISTER_TTL)) * time.Second,
+		RegisterInterval: time.Duration(cfg.MustInt("main", "register_interval", _DEFAULT_REGISTER_INTERVAL)) * time.Second,
+		TokenTtl:         time.Duration(cfg.MustInt64("main", "token_ttl", _DEFAULT_TOKEN_TTL)) * time.Second,
+		SecretKey:        cfg.MustValue("main", "secret_key", _DEFAULT_SECRET_KEY),
 
 		LogLevel: cfg.MustValue("log", "level", _DEFAULT_LOG_LEVEL),
 		LogPath:  cfg.MustValue("log", "path", _DEFAULT_LOG_PATH),

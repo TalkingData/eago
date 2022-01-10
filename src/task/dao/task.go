@@ -84,8 +84,8 @@ func SetTask(id int, disabled bool, category int, codename, description, fParams
 // GetTask 查询单个任务
 func GetTask(query Query) (*model.Task, bool) {
 	var (
-		t = model.Task{}
 		d = db
+		t = model.Task{}
 	)
 
 	for k, v := range query {

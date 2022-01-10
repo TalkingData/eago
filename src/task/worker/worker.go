@@ -111,16 +111,16 @@ func (w *worker) callTask(req *CallTaskReq) {
 	task.logger = newLogger(w.opts.LogBufferSize)
 
 	task.Param = &Param{
-		req.TaskUniqueId,
-		req.Caller,
-		req.Timeout,
-		req.Arguments,
-		time.Now(),
-		time.Unix(req.Timestamp, 0),
-		task.logger,
+		TaskUniqueId:    req.TaskUniqueId,
+		Caller:          req.Caller,
+		Timeout:         req.Timeout,
+		Arguments:       req.Arguments,
+		LocalStartTime:  time.Now(),
+		RemoteStartTime: time.Unix(req.Timestamp, 0),
+		Log:             task.logger,
 	}
 
-	w.runList.New(req.TaskUniqueId, &task)
+	w.runList.Put(req.TaskUniqueId, &task)
 	go func() {
 		defer func() {
 			// recover here for task panic end.
@@ -145,10 +145,19 @@ func (w *worker) callTask(req *CallTaskReq) {
 		}
 
 		// 执行任务
-		task.Run(func(ok bool) {
-			if ok {
+		task.Run(func(err error) {
+			switch err {
+			case nil:
+				// 成功结束
 				w.callback(&task, TASK_SUCCESS_END_STATUS)
-			} else {
+			case context.DeadlineExceeded:
+				// 超时结束
+				w.callback(&task, TASK_TIMEOUT_END_STATUS)
+			case context.Canceled:
+				// 任务取消
+				w.callback(&task, TASK_MANUAL_END_STATUS)
+			default:
+				// 任务失败结束
 				w.callback(&task, TASK_FAILED_END_STATUS)
 			}
 		})
@@ -190,7 +199,7 @@ func (w *worker) killTask(taskUniqueId string) {
 	close(t.logger.LogCh)
 
 	// 删除任务
-	w.runList.Del(taskUniqueId)
+	w.runList.Delete(taskUniqueId)
 }
 
 // callback 回调调度中心
@@ -200,7 +209,7 @@ func (w *worker) callback(task *Task, status int) {
 		task.Cancel()
 
 		// 删除任务
-		w.runList.Del(task.Param.TaskUniqueId)
+		w.runList.Delete(task.Param.TaskUniqueId)
 	}()
 
 	// 关闭日志通道
@@ -296,7 +305,7 @@ func (w *worker) RegTask(codename string, fn TaskFunc) {
 	t.Codename = codename
 	t.fn = fn
 
-	w.taskList.New(codename, t)
+	w.taskList.Put(codename, t)
 }
 
 // Start 启动Worker
@@ -356,12 +365,8 @@ func (w *worker) init() {
 		w.workerId = fmt.Sprintf("%s.worker-unique", w.opts.ServiceName)
 	}
 
-	w.taskList = &taskList{
-		data: make(map[string]*Task),
-	}
-	w.runList = &taskList{
-		data: make(map[string]*Task),
-	}
+	w.taskList = NewTaskList()
+	w.runList = NewTaskList()
 
 	etcdReg := etcdv3.NewRegistry(
 		registry.Addrs(w.opts.EtcdAddresses...),

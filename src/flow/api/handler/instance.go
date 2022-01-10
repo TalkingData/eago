@@ -59,7 +59,7 @@ func ListInstances(c *gin.Context) {
 	// 设置查询filter
 	liq := dto.ListInstancesQuery{}
 	if c.ShouldBindQuery(&liq) == nil {
-		_ = liq.DefaultUpdateQuery(query, tc["Username"].(string))
+		_ = liq.UpdateDefaultQuery(query, tc["Username"].(string))
 	}
 	listInstances(c, query)
 }
@@ -73,7 +73,7 @@ func ListMyInstances(c *gin.Context) {
 	// 设置查询filter
 	liq := dto.ListInstancesQuery{}
 	if c.ShouldBindQuery(&liq) == nil {
-		_ = liq.MyInstancesUpdateQuery(query, tc["Username"].(string))
+		_ = liq.UpdateMyInstancesQuery(query, tc["Username"].(string))
 	}
 	listInstances(c, query)
 }
@@ -87,7 +87,7 @@ func ListTodoInstances(c *gin.Context) {
 	// 设置查询filter
 	liq := dto.ListInstancesQuery{}
 	if c.ShouldBindQuery(&liq) == nil {
-		_ = liq.TodoInstancesUpdateQuery(query, tc["Username"].(string))
+		_ = liq.UpdateTodoInstancesQuery(query, tc["Username"].(string))
 	}
 	listInstances(c, query)
 }
@@ -101,7 +101,7 @@ func ListDoneInstances(c *gin.Context) {
 	// 设置查询filter
 	liq := dto.ListInstancesQuery{}
 	if c.ShouldBindQuery(&liq) == nil {
-		_ = liq.DoneInstancesUpdateQuery(query, tc["Username"].(string))
+		_ = liq.UpdateDoneInstancesQuery(query, tc["Username"].(string))
 	}
 	listInstances(c, query)
 }

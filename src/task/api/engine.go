@@ -65,8 +65,12 @@ func NewGinEngine() *gin.Engine {
 
 		// Log模块
 		// 按分区ID列出所有结果日志
-		tGroup.GET("/logs/:result_partition_id/:result_id", pg.ListPageHelper(), h.ListLogs)
+		tGroup.GET("/logs/:result_partition_id/:result_id", h.ListLogs)
 	}
+
+	// Log模块
+	// 以WebSocket方式按分区ID列出所有结果日志
+	engine.GET("/task/logs/:result_partition_id/:result_id/ws", perm.MustLoginWs(), h.WsListLogs)
 
 	engine.NoRoute(handler.PageNoFound)
 

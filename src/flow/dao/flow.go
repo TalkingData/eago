@@ -10,26 +10,28 @@ import (
 )
 
 // NewFlow 创建流程
-func NewFlow(name string, catId *int, description string, disabled bool, frmID, firstNodeID int, createdBy string) *model.Flow {
+func NewFlow(name, insTit string, catId *int, description string, disabled bool, frmID, firstNodeID int, createdBy string) *model.Flow {
 	f := model.Flow{
-		Name:         name,
-		CategoriesId: catId,
-		Disabled:     &disabled,
-		Description:  &description,
-		FormId:       frmID,
-		FirstNodeId:  firstNodeID,
-		CreatedBy:    createdBy,
+		Name:          name,
+		InstanceTitle: insTit,
+		CategoriesId:  catId,
+		Disabled:      &disabled,
+		Description:   &description,
+		FormId:        frmID,
+		FirstNodeId:   firstNodeID,
+		CreatedBy:     createdBy,
 	}
 
 	if res := db.Create(&f); res.Error != nil {
 		log.ErrorWithFields(log.Fields{
-			"name":          name,
-			"categories_id": catId,
-			"disabled":      disabled,
-			"description":   description,
-			"form_id":       frmID,
-			"first_node_id": firstNodeID,
-			"error":         res.Error,
+			"name":           name,
+			"instance_title": insTit,
+			"categories_id":  catId,
+			"disabled":       disabled,
+			"description":    description,
+			"form_id":        frmID,
+			"first_node_id":  firstNodeID,
+			"error":          res.Error,
 		}, "An error occurred while db.Create.")
 		return nil
 	}
@@ -39,7 +41,7 @@ func NewFlow(name string, catId *int, description string, disabled bool, frmID, 
 
 // RemoveFlow 删除流程
 func RemoveFlow(fID int) bool {
-	res := db.Delete(model.Form{}, "id=?", fID)
+	res := db.Delete(model.Flow{}, "id=?", fID)
 	if res.Error != nil {
 		log.ErrorWithFields(log.Fields{
 			"id":    fID,
@@ -52,19 +54,20 @@ func RemoveFlow(fID int) bool {
 }
 
 // SetFlow 更新流程
-func SetFlow(id int, name string, catId *int, description string, disabled bool, frmID, firstNodeID int, updatedBy string) (*model.Flow, bool) {
+func SetFlow(id int, name, insTit string, catId *int, description string, disabled bool, frmID, firstNodeID int, updatedBy string) (*model.Flow, bool) {
 	var f model.Flow
 
 	res := db.Model(&model.Flow{}).
 		Where("id=?", id).
 		Updates(map[string]interface{}{
-			"name":          name,
-			"categories_id": catId,
-			"disabled":      disabled,
-			"description":   description,
-			"form_id":       frmID,
-			"first_node_id": firstNodeID,
-			"updated_by":    updatedBy,
+			"name":           name,
+			"instance_title": insTit,
+			"categories_id":  catId,
+			"disabled":       disabled,
+			"description":    description,
+			"form_id":        frmID,
+			"first_node_id":  firstNodeID,
+			"updated_by":     updatedBy,
 		}).
 		First(&f)
 	if res.Error != nil {
@@ -164,8 +167,26 @@ func ListFlows(query Query) ([]model.Flow, bool) {
 
 // PagedListFlows 查询流程-分页
 func PagedListFlows(query Query, page, pageSize int, orderBy ...string) (*pagination.Paginator, bool) {
-	var d = db.Model(&model.Flow{})
-	fs := make([]model.Flow, 0)
+	var d = db.Model(&model.Flow{}).
+		Select("flows.id AS id, " +
+			"flows.name AS name, " +
+			"flows.instance_title AS instance_title, " +
+			"flows.categories_id AS categories_id, " +
+			"c.name AS categories_name, " +
+			"flows.disabled AS disabled, " +
+			"flows.description AS description, " +
+			"flows.form_id AS form_id, " +
+			"f.name AS form_name, " +
+			"flows.first_node_id AS first_node_id, " +
+			"n.name AS first_node_name, " +
+			"flows.created_at AS created_at, " +
+			"flows.created_by AS created_by, " +
+			"flows.updated_at AS updated_at, " +
+			"flows.updated_by AS updated_by").
+		Joins("LEFT JOIN categories AS c ON c.id = flows.categories_id").
+		Joins("LEFT JOIN forms AS f ON f.id = flows.form_id").
+		Joins("LEFT JOIN nodes AS n ON n.id = flows.first_node_id")
+	fs := make([]model.ListFlows, 0)
 
 	for k, v := range query {
 		d = d.Where(k, v)

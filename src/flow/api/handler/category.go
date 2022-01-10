@@ -62,7 +62,7 @@ func RemoveCategory(c *gin.Context) {
 		return
 	}
 
-	if ok := dao.RemoveCategory(cId); !ok {
+	if !dao.RemoveCategory(cId) {
 		m := msg.UnknownError
 		log.WarnWithFields(m.LogFields())
 		m.WriteRest(c)
@@ -140,16 +140,21 @@ func ListCategoryFlows(c *gin.Context) {
 		return
 	}
 
-	var lcfFrm dto.ListCategoriesRelations
-	// 验证数据
+	lcfFrm := dto.ListCategoriesRelations{}
+	// 设置查询filter
 	if m := lcfFrm.Validate(cId); m != nil {
 		// 数据验证未通过
 		log.WarnWithFields(m.LogFields())
 		m.WriteRest(c)
 		return
 	}
+	// 设置查询filter
+	query := dao.Query{"categories_id=?": cId}
+	if c.ShouldBindQuery(&lcfFrm) == nil {
+		_ = lcfFrm.UpdateQuery(query)
+	}
 
-	fl, ok := dao.ListFlows(dao.Query{"categories_id=?": cId})
+	fl, ok := dao.ListFlows(query)
 	if !ok {
 		m := msg.UnknownError
 		log.WarnWithFields(m.LogFields())

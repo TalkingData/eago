@@ -14,7 +14,7 @@ type CallTask struct {
 	TaskCodeName string
 
 	Timeout   *int64 `json:"timeout" valid:"Range(0,86400000)"`
-	Arguments string `json:"arguments" valid:"Required;MaxSize(2)"`
+	Arguments string `json:"arguments" valid:"Required;MinSize(2)"`
 }
 
 // Validate

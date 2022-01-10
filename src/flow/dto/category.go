@@ -103,13 +103,24 @@ func (q *ListCategoriesQuery) UpdateQuery(query dao.Query) error {
 }
 
 // ListCategoriesRelations struct
-type ListCategoriesRelations struct{}
+type ListCategoriesRelations struct {
+	Disabled *bool `form:"disabled"`
+}
 
 // Validate
 func (*ListCategoriesRelations) Validate(cId int) *message.Message {
 	// 验证类别是否存在
 	if ct, _ := dao.GetCategoriesCount(dao.Query{"id=?": cId}); ct < 1 {
 		return msg.NotFoundFailed.SetDetail("类别不存在")
+	}
+
+	return nil
+}
+
+// UpdateQuery
+func (q *ListCategoriesRelations) UpdateQuery(query dao.Query) error {
+	if q.Disabled != nil {
+		query["flows.disabled=?"] = *q.Disabled
 	}
 
 	return nil

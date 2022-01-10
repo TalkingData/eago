@@ -88,7 +88,8 @@ func (*GetForm) Validate(frmId int) *message.Message {
 
 // ListFormsQuery struct
 type ListFormsQuery struct {
-	Query *string `form:"query"`
+	Query    *string `form:"query"`
+	Disabled *bool   `form:"disabled"`
 }
 
 // UpdateQuery
@@ -96,7 +97,15 @@ func (q *ListFormsQuery) UpdateQuery(query dao.Query) error {
 	// 通用Query
 	if q.Query != nil && *q.Query != "" {
 		likeQuery := fmt.Sprintf("%%%s%%", *q.Query)
-		query["name LIKE @query OR description LIKE @query OR id LIKE @query OR created_by LIKE @query OR updated_by LIKE @query"] = sql.Named("query", likeQuery)
+		query["(id LIKE @query OR "+
+			"name LIKE @query OR "+
+			"description LIKE @query OR "+
+			"created_by LIKE @query OR "+
+			"updated_by LIKE @query)"] = sql.Named("query", likeQuery)
+	}
+
+	if q.Disabled != nil {
+		query["disabled=?"] = *q.Disabled
 	}
 
 	return nil

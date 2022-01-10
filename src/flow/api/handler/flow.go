@@ -3,6 +3,7 @@ package handler
 import (
 	w "eago/common/api-suite/writter"
 	"eago/common/log"
+	"eago/flow/conf"
 	"eago/flow/conf/msg"
 	"eago/flow/dao"
 	"eago/flow/dto"
@@ -49,9 +50,9 @@ func InstantiateFlow(c *gin.Context) {
 
 	tc := c.GetStringMap("TokenContent")
 	// 将创建人信息存入FormData
-	fData["user_id"] = tc["UserId"].(int32)
-	fData["username"] = tc["Username"].(string)
-	fData["phone"] = tc["Phone"].(string)
+	fData[conf.INITIATOR_USER_ID_KEY] = tc["UserId"].(int32)
+	fData[conf.INITIATOR_USERNAME_KEY] = tc["Username"].(string)
+	fData[conf.INITIATOR_PHONE_KEY] = tc["Phone"].(string)
 
 	// 序列化FormData
 	fDataStr, err := json.Marshal(fData)
@@ -97,6 +98,7 @@ func NewFlow(c *gin.Context) {
 	tc := c.GetStringMap("TokenContent")
 	fl := dao.NewFlow(
 		flFrm.Name,
+		flFrm.InstanceTitle,
 		flFrm.CategoriesId,
 		*flFrm.Description,
 		*flFrm.Disabled,
@@ -134,7 +136,7 @@ func RemoveFlow(c *gin.Context) {
 		return
 	}
 
-	if ok := dao.RemoveFlow(fId); !ok {
+	if !dao.RemoveFlow(fId) {
 		m := msg.UnknownError
 		log.WarnWithFields(m.LogFields())
 		m.WriteRest(c)
@@ -146,7 +148,6 @@ func RemoveFlow(c *gin.Context) {
 
 // SetFlow 更新流程
 func SetFlow(c *gin.Context) {
-
 	fId, err := strconv.Atoi(c.Param("flow_id"))
 	if err != nil {
 		m := msg.InvalidUriFailed.SetError(err, "flow_id")
@@ -175,6 +176,7 @@ func SetFlow(c *gin.Context) {
 	f, ok := dao.SetFlow(
 		fId,
 		flFrm.Name,
+		flFrm.InstanceTitle,
 		flFrm.CategoriesId,
 		*flFrm.Description,
 		*flFrm.Disabled,

@@ -257,7 +257,12 @@ func ListUserProducts(userId int) (*[]model.UserProductMember, bool) {
 	ups := make([]model.UserProductMember, 0)
 
 	res := db.Model(&model.Product{}).
-		Select("products.id AS id, products.name AS name, products.alias, products.disabled, up.is_owner AS is_owner, up.joined_at").
+		Select("products.id AS id, "+
+			"products.name AS name, "+
+			"products.alias AS alias, "+
+			"products.disabled AS disabled, "+
+			"up.is_owner AS is_owner, "+
+			"up.joined_at AS joined_at").
 		Joins("LEFT JOIN user_products AS up ON products.id = up.product_id").
 		Where("user_id=?", userId).
 		Find(&ups)
@@ -282,7 +287,10 @@ func ListUserGroups(userId int) (*[]model.UserMember, bool) {
 	ugs := make([]model.UserMember, 0)
 
 	res := db.Model(&model.Group{}).
-		Select("groups.id AS id, groups.name AS name, ug.is_owner AS is_owner, ug.joined_at AS joined_at").
+		Select("groups.id AS id, "+
+			"groups.name AS name, "+
+			"ug.is_owner AS is_owner, "+
+			"ug.joined_at AS joined_at").
 		Joins("LEFT JOIN user_groups AS ug ON groups.id = ug.group_id").
 		Where("user_id=?", userId).
 		Find(&ugs)
@@ -307,7 +315,11 @@ func GetUserDepartment(userId int) (*model.UserDepartmentMember, bool) {
 	var uDeptMember = model.UserDepartmentMember{}
 
 	res := db.Model(&model.Department{}).
-		Select("departments.id AS id, departments.name AS name, departments.parent_id AS parent_id, ud.is_owner AS is_owner, ud.joined_at AS joined_at").
+		Select("departments.id AS id, "+
+			"departments.name AS name, "+
+			"departments.parent_id AS parent_id, "+
+			"ud.is_owner AS is_owner, "+
+			"ud.joined_at AS joined_at").
 		Joins("LEFT JOIN user_departments AS ud ON departments.id = ud.department_id").
 		Where("user_id=?", userId).
 		First(&uDeptMember)

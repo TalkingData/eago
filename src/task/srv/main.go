@@ -43,6 +43,8 @@ func main() {
 		micro.Name(conf.RPC_REGISTER_KEY),
 		micro.Registry(etcdReg),
 		micro.WrapHandler(opentracing.NewHandlerWrapper(t)),
+		micro.RegisterTTL(conf.Conf.RegisterTtl),
+		micro.RegisterInterval(conf.Conf.RegisterInterval),
 		micro.Context(ctx),
 		micro.Version("v1"),
 	)

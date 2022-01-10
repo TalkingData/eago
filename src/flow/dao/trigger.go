@@ -184,7 +184,9 @@ func ListTriggerNodes(tId int) ([]model.TriggersNode, bool) {
 	var d = db.Model(&model.Node{})
 	tns := make([]model.TriggersNode, 0)
 
-	res := d.Select("nodes.id AS id, nodes.name AS name, nodes.parent_id AS parent_id").
+	res := d.Select("nodes.id AS id, "+
+		"nodes.name AS name, "+
+		"nodes.parent_id AS parent_id").
 		Joins("LEFT JOIN node_triggers AS nt ON nodes.id = nt.node_id").
 		Where("nt.trigger_id=?", tId).
 		Find(&tns)

@@ -7,6 +7,7 @@ import (
 	"eago/flow/dao"
 	"fmt"
 	"github.com/beego/beego/v2/core/validation"
+	"strings"
 )
 
 type NewNode struct {
@@ -21,6 +22,13 @@ type NewNode struct {
 
 // Validate
 func (n *NewNode) Validate() *message.Message {
+	if n.ParentId != nil {
+		// 验证是否重复关联父节点
+		if ct, _ := dao.GetNodeCount(dao.Query{"parent_id=?": n.ParentId}); ct > 0 {
+			return msg.AssociatedParentNodeDuplicateFailed
+		}
+	}
+
 	valid := validation.Validation{}
 	// 验证数据¬
 	ok, err := valid.Valid(n)
@@ -56,7 +64,7 @@ func (*RemoveNode) Validate(nId int) *message.Message {
 	}
 
 	// 验证节是否有关联存在
-	if ct, _ := dao.GetFlowCount(dao.Query{"first_node_id=?": nId}); ct < 1 {
+	if ct, _ := dao.GetFlowCount(dao.Query{"first_node_id=?": nId}); ct > 0 {
 		return msg.AssociatedNodeFlowFailed
 	}
 
@@ -75,6 +83,18 @@ type SetNode struct {
 
 // Validate
 func (s *SetNode) Validate(nId int) *message.Message {
+	if s.ParentId != nil {
+		// 验证是否重复关联父节点
+		if ct, _ := dao.GetNodeCount(dao.Query{"parent_id=?": s.ParentId, "id<>?": nId}); ct > 0 {
+			return msg.AssociatedParentNodeDuplicateFailed
+		}
+
+		// 不能将自身节点关联为父节点
+		if *s.ParentId == nId {
+			return msg.AssociatedParentNodeSelfFailed
+		}
+	}
+
 	// 验证节是否存在
 	if ct, _ := dao.GetNodeCount(dao.Query{"id=?": nId}); ct < 1 {
 		return msg.NotFoundFailed.SetDetail("节点不存在")
@@ -97,7 +117,9 @@ func (s *SetNode) Validate(nId int) *message.Message {
 // ListNodesQuery struct
 type ListNodesQuery struct {
 	Query    *string `form:"query"`
-	Category *bool   `form:"category"`
+	Name     *string `form:"name"`
+	ParentId *string `form:"parent_id"`
+	Category *int    `form:"category"`
 }
 
 // UpdateQuery
@@ -105,11 +127,26 @@ func (q *ListNodesQuery) UpdateQuery(query dao.Query) error {
 	// 通用Query
 	if q.Query != nil && *q.Query != "" {
 		likeQuery := fmt.Sprintf("%%%s%%", *q.Query)
-		query["(name LIKE @query OR description LIKE @query OR id LIKE @query OR created_by LIKE @query OR updated_by LIKE @query)"] = sql.Named("query", likeQuery)
+		query["(nodes.id LIKE @query OR "+
+			"nodes.name LIKE @query OR "+
+			"nodes.created_by LIKE @query OR "+
+			"nodes.updated_by LIKE @query)"] = sql.Named("query", likeQuery)
+	}
+
+	if q.Name != nil {
+		query["nodes.name LIKE ?"] = fmt.Sprintf("%%%s%%", *q.Name)
 	}
 
 	if q.Category != nil {
-		query["category=?"] = *q.Category
+		query["nodes.category=?"] = *q.Category
+	}
+
+	if q.ParentId != nil {
+		if strings.ToLower(*q.ParentId) == "null" {
+			query["nodes.parent_id"] = nil
+		} else {
+			query["nodes.parent_id=?"] = *q.ParentId
+		}
 	}
 
 	return nil

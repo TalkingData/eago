@@ -86,11 +86,12 @@ func InstantiateFlow(flowId int, fromData, createdBy string) (int, error) {
 		}, "An error occurred while InstantiateFlow, in chain2String json.Marshal(head).")
 		return 0, err
 	}
+
 	// 创建流程实例
 	ins := dao.NewInstance(
 		flow.FormId,
-		conf.INSTANCE_PENDING_STATUS,
-		renderInstanceName(flow.Name, mapData),
+		conf.INSTANCE_STATUS_PENDING,
+		renderInstanceName(flow.InstanceTitle, mapData),
 		fromData,
 		chainStr,
 		createdBy,
@@ -103,7 +104,7 @@ func InstantiateFlow(flowId int, fromData, createdBy string) (int, error) {
 
 // getter 取值方法
 func getter(ac *model.AssigneeCondition, data map[string]interface{}) (realData interface{}) {
-	if ac.Getter == "direct" {
+	if ac.Getter == conf.GETTER_DIRECT {
 		return ac.Data
 	}
 

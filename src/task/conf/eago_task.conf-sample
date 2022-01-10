@@ -1,5 +1,9 @@
 [main]
+srv_listen = 127.0.0.1:0
+api_listen = 127.0.0.1:0
 gin_mode = release
+register_ttl = 10
+register_interval = 3
 
 [log]
 level = debug
