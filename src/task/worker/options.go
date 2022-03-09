@@ -97,6 +97,13 @@ func MultiInstance(b bool) Option {
 	}
 }
 
+// RegisterTtl 注册超时时间
+func RegisterTtl(ttl int64) Option {
+	return func(o *Options) {
+		o.RegisterTtl = ttl
+	}
+}
+
 // LogBufferSize 设置Worker的LogBufferSize
 func LogBufferSize(size uint) Option {
 	return func(o *Options) {

@@ -25,6 +25,9 @@ service TaskService {
 
   // AppendTaskLog 追加任务日志
   rpc AppendTaskLog(stream AppendTaskLogReq) returns (stream BoolMsg) {}
+
+  // IsAllowedSrv 判断Srv是否已经在白名单内
+  rpc IsAllowedSrv(IsAllowedSrvQuery) returns (BoolMsg) {}
 }
 
 message QueryWithPage {
@@ -99,3 +102,7 @@ message BoolMsg {
   bool ok = 1;
 }
 
+message IsAllowedSrvQuery {
+  string srv_addr = 1;
+  string worker_addr = 2;
+}

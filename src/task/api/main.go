@@ -5,10 +5,12 @@ import (
 	perm "eago/common/api-suite/permission"
 	"eago/common/log"
 	"eago/common/orm"
+	"eago/common/redis"
 	"eago/common/tracer"
 	"eago/task/cli"
 	"eago/task/conf"
 	"eago/task/dao"
+	"eago/task/srv/builtin"
 	"fmt"
 	"github.com/micro/go-micro/v2/registry"
 	"github.com/micro/go-micro/v2/web"
@@ -21,17 +23,11 @@ import (
 )
 
 func main() {
-	// 初始化DAO
-	dao.Init(orm.InitMysql(
-		conf.Conf.MysqlAddress,
-		conf.Conf.MysqlUser,
-		conf.Conf.MysqlPassword,
-		conf.Conf.MysqlDbName,
-	))
-
 	// 初始化Tracer
 	t, c := tracer.NewTracer(conf.API_REGISTER_KEY, conf.Conf.JaegerAddress)
-	defer c.Close()
+	defer func() {
+		_ = c.Close()
+	}()
 
 	opentracing.SetGlobalTracer(t)
 
@@ -51,13 +47,13 @@ func main() {
 		web.Version("v1"),
 		web.Handler(NewGinEngine()),
 		web.Registry(etcdReg),
-		web.RegisterTTL(conf.Conf.RegisterTtl),
-		web.RegisterInterval(conf.Conf.RegisterInterval),
+		web.RegisterTTL(conf.Conf.MicroRegisterTtl),
+		web.RegisterInterval(conf.Conf.MicroRegisterInterval),
 		web.Context(ctx),
 	)
 
-	// 初始化WorkerCli
-	cli.InitWorkerCli()
+	// 初始化WorkerCli，此处不需要Handlers，API仅调用ListWorker
+	cli.InitWorkerCli(builtin.RegisterSrvWrapHandler)
 
 	e := make(chan error)
 	go func() {
@@ -106,4 +102,19 @@ func init() {
 		fmt.Println("Failed to init logging, error:", err.Error())
 		panic(err)
 	}
+
+	// 初始化DAO
+	dao.Init(orm.InitMysql(
+		conf.Conf.MysqlAddress,
+		conf.Conf.MysqlUser,
+		conf.Conf.MysqlPassword,
+		conf.Conf.MysqlDbName,
+	))
+	// 初始化Redis
+	redis.InitRedis(
+		conf.Conf.RedisAddress,
+		conf.Conf.RedisPassword,
+		conf.SERVICE_NAME,
+		conf.Conf.RedisDb,
+	)
 }

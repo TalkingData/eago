@@ -1,16 +1,16 @@
 [main]
 api_listen = 127.0.0.1:0
 gin_mode = release
-register_ttl = 10
-register_interval = 3
+micro_register_ttl = 10
+micro_register_interval = 3
 
 [log]
 level = debug
 path = ../logs
 
 [notify]
-title = [Eago-Flow]Notify
-base_url = https://eago.tendcloud.com
+title = [新CMDB-Eago]流程服务通知
+base_url = https://eago-dev.tendcloud.com
 
 [etcd]
 addresses = 127.0.0.1:2379,127.0.0.1:2379,127.0.0.1:2379

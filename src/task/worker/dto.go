@@ -15,8 +15,8 @@ const (
 )
 
 const (
-	WORKER_LOGGER_BUFFER_SIZE = 100
-	WORKER_REGISTER_TTL       = 3
+	WORKER_LOGGER_BUFFER_SIZE = 500
+	WORKER_REGISTER_TTL       = 10
 )
 
 type CallTaskReq struct {

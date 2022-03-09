@@ -151,19 +151,20 @@ func InstanceNextStep(insId int) error {
 		return err
 	}
 
+	// assReq int 标记当前节点需要多少个用户审批
 	var assReq int
 	switch currNode.Category {
 	case conf.NODE_CATEGORY_FIRST:
-		// 首节点
+		// 首节点，需要0个用户审批
 		assReq = 0
 	case conf.NODE_CATEGORY_ANY:
-		// 或签
+		// 或签，需要1用户审批
 		assReq = 1
 	case conf.NODE_CATEGORY_ALL:
-		// 会签
+		// 会签，需要全部用户审批
 		assReq = len(currNode.Assignees)
 	case conf.NODE_CATEGORY_INFORM:
-		// 知会
+		// 知会，需要0个用户审批
 		assReq = 0
 	}
 

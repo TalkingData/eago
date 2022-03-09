@@ -56,6 +56,8 @@ type TaskService interface {
 	SetTaskStatus(ctx context.Context, in *SetTaskStatusReq, opts ...client.CallOption) (*BoolMsg, error)
 	// AppendTaskLog 追加任务日志
 	AppendTaskLog(ctx context.Context, opts ...client.CallOption) (TaskService_AppendTaskLogService, error)
+	// IsAllowedSrv 判断Srv是否已经在白名单内
+	IsAllowedSrv(ctx context.Context, in *IsAllowedSrvQuery, opts ...client.CallOption) (*BoolMsg, error)
 }
 
 type taskService struct {
@@ -181,6 +183,16 @@ func (x *taskServiceAppendTaskLog) Recv() (*BoolMsg, error) {
 	return m, nil
 }
 
+func (c *taskService) IsAllowedSrv(ctx context.Context, in *IsAllowedSrvQuery, opts ...client.CallOption) (*BoolMsg, error) {
+	req := c.c.NewRequest(c.name, "TaskService.IsAllowedSrv", in)
+	out := new(BoolMsg)
+	err := c.c.Call(ctx, req, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // Server API for TaskService service
 
 type TaskServiceHandler interface {
@@ -198,6 +210,8 @@ type TaskServiceHandler interface {
 	SetTaskStatus(context.Context, *SetTaskStatusReq, *BoolMsg) error
 	// AppendTaskLog 追加任务日志
 	AppendTaskLog(context.Context, TaskService_AppendTaskLogStream) error
+	// IsAllowedSrv 判断Srv是否已经在白名单内
+	IsAllowedSrv(context.Context, *IsAllowedSrvQuery, *BoolMsg) error
 }
 
 func RegisterTaskServiceHandler(s server.Server, hdlr TaskServiceHandler, opts ...server.HandlerOption) error {
@@ -209,6 +223,7 @@ func RegisterTaskServiceHandler(s server.Server, hdlr TaskServiceHandler, opts .
 		KillTask(ctx context.Context, in *TaskUniqueId, out *BoolMsg) error
 		SetTaskStatus(ctx context.Context, in *SetTaskStatusReq, out *BoolMsg) error
 		AppendTaskLog(ctx context.Context, stream server.Stream) error
+		IsAllowedSrv(ctx context.Context, in *IsAllowedSrvQuery, out *BoolMsg) error
 	}
 	type TaskService struct {
 		taskService
@@ -288,4 +303,8 @@ func (x *taskServiceAppendTaskLogStream) Recv() (*AppendTaskLogReq, error) {
 		return nil, err
 	}
 	return m, nil
+}
+
+func (h *taskServiceHandler) IsAllowedSrv(ctx context.Context, in *IsAllowedSrvQuery, out *BoolMsg) error {
+	return h.TaskServiceHandler.IsAllowedSrv(ctx, in, out)
 }

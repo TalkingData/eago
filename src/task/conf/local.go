@@ -7,11 +7,13 @@ import (
 )
 
 const (
-	_DEFAULT_SRV_LISTEN        = "127.0.0.1:0"
-	_DEFAULT_API_LISTEN        = "127.0.0.1:0"
-	_DEFAULT_GIN_MODEL         = "release"
-	_DEFAULT_REGISTER_TTL      = 10
-	_DEFAULT_REGISTER_INTERVAL = 3
+	_DEFAULT_SRV_LISTEN              = "127.0.0.1:0"
+	_DEFAULT_API_LISTEN              = "127.0.0.1:0"
+	_DEFAULT_GIN_MODEL               = "release"
+	_DEFAULT_MICRO_REGISTER_TTL      = 10
+	_DEFAULT_MICRO_REGISTER_INTERVAL = 3
+	_DEFAULT_SCHEDULER_REGISTER_TTL  = 10
+	_DEFAULT_ALLOWED_SRV_TTL_IN_SECS = 30
 
 	_DEFAULT_LOG_LEVEL = "debug"
 	_DEFAULT_LOG_PATH  = "./logs"
@@ -29,17 +31,24 @@ const (
 	_DEFAULT_MYSQL_MAX_OPEN_CONNECTIONS = 20
 	_DEFAULT_MYSQL_MAX_IDLE_CONNECTIONS = 5
 
+	// Redis默认配置
+	_DEFAULT_REDIS_ADDRESS  = "127.0.0.1:6379"
+	_DEFAULT_REDIS_PASSWORD = ""
+	_DEFAULT_REDIS_DB       = 1
+
 	// Jaeger默认配置
 	_DEFAULT_JAEGER_ADDRESS = "127.0.0.1:5775"
 )
 
 // conf 配置
 type conf struct {
-	SrvListen        string
-	ApiListen        string
-	GinMode          string
-	RegisterTtl      time.Duration
-	RegisterInterval time.Duration
+	SrvListen             string
+	ApiListen             string
+	GinMode               string
+	MicroRegisterTtl      time.Duration
+	MicroRegisterInterval time.Duration
+	SchedulerRegisterTtl  int64
+	AllowedSrvTtlSecs     time.Duration
 
 	LogLevel string
 	LogPath  string
@@ -54,6 +63,10 @@ type conf struct {
 	MysqlPassword           string
 	MysqlMaxOpenConnections int
 	MysqlMaxIdleConnections int
+
+	RedisAddress  string
+	RedisPassword string
+	RedisDb       int
 
 	JaegerAddress string
 }
@@ -71,11 +84,13 @@ func newLocalConf() *conf {
 	}
 
 	return &conf{
-		SrvListen:        cfg.MustValue("main", "srv_listen", _DEFAULT_SRV_LISTEN),
-		ApiListen:        cfg.MustValue("main", "api_listen", _DEFAULT_API_LISTEN),
-		GinMode:          cfg.MustValue("main", "gin_mode", _DEFAULT_GIN_MODEL),
-		RegisterTtl:      time.Duration(cfg.MustInt("main", "register_ttl", _DEFAULT_REGISTER_TTL)) * time.Second,
-		RegisterInterval: time.Duration(cfg.MustInt("main", "register_interval", _DEFAULT_REGISTER_INTERVAL)) * time.Second,
+		SrvListen:             cfg.MustValue("main", "srv_listen", _DEFAULT_SRV_LISTEN),
+		ApiListen:             cfg.MustValue("main", "api_listen", _DEFAULT_API_LISTEN),
+		GinMode:               cfg.MustValue("main", "gin_mode", _DEFAULT_GIN_MODEL),
+		MicroRegisterTtl:      time.Duration(cfg.MustInt("main", "micro_register_ttl", _DEFAULT_MICRO_REGISTER_TTL)) * time.Second,
+		MicroRegisterInterval: time.Duration(cfg.MustInt("main", "micro_register_interval", _DEFAULT_MICRO_REGISTER_INTERVAL)) * time.Second,
+		SchedulerRegisterTtl:  cfg.MustInt64("main", "scheduler_register_ttl", _DEFAULT_SCHEDULER_REGISTER_TTL),
+		AllowedSrvTtlSecs:     time.Duration(cfg.MustInt("main", "allowed_srv_ttl_secs", _DEFAULT_ALLOWED_SRV_TTL_IN_SECS)) * time.Second,
 
 		LogLevel: cfg.MustValue("log", "level", _DEFAULT_LOG_LEVEL),
 		LogPath:  cfg.MustValue("log", "path", _DEFAULT_LOG_PATH),
@@ -90,6 +105,10 @@ func newLocalConf() *conf {
 		MysqlPassword:           cfg.MustValue("mysql", "password", _DEFAULT_MYSQL_PASSWORD),
 		MysqlMaxOpenConnections: cfg.MustInt("mysql", "max_open_connections", _DEFAULT_MYSQL_MAX_OPEN_CONNECTIONS),
 		MysqlMaxIdleConnections: cfg.MustInt("mysql", "max_idle_connections", _DEFAULT_MYSQL_MAX_IDLE_CONNECTIONS),
+
+		RedisAddress:  cfg.MustValue("redis", "address", _DEFAULT_REDIS_ADDRESS),
+		RedisPassword: cfg.MustValue("redis", "password", _DEFAULT_REDIS_PASSWORD),
+		RedisDb:       cfg.MustInt("redis", "db", _DEFAULT_REDIS_DB),
 
 		JaegerAddress: cfg.MustValue("tracer", "jaeger_address", _DEFAULT_JAEGER_ADDRESS),
 	}

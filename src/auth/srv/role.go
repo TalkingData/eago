@@ -21,6 +21,13 @@ func (as *AuthService) ListRoleUsers(ctx context.Context, in *auth.NameQuery, ou
 		return m.RpcError()
 	}
 
+	out.Users = make([]*auth.RoleMemberUsers_MemberUser, 0)
+
+	// 查找不到角色时直接返回空结果
+	if r == nil {
+		return nil
+	}
+
 	log.Info("Finding role users.")
 	us, ok := dao.ListRoleUsers(r.Id)
 	if !ok {
@@ -30,7 +37,6 @@ func (as *AuthService) ListRoleUsers(ctx context.Context, in *auth.NameQuery, ou
 	}
 
 	log.Info("Making response.")
-	out.Users = make([]*auth.RoleMemberUsers_MemberUser, 0)
 	for _, u := range *us {
 		mUser := auth.RoleMemberUsers_MemberUser{}
 		mUser.Id = int32(u.Id)

@@ -9,19 +9,23 @@ import (
 	"encoding/json"
 	"errors"
 	"github.com/coreos/etcd/clientv3"
+	"net"
 	"net/rpc"
 	"net/rpc/jsonrpc"
 	"time"
 )
 
+type AfterConnWrapHandler func(conn net.Conn)
+
 var WorkerClient *workerClient
 
 type workerClient struct {
-	etcdCli *clientv3.Client
+	etcdCli           *clientv3.Client
+	afterConnHandlers []AfterConnWrapHandler
 }
 
 // InitWorkerCli 启动Worker客户端
-func InitWorkerCli() {
+func InitWorkerCli(afterHandlers ...AfterConnWrapHandler) {
 	etcdCli, err := clientv3.New(clientv3.Config{
 		Endpoints:   conf.Conf.EtcdAddresses,
 		DialTimeout: 5 * time.Second,
@@ -33,7 +37,10 @@ func InitWorkerCli() {
 		panic(err)
 	}
 
-	WorkerClient = &workerClient{etcdCli}
+	WorkerClient = &workerClient{
+		etcdCli:           etcdCli,
+		afterConnHandlers: afterHandlers,
+	}
 }
 
 // List 列出所有活跃的Worker
@@ -106,6 +113,9 @@ func (wc *workerClient) CallTask(wk *worker.WorkerInfo, codename, uniqueId, argu
 	if err != nil {
 		return err
 	}
+	defer func() {
+		_ = conn.Close()
+	}()
 
 	// 调用 WorkerService.CallTask
 	wkRsp := worker.WorkerResponse{}
@@ -137,6 +147,9 @@ func (wc *workerClient) KillTask(wk *worker.WorkerInfo, taskUniqueId string) err
 	if err != nil {
 		return err
 	}
+	defer func() {
+		_ = conn.Close()
+	}()
 
 	// 调用 WorkerService.KillTask
 	wkRsp := worker.WorkerResponse{}
@@ -158,15 +171,14 @@ func (wc *workerClient) KillTask(wk *worker.WorkerInfo, taskUniqueId string) err
 
 // connWorker 连接Worker
 func (wc *workerClient) connWorker(wk *worker.WorkerInfo) (*rpc.Client, error) {
-	// 创建与WorkerService的链接
-	conn, err := jsonrpc.Dial("tcp", wk.Address)
+	// 创建与Worker的链接
+	conn, err := net.Dial("tcp", wk.Address)
 	if err != nil {
 		log.ErrorWithFields(log.Fields{
 			"error": err,
 		}, "An error occurred while jsonrpc.Dial.")
 		return nil, err
 	}
-
 	if conn == nil {
 		err = errors.New("got an nil connection")
 		log.ErrorWithFields(log.Fields{
@@ -175,5 +187,11 @@ func (wc *workerClient) connWorker(wk *worker.WorkerInfo) (*rpc.Client, error) {
 		return nil, err
 	}
 
-	return conn, nil
+	// 执行所有handler
+	for _, h := range wc.afterConnHandlers {
+		h(conn)
+	}
+
+	// 返回client
+	return jsonrpc.NewClient(conn), nil
 }

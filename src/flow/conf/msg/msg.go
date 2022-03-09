@@ -22,8 +22,9 @@ var (
 	AssociatedNodeFailed                = m.NewMessage(120200, "无法执行操作，仍有子节点与该节点关联")
 	AssociatedNodeTriggerFailed         = m.NewMessage(120201, "无法执行操作，仍有触发器与该节点关联")
 	AssociatedNodeFlowFailed            = m.NewMessage(120202, "无法执行操作，仍有流程与该节点关联")
-	AssociatedParentNodeSelfFailed      = m.NewMessage(120203, "无法执行操作，不能将自身节点设置为父节点")
-	AssociatedParentNodeDuplicateFailed = m.NewMessage(120204, "无法执行操作，已经有其他节点关联了该父节点")
+	AssociatedParentNodeNotFoundFailed  = m.NewMessage(120203, "无法执行操作，该父节点不存在")
+	AssociatedParentNodeSelfFailed      = m.NewMessage(120204, "无法执行操作，不能将自身节点设置为父节点")
+	AssociatedParentNodeDuplicateFailed = m.NewMessage(120205, "无法执行操作，已经有其他节点关联了该父节点")
 
 	// Flow 1203xx
 

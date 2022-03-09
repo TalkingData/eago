@@ -2,8 +2,10 @@
 srv_listen = 127.0.0.1:0
 api_listen = 127.0.0.1:0
 gin_mode = release
-register_ttl = 10
-register_interval = 3
+micro_register_ttl = 10
+micro_register_interval = 3
+scheduler_register_ttl = 10
+allowed_srv_ttl_secs = 30
 
 [log]
 level = debug
@@ -21,6 +23,11 @@ user = root
 password = root
 max_open_connections = 5
 max_idle_connections = 20
+
+[redis]
+address = 127.0.0.1:6379
+password = redis
+db = 1
 
 [tracer]
 jaeger_address = 127.0.0.1:5775

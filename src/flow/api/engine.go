@@ -109,7 +109,7 @@ func NewGinEngine() *gin.Engine {
 			// 更新节点，要求管理员权限
 			nR.PUT("/:node_id", perm.MustRole(conf.ADMIN_ROLE_NAME), h.SetNode)
 			// 列出所有节点，要求管理员权限
-			nR.GET("", perm.MustRole(conf.ADMIN_ROLE_NAME), h.ListNodes)
+			nR.GET("", perm.MustRole(conf.ADMIN_ROLE_NAME), pg.ListPageHelper(), h.ListNodes)
 
 			// 添加触发器至节点，要求管理员权限
 			nR.POST("/:node_id/triggers", perm.MustRole(conf.ADMIN_ROLE_NAME), h.AddTrigger2Node)

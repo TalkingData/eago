@@ -31,7 +31,9 @@ func main() {
 
 	// 初始化Tracer
 	t, c := tracer.NewTracer(conf.API_REGISTER_KEY, conf.Conf.JaegerAddress)
-	defer c.Close()
+	defer func() {
+		_ = c.Close()
+	}()
 
 	opentracing.SetGlobalTracer(t)
 
@@ -51,8 +53,8 @@ func main() {
 		web.Version("v1"),
 		web.Handler(NewGinEngine()),
 		web.Registry(etcdReg),
-		web.RegisterTTL(conf.Conf.RegisterTtl),
-		web.RegisterInterval(conf.Conf.RegisterInterval),
+		web.RegisterTTL(conf.Conf.MicroRegisterTtl),
+		web.RegisterInterval(conf.Conf.MicroRegisterInterval),
 		web.Context(ctx),
 	)
 

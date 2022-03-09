@@ -6,6 +6,7 @@ import (
 	w "eago/common/api-suite/writter"
 	"eago/common/log"
 	"github.com/gin-gonic/gin"
+	"strings"
 )
 
 // ReadLoginForm 登录表单预读
@@ -31,7 +32,7 @@ func ReadLoginForm() gin.HandlerFunc { // 登录表单预读
 		}
 
 		c.Set("LoginUser", map[string]string{
-			"username": loginFrm.Username, "password": loginFrm.Password,
+			"username": strings.ToLower(loginFrm.Username), "password": loginFrm.Password,
 		})
 	}
 }

@@ -214,6 +214,7 @@ func (as *AuthService) MakeUserHandover(ctx context.Context, in *auth.HandoverRe
 			"username":        user.Username,
 			"target_user_id":  in.TargetUserId,
 			"target_username": tgtUser.Username,
+			"error":           err,
 		}, "Failed when broker.Publisher.Publish.")
 	}
 

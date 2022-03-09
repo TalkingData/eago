@@ -3,10 +3,14 @@ package dto
 import (
 	"database/sql"
 	"eago/common/message"
+	"eago/flow/conf"
 	"eago/flow/conf/msg"
 	"eago/flow/dao"
+	"eago/flow/model"
+	"encoding/json"
 	"fmt"
 	"github.com/beego/beego/v2/core/validation"
+	"regexp"
 	"strings"
 )
 
@@ -20,9 +24,21 @@ type NewNode struct {
 	EditableFields    string  `json:"editable_fields" valid:"Required;MinSize(2)"`
 }
 
+func (n *NewNode) Valid(v *validation.Validation) {
+	// 验证AssigneeCondition
+	if m := validateAssigneeCondition(n.Category, n.AssigneeCondition); m != "" {
+		_ = v.SetError("AssigneeCondition", m)
+	}
+}
+
 // Validate
 func (n *NewNode) Validate() *message.Message {
 	if n.ParentId != nil {
+		// 验证父节点是否存在
+		if ct, _ := dao.GetNodeCount(dao.Query{"id=?": n.ParentId}); ct < 1 {
+			return msg.AssociatedParentNodeNotFoundFailed
+		}
+
 		// 验证是否重复关联父节点
 		if ct, _ := dao.GetNodeCount(dao.Query{"parent_id=?": n.ParentId}); ct > 0 {
 			return msg.AssociatedParentNodeDuplicateFailed
@@ -30,7 +46,7 @@ func (n *NewNode) Validate() *message.Message {
 	}
 
 	valid := validation.Validation{}
-	// 验证数据¬
+	// 验证数据
 	ok, err := valid.Valid(n)
 	if err != nil {
 		return msg.ValidateFailed.SetError(err)
@@ -81,9 +97,21 @@ type SetNode struct {
 	EditableFields    string  `json:"editable_fields" valid:"Required;MinSize(2)"`
 }
 
+func (s *SetNode) Valid(v *validation.Validation) {
+	// 验证AssigneeCondition
+	if m := validateAssigneeCondition(s.Category, s.AssigneeCondition); m != "" {
+		_ = v.SetError("AssigneeCondition", m)
+	}
+}
+
 // Validate
 func (s *SetNode) Validate(nId int) *message.Message {
 	if s.ParentId != nil {
+		// 验证父节点是否存在
+		if ct, _ := dao.GetNodeCount(dao.Query{"id=?": s.ParentId}); ct < 1 {
+			return msg.AssociatedParentNodeNotFoundFailed
+		}
+
 		// 验证是否重复关联父节点
 		if ct, _ := dao.GetNodeCount(dao.Query{"parent_id=?": s.ParentId, "id<>?": nId}); ct > 0 {
 			return msg.AssociatedParentNodeDuplicateFailed
@@ -218,4 +246,55 @@ func (*ListNodeRelations) Validate(nId int) *message.Message {
 	}
 
 	return nil
+}
+
+// validateAssigneeCondition 验证审批人条件是否合法
+func validateAssigneeCondition(category int, acStr *string) string {
+	// 首节点不需要有AssigneeCondition
+	if category == conf.NODE_CATEGORY_FIRST {
+		if acStr != nil && *acStr != "{}" {
+			return "不需要设置审批人条件，请设置其为空对象"
+		}
+		*acStr = "{}"
+		return ""
+	}
+
+	// 反序列化AssigneeCondition
+	acObj := model.AssigneeCondition{}
+	err := json.Unmarshal([]byte(*acStr), &acObj)
+	// 反序列化错误
+	if err != nil {
+		return "格式不合法，必须包含：condition、getter、data属性"
+	}
+
+	// Condition表达式不合法
+	if acObj.Condition != conf.AC_INITIATOR &&
+		acObj.Condition != conf.AC_INITIATORS_DEPARTMENTS_OWNER &&
+		acObj.Condition != conf.AC_INITIATORS_PARENT_DEPARTMENTS_OWNER &&
+		acObj.Condition != conf.AC_SPECIFIED_USERS &&
+		acObj.Condition != conf.AC_SPECIFIED_PRODUCT_OWNER &&
+		acObj.Condition != conf.AC_SPECIFIED_GROUP_OWNER &&
+		acObj.Condition != conf.AC_SPECIFIED_DEPARTMENT_OWNER &&
+		acObj.Condition != conf.AC_SPECIFIED_ROLE {
+		return "不支持所输入的condition表达式"
+	}
+
+	// Getter不合法
+	if acObj.Getter != conf.GETTER_DIRECT &&
+		acObj.Getter != conf.GETTER_FIELD {
+		return "不支持所输入的getter方法"
+	}
+
+	// Data长度不合法
+	if len(acObj.Data) < 3 {
+		return "所输入的data长度不能小于3个字符"
+	}
+
+	// Data不合法
+	r, _ := regexp.Compile("^[a-zA-Z-_][a-zA-Z0-9-.,_@]{1,}$")
+	if !r.Match([]byte(acObj.Data)) {
+		return "所输入的data只能包含：英文大小写字母和\"@,.-_\"，并且以英文大小写字母开头"
+	}
+
+	return ""
 }

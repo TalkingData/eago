@@ -4,10 +4,12 @@ import (
 	"context"
 	"eago/common/log"
 	"eago/common/orm"
+	"eago/common/redis"
 	"eago/common/tracer"
 	"eago/task/cli"
 	"eago/task/conf"
 	"eago/task/dao"
+	"eago/task/srv/builtin"
 	task "eago/task/srv/proto"
 	"fmt"
 	"github.com/micro/go-micro/v2"
@@ -23,16 +25,10 @@ import (
 type TaskService struct{}
 
 func main() {
-	// 初始化DAO
-	dao.Init(orm.InitMysql(
-		conf.Conf.MysqlAddress,
-		conf.Conf.MysqlUser,
-		conf.Conf.MysqlPassword,
-		conf.Conf.MysqlDbName,
-	))
-
 	t, c := tracer.NewTracer(conf.RPC_REGISTER_KEY, conf.Conf.JaegerAddress)
-	defer c.Close()
+	defer func() {
+		_ = c.Close()
+	}()
 
 	ctx, cancel := context.WithCancel(context.Background())
 	etcdReg := etcdv3.NewRegistry(
@@ -43,15 +39,15 @@ func main() {
 		micro.Name(conf.RPC_REGISTER_KEY),
 		micro.Registry(etcdReg),
 		micro.WrapHandler(opentracing.NewHandlerWrapper(t)),
-		micro.RegisterTTL(conf.Conf.RegisterTtl),
-		micro.RegisterInterval(conf.Conf.RegisterInterval),
+		micro.RegisterTTL(conf.Conf.MicroRegisterTtl),
+		micro.RegisterInterval(conf.Conf.MicroRegisterInterval),
 		micro.Context(ctx),
 		micro.Version("v1"),
 	)
 
 	_ = task.RegisterTaskServiceHandler(srv.Server(), &TaskService{})
 
-	cli.InitWorkerCli()
+	cli.InitWorkerCli(builtin.RegisterSrvWrapHandler)
 
 	e := make(chan error)
 	go func() {
@@ -100,4 +96,20 @@ func init() {
 		fmt.Println("Failed to init logging, error:", err.Error())
 		panic(err)
 	}
+
+	// 初始化DAO
+	dao.Init(orm.InitMysql(
+		conf.Conf.MysqlAddress,
+		conf.Conf.MysqlUser,
+		conf.Conf.MysqlPassword,
+		conf.Conf.MysqlDbName,
+	))
+
+	// 初始化Redis
+	redis.InitRedis(
+		conf.Conf.RedisAddress,
+		conf.Conf.RedisPassword,
+		conf.SERVICE_NAME,
+		conf.Conf.RedisDb,
+	)
 }

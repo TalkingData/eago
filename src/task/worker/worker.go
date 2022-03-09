@@ -340,6 +340,18 @@ func (w *worker) Start() error {
 				}, "An error occurred while listener.Accept.")
 				continue
 			}
+
+			// 判断是否是在白名单内的srv
+			if err = w.isAllowedSrv(conn); err != nil {
+				log.WarnWithFields(log.Fields{
+					"srv_addr":    conn.RemoteAddr().String(),
+					"worker_addr": conn.LocalAddr().String(),
+					"error":       err,
+				}, "Worker.isAllowedSrv error, Connection rejected.")
+				_ = conn.Close()
+				continue
+			}
+
 			// 处理实际请求
 			go jsonrpc.ServeConn(conn)
 		}
@@ -486,4 +498,22 @@ func (w *worker) unregister() {
 	}
 
 	w.startTime = nil
+}
+
+// isAllowedSrv 判断Srv是否已经在白名单内
+func (w *worker) isAllowedSrv(conn net.Conn) error {
+	req := &proto.IsAllowedSrvQuery{
+		SrvAddr:    conn.RemoteAddr().String(),
+		WorkerAddr: conn.LocalAddr().String(),
+	}
+
+	ret, err := w.taskServiceClient.IsAllowedSrv(context.TODO(), req)
+	if err != nil {
+		return err
+	}
+	if !ret.Ok {
+		return errors.New("srv not allowed")
+	}
+
+	return nil
 }

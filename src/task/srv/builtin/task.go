@@ -60,6 +60,8 @@ func CallTask(taskCodename, arguments, caller string, timeout int64) (taskUnique
 	// 调用Worker
 	err = cli.WorkerClient.CallTask(w, cNameSplit[1], taskUniqueId, arguments, caller, timeout, taskResult.StartAt.Unix())
 	if err != nil {
+		// 任务调用错误
+		dao.SetResultStatus(partition, taskResult.Id, worker.TASK_CALL_ERROR_END_STATUS, true)
 		log.ErrorWithFields(log.Fields{
 			"partition": partition,
 			"result_id": taskResult.Id,

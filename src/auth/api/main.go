@@ -22,25 +22,11 @@ import (
 )
 
 func main() {
-	// 初始化DAO
-	dao.Init(orm.InitMysql(
-		conf.Conf.MysqlAddress,
-		conf.Conf.MysqlUser,
-		conf.Conf.MysqlPassword,
-		conf.Conf.MysqlDbName,
-	))
-
-	// 初始化Redis
-	redis.InitRedis(
-		conf.Conf.RedisAddress,
-		conf.Conf.RedisPassword,
-		conf.SERVICE_NAME,
-		conf.Conf.RedisDb,
-	)
-
 	// 初始化Tracer
 	t, c := tracer.NewTracer(conf.API_REGISTER_KEY, conf.Conf.JaegerAddress)
-	defer c.Close()
+	defer func() {
+		_ = c.Close()
+	}()
 
 	opentracing.SetGlobalTracer(t)
 
@@ -59,8 +45,8 @@ func main() {
 		web.Version("v1"),
 		web.Handler(NewGinEngine()),
 		web.Registry(etcdReg),
-		web.RegisterTTL(conf.Conf.RegisterTtl),
-		web.RegisterInterval(conf.Conf.RegisterInterval),
+		web.RegisterTTL(conf.Conf.MicroRegisterTtl),
+		web.RegisterInterval(conf.Conf.MicroRegisterInterval),
 		web.Context(ctx),
 	)
 
@@ -112,4 +98,20 @@ func init() {
 		fmt.Println("Failed to init logging, error:", err.Error())
 		panic(err)
 	}
+
+	// 初始化DAO
+	dao.Init(orm.InitMysql(
+		conf.Conf.MysqlAddress,
+		conf.Conf.MysqlUser,
+		conf.Conf.MysqlPassword,
+		conf.Conf.MysqlDbName,
+	))
+
+	// 初始化Redis
+	redis.InitRedis(
+		conf.Conf.RedisAddress,
+		conf.Conf.RedisPassword,
+		conf.SERVICE_NAME,
+		conf.Conf.RedisDb,
+	)
 }

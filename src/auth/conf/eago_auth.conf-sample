@@ -2,8 +2,9 @@
 srv_listen = 127.0.0.1:0
 api_listen = 127.0.0.1:0
 gin_mode = debug
-register_ttl = 10
-register_interval = 3
+micro_register_ttl = 10
+micro_register_interval = 3
+worker_register_ttl = 10
 token_ttl = 900
 secret_key = eago_default_secret_key
 

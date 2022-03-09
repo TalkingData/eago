@@ -26,24 +26,10 @@ type AuthService struct{}
 var Publisher broker.Publisher
 
 func main() {
-	// 初始化DAO
-	dao.Init(orm.InitMysql(
-		conf.Conf.MysqlAddress,
-		conf.Conf.MysqlUser,
-		conf.Conf.MysqlPassword,
-		conf.Conf.MysqlDbName,
-	))
-
-	// 初始化Redis
-	redis.InitRedis(
-		conf.Conf.RedisAddress,
-		conf.Conf.RedisPassword,
-		conf.SERVICE_NAME,
-		conf.Conf.RedisDb,
-	)
-
 	t, c := tracer.NewTracer(conf.RPC_REGISTER_KEY, conf.Conf.JaegerAddress)
-	defer c.Close()
+	defer func() {
+		_ = c.Close()
+	}()
 
 	ctx, cancel := context.WithCancel(context.Background())
 	etcdReg := etcdv3.NewRegistry(
@@ -55,8 +41,8 @@ func main() {
 		micro.Address(conf.Conf.SrvListen),
 		micro.Version("v1"),
 		micro.Registry(etcdReg),
-		micro.RegisterTTL(conf.Conf.RegisterTtl),
-		micro.RegisterInterval(conf.Conf.RegisterInterval),
+		micro.RegisterTTL(conf.Conf.MicroRegisterTtl),
+		micro.RegisterInterval(conf.Conf.MicroRegisterInterval),
 		micro.Context(ctx),
 		micro.WrapHandler(opentracing.NewHandlerWrapper(t)),
 		micro.Broker(broker.NewBroker(conf.Conf.KafkaAddresses)),
@@ -117,4 +103,20 @@ func init() {
 		fmt.Println("Failed to init logging, error:", err.Error())
 		panic(err)
 	}
+
+	// 初始化DAO
+	dao.Init(orm.InitMysql(
+		conf.Conf.MysqlAddress,
+		conf.Conf.MysqlUser,
+		conf.Conf.MysqlPassword,
+		conf.Conf.MysqlDbName,
+	))
+
+	// 初始化Redis
+	redis.InitRedis(
+		conf.Conf.RedisAddress,
+		conf.Conf.RedisPassword,
+		conf.SERVICE_NAME,
+		conf.Conf.RedisDb,
+	)
 }
