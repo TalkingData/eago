@@ -19,7 +19,6 @@
 -- Table structure for table `categories`
 --
 
-DROP TABLE IF EXISTS `categories`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `categories`
@@ -38,7 +37,6 @@ CREATE TABLE `categories`
 -- Table structure for table `flows`
 --
 
-DROP TABLE IF EXISTS `flows`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `flows`
@@ -70,7 +68,6 @@ CREATE TABLE `flows`
 -- Table structure for table `forms`
 --
 
-DROP TABLE IF EXISTS `forms`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `forms`
@@ -94,7 +91,6 @@ CREATE TABLE `forms`
 -- Table structure for table `instances`
 --
 
-DROP TABLE IF EXISTS `instances`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `instances`
@@ -122,7 +118,6 @@ CREATE TABLE `instances`
 -- Table structure for table `logs`
 --
 
-DROP TABLE IF EXISTS `logs`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `logs`
@@ -143,7 +138,6 @@ CREATE TABLE `logs`
 -- Table structure for table `node_triggers`
 --
 
-DROP TABLE IF EXISTS `node_triggers`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `node_triggers`
@@ -167,7 +161,6 @@ CREATE TABLE `node_triggers`
 -- Table structure for table `nodes`
 --
 
-DROP TABLE IF EXISTS `nodes`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `nodes`
@@ -195,7 +188,6 @@ CREATE TABLE `nodes`
 -- Table structure for table `triggers`
 --
 
-DROP TABLE IF EXISTS `triggers`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `triggers`

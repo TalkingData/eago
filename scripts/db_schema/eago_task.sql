@@ -19,7 +19,6 @@
 -- Table structure for table `result_partitions`
 --
 
-DROP TABLE IF EXISTS `result_partitions`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `result_partitions`
@@ -36,7 +35,6 @@ CREATE TABLE `result_partitions`
 -- Table structure for table `schedules`
 --
 
-DROP TABLE IF EXISTS `schedules`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `schedules`
@@ -61,7 +59,6 @@ CREATE TABLE `schedules`
 -- Table structure for table `tasks`
 --
 
-DROP TABLE IF EXISTS `tasks`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `tasks`
