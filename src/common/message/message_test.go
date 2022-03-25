@@ -41,7 +41,7 @@ func NewUserHandler(c *gin.Context) {
 	var userFrm User
 
 	if err := c.BindJSON(&userFrm); err != nil {
-		m := InvalidBody.SetDetail("An error occurred when BindJSON.").SetError(err)
+		m := InvalidBody.SetError(err)
 		log.WarnWithFields(m.LogFields())
 		m.WriteRest(c)
 		return
@@ -94,7 +94,7 @@ func init() {
 	// 加载日志设置
 	err := log.InitLog(
 		"./logs",
-		"eago-common",
+		"eago-test",
 		"debug",
 	)
 	if err != nil {

@@ -32,7 +32,7 @@ func NewTrigger(c *gin.Context) {
 	tc := c.GetStringMap("TokenContent")
 	t := dao.NewTrigger(tFrm.Name, *tFrm.Description, tFrm.TaskCodename, tFrm.Arguments, tc["Username"].(string))
 	if t == nil {
-		m := msg.UnknownError
+		m := msg.UndefinedError
 		log.WarnWithFields(m.LogFields())
 		m.WriteRest(c)
 		return
@@ -61,7 +61,7 @@ func RemoveTrigger(c *gin.Context) {
 	}
 
 	if ok := dao.RemoveTrigger(tId); !ok {
-		m := msg.UnknownError
+		m := msg.UndefinedError
 		log.WarnWithFields(m.LogFields())
 		m.WriteRest(c)
 		return
@@ -99,7 +99,7 @@ func SetTrigger(c *gin.Context) {
 	tc := c.GetStringMap("TokenContent")
 	t, ok := dao.SetTrigger(tId, stFrm.Name, *stFrm.Description, stFrm.TaskCodename, stFrm.Arguments, tc["Username"].(string))
 	if !ok {
-		m := msg.UnknownError
+		m := msg.UndefinedError
 		log.WarnWithFields(m.LogFields())
 		m.WriteRest(c)
 		return
@@ -124,7 +124,7 @@ func ListTriggers(c *gin.Context) {
 		c.GetStringSlice("OrderBy")...,
 	)
 	if !ok {
-		m := msg.UnknownError
+		m := msg.UndefinedError
 		log.WarnWithFields(m.LogFields())
 		m.WriteRest(c)
 		return
@@ -154,7 +154,7 @@ func ListTriggerNodes(c *gin.Context) {
 
 	u, ok := dao.ListTriggerNodes(tId)
 	if !ok {
-		m := msg.UnknownError
+		m := msg.UndefinedError
 		log.WarnWithFields(m.LogFields())
 		m.WriteRest(c)
 		return

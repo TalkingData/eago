@@ -158,7 +158,7 @@ func ListTasks(query Query) (*[]model.Task, bool) {
 // PagedListTasks 查询任务-分页
 func PagedListTasks(query Query, page, pageSize int, orderBy ...string) (*pagination.Paginator, bool) {
 	var d = db.Model(&model.Task{})
-	ts := make([]model.Task, 0)
+	ts := make([]model.Task, pageSize)
 
 	for k, v := range query {
 		d = d.Where(k, v)

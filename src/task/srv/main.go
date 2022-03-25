@@ -9,7 +9,6 @@ import (
 	"eago/task/cli"
 	"eago/task/conf"
 	"eago/task/dao"
-	"eago/task/srv/builtin"
 	task "eago/task/srv/proto"
 	"fmt"
 	"github.com/micro/go-micro/v2"
@@ -47,7 +46,7 @@ func main() {
 
 	_ = task.RegisterTaskServiceHandler(srv.Server(), &TaskService{})
 
-	cli.InitWorkerCli(builtin.RegisterSrvWrapHandler)
+	cli.InitWorkerCli()
 
 	e := make(chan error)
 	go func() {

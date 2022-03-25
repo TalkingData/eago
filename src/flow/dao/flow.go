@@ -186,7 +186,7 @@ func PagedListFlows(query Query, page, pageSize int, orderBy ...string) (*pagina
 		Joins("LEFT JOIN categories AS c ON c.id = flows.categories_id").
 		Joins("LEFT JOIN forms AS f ON f.id = flows.form_id").
 		Joins("LEFT JOIN nodes AS n ON n.id = flows.first_node_id")
-	fs := make([]model.ListFlows, 0)
+	fs := make([]model.ListFlows, pageSize)
 
 	for k, v := range query {
 		d = d.Where(k, v)

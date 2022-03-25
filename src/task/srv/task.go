@@ -23,7 +23,7 @@ func (ts *TaskService) ListTasks(ctx context.Context, in *task.QueryWithPage, ou
 	}
 	pagedData, ok := dao.PagedListTasks(query, int(in.Page), int(in.PageSize))
 	if !ok {
-		m := msg.UnknownError.SetDetail("An error occurred while dao.PagedListTasks.")
+		m := msg.UndefinedError.SetDetail("An error occurred while dao.PagedListTasks.")
 		log.ErrorWithFields(m.LogFields())
 		return m.RpcError()
 	}
@@ -53,7 +53,7 @@ func (ts *TaskService) CallTask(ctx context.Context, in *task.CallTaskReq, out *
 
 	tId, err := builtin.CallTask(in.TaskCodename, string(in.Arguments), in.Caller, in.Timeout)
 	if err != nil {
-		m := msg.UnknownError.SetError(err, "An error occurred while builtin.CallTask.")
+		m := msg.UndefinedError.SetError(err, "An error occurred while builtin.CallTask.")
 		log.ErrorWithFields(log.Fields{
 			"task_codename": in.TaskCodename,
 			"arguments":     in.Arguments,
@@ -79,7 +79,7 @@ func (ts *TaskService) KillTask(ctx context.Context, in *task.TaskUniqueId, out 
 
 	err := builtin.KillTask(in.TaskUniqueId)
 	if err != nil {
-		m := msg.UnknownError.SetError(err, "An error occurred while builtin.KillTask.")
+		m := msg.UndefinedError.SetError(err, "An error occurred while builtin.KillTask.")
 		log.ErrorWithFields(log.Fields{
 			"task_unique_id": in.TaskUniqueId,
 			"error":          err,
@@ -103,7 +103,7 @@ func (ts *TaskService) SetTaskStatus(ctx context.Context, in *task.SetTaskStatus
 	// 将任务唯一Id解码为任务结果Id和分区
 	p, id, err := builtin.TaskUniqueIdDecode(in.TaskUniqueId)
 	if err != nil {
-		m := msg.UnknownError.SetError(err, "An error occurred while builtin.TaskUniqueIdDecode.")
+		m := msg.UndefinedError.SetError(err, "An error occurred while builtin.TaskUniqueIdDecode.")
 		log.ErrorWithFields(log.Fields{
 			"task_unique_id": in.TaskUniqueId,
 			"error":          err,
@@ -114,7 +114,7 @@ func (ts *TaskService) SetTaskStatus(ctx context.Context, in *task.SetTaskStatus
 	// 取数据库中任务结果记录
 	obj, ok := dao.GetResult(p, id)
 	if !ok {
-		m := msg.UnknownError.SetDetail("An error occurred while dao.GetResult.")
+		m := msg.UndefinedError.SetDetail("An error occurred while dao.GetResult.")
 		log.ErrorWithFields(log.Fields{
 			"partition": p,
 			"result_id": id,
@@ -123,7 +123,7 @@ func (ts *TaskService) SetTaskStatus(ctx context.Context, in *task.SetTaskStatus
 	}
 	// 找不到数据的处理
 	if obj == nil {
-		m := msg.UnknownError.SetDetail("Result object not found.")
+		m := msg.UndefinedError.SetDetail("Result object not found.")
 		log.ErrorWithFields(log.Fields{
 			"partition": p,
 			"result_id": id,
@@ -133,7 +133,7 @@ func (ts *TaskService) SetTaskStatus(ctx context.Context, in *task.SetTaskStatus
 
 	// 判断任务记录，无法结束不是在执行的状态就，返回错误
 	if obj.Status <= worker.TASK_SUCCESS_END_STATUS {
-		m := msg.UnknownError.SetDetail("Result object wrong state, task was ended.")
+		m := msg.UndefinedError.SetDetail("Result object wrong state, task was ended.")
 		log.ErrorWithFields(log.Fields{
 			"partition": p,
 			"result_id": id,
@@ -148,7 +148,7 @@ func (ts *TaskService) SetTaskStatus(ctx context.Context, in *task.SetTaskStatus
 	}
 	ok = dao.SetResultStatus(p, id, int(in.Status), end)
 	if !ok {
-		m := msg.UnknownError.SetDetail("An error occurred while dao.SetResultStatus.")
+		m := msg.UndefinedError.SetDetail("An error occurred while dao.SetResultStatus.")
 		log.ErrorWithFields(log.Fields{
 			"partition": p,
 			"result_id": id,
@@ -178,13 +178,13 @@ func (ts *TaskService) AppendTaskLog(ctx context.Context, stream task.TaskServic
 			break
 		}
 		if err != nil {
-			m := msg.UnknownError.SetError(err, "An error occurred while stream.Recv.")
+			m := msg.UndefinedError.SetError(err, "An error occurred while stream.Recv.")
 			log.ErrorWithFields(m.LogFields())
 			return m.RpcError()
 		}
 		// 新建Log
 		if err = builtin.NewLog(tlq.TaskUniqueId, &tlq.Content); err != nil {
-			m := msg.UnknownError.SetError(err, "An error occurred while local.NewLog.")
+			m := msg.UndefinedError.SetError(err, "An error occurred while local.NewLog.")
 			log.ErrorWithFields(log.Fields{
 				"task_unique_id": tlq.TaskUniqueId,
 				"error":          err,
@@ -194,7 +194,7 @@ func (ts *TaskService) AppendTaskLog(ctx context.Context, stream task.TaskServic
 
 		// 返回请求结果给客户端
 		if err = stream.Send(&task.BoolMsg{Ok: true}); err != nil {
-			m := msg.UnknownError.SetError(err, "An error occurred while local.Send.")
+			m := msg.UndefinedError.SetError(err, "An error occurred while local.Send.")
 			log.ErrorWithFields(log.Fields{
 				"task_unique_id": tlq.TaskUniqueId,
 				"error":          err,
@@ -204,7 +204,7 @@ func (ts *TaskService) AppendTaskLog(ctx context.Context, stream task.TaskServic
 
 	}
 	if err := stream.Close(); err != nil {
-		m := msg.UnknownError.SetError(err, "An error occurred while stream.Close.")
+		m := msg.UndefinedError.SetError(err, "An error occurred while stream.Close.")
 		log.ErrorWithFields(m.LogFields())
 		return m.RpcError()
 	}

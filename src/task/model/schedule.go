@@ -9,7 +9,7 @@ type Schedule struct {
 	Id           int              `json:"id"`
 	TaskCodename string           `json:"task_codename"`
 	Expression   string           `json:"expression"`
-	Timeout      *int64           `json:"timeout"`
+	Timeout      *int             `json:"timeout"`
 	Arguments    string           `json:"arguments"`
 	Disabled     *bool            `json:"disabled"`
 	Description  *string          `json:"description"`

@@ -179,7 +179,7 @@ func ListResultPartitions(query Query) (*[]model.ResultPartition, bool) {
 // PagedListResultPartitions 查询结果分区-分页
 func PagedListResultPartitions(query Query, page, pageSize int, orderBy ...string) (*pagination.Paginator, bool) {
 	var d = db.Model(&model.ResultPartition{})
-	rParts := make([]model.ResultPartition, 0)
+	rParts := make([]model.ResultPartition, pageSize)
 
 	for k, v := range query {
 		d = d.Where(k, v)

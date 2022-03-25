@@ -30,7 +30,7 @@ func NewProduct(c *gin.Context) {
 
 	p, err := dao.NewProduct(npFrm.Name, npFrm.Alias, *npFrm.Description, npFrm.Disabled)
 	if p == nil {
-		m := msg.UnknownError.SetError(err)
+		m := msg.UndefinedError.SetError(err)
 		log.WarnWithFields(m.LogFields())
 		m.WriteRest(c)
 		return
@@ -59,7 +59,7 @@ func RemoveProduct(c *gin.Context) {
 	}
 
 	if err := dao.RemoveProduct(prdId); err != nil {
-		m := msg.UnknownError.SetError(err)
+		m := msg.UndefinedError.SetError(err)
 		log.WarnWithFields(m.LogFields())
 		m.WriteRest(c)
 		return
@@ -96,7 +96,7 @@ func SetProduct(c *gin.Context) {
 
 	prod, err := dao.SetProduct(prdId, spFrm.Name, spFrm.Alias, *spFrm.Description, *spFrm.Disabled)
 	if err != nil {
-		m := msg.UnknownError.SetError(err)
+		m := msg.UndefinedError.SetError(err)
 		log.WarnWithFields(m.LogFields())
 		m.WriteRest(c)
 		return
@@ -121,7 +121,7 @@ func ListProducts(c *gin.Context) {
 		c.GetStringSlice("OrderBy")...,
 	)
 	if !ok {
-		m := msg.UnknownError
+		m := msg.UndefinedError
 		log.WarnWithFields(m.LogFields())
 		m.WriteRest(c)
 		return
@@ -157,7 +157,7 @@ func AddUser2Product(c *gin.Context) {
 	}
 
 	if !dao.AddProductUser(prdId, aumFrm.UserId, aumFrm.IsOwner) {
-		m := msg.UnknownError
+		m := msg.UndefinedError
 		log.WarnWithFields(m.LogFields())
 		m.WriteRest(c)
 		return
@@ -194,7 +194,7 @@ func RemoveProductUser(c *gin.Context) {
 	}
 
 	if !dao.RemoveProductUser(prdId, userId) {
-		m := msg.UnknownError
+		m := msg.UndefinedError
 		log.WarnWithFields(m.LogFields())
 		m.WriteRest(c)
 		return
@@ -238,7 +238,7 @@ func SetUserIsProductOwner(c *gin.Context) {
 	}
 
 	if !dao.SetProductUserIsOwner(prdId, userId, suoFrm.IsOwner) {
-		m := msg.UnknownError
+		m := msg.UndefinedError
 		log.WarnWithFields(m.LogFields())
 		m.WriteRest(c)
 		return
@@ -272,7 +272,7 @@ func ListProductUsers(c *gin.Context) {
 	_ = lpuFrm.UpdateQuery(query)
 	u, ok := dao.ListProductUsers(prdId, query)
 	if !ok {
-		m := msg.UnknownError
+		m := msg.UndefinedError
 		log.WarnWithFields(m.LogFields())
 		m.WriteRest(c)
 		return

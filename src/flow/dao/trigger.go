@@ -154,7 +154,7 @@ func ListTriggers(query Query) ([]model.Trigger, bool) {
 // PagedListTriggers 查询触发器-分页
 func PagedListTriggers(query Query, page, pageSize int, orderBy ...string) (*pagination.Paginator, bool) {
 	var d = db.Model(&model.Trigger{})
-	ts := make([]model.Trigger, 0)
+	ts := make([]model.Trigger, pageSize)
 
 	for k, v := range query {
 		d = d.Where(k, v)

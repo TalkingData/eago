@@ -148,7 +148,7 @@ func ListProducts(query Query) (*[]model.Product, bool) {
 // PagedListProducts 查询产品线-分页
 func PagedListProducts(query Query, page, pageSize int, orderBy ...string) (*pagination.Paginator, bool) {
 	var d = db.Model(&model.Product{})
-	ps := make([]model.Product, 0)
+	ps := make([]model.Product, pageSize)
 
 	for k, v := range query {
 		d = d.Where(k, v)

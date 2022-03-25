@@ -16,11 +16,11 @@ func ListPageHelper() gin.HandlerFunc {
 		}
 		c.Set("Page", page)
 
-		pageSize, err := strconv.Atoi(c.DefaultQuery("page_size", strconv.Itoa(DEFAULT_PAGE_SIZE)))
+		pageSize, err := strconv.Atoi(c.DefaultQuery("page_size", strconv.Itoa(_DEFAULT_PAGE_SIZE)))
 		if err != nil {
-			pageSize = DEFAULT_PAGE_SIZE
+			pageSize = _DEFAULT_PAGE_SIZE
 		}
-		c.Set("PageSize", utils.IntMin(pageSize, MAX_PAGE_SIZE))
+		c.Set("PageSize", utils.IntMin(pageSize, _MAX_PAGE_SIZE))
 
 		c.Set("Query", c.Query("query"))
 

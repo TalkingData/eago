@@ -66,7 +66,7 @@ func InstantiateFlow(c *gin.Context) {
 	// 调用流程服务，发起流程，返回流程实例ID
 	insId, err := builtin.InstantiateFlow(insFrm.FormId, string(fDataStr), tc["Username"].(string))
 	if err != nil {
-		m := msg.UnknownError
+		m := msg.UndefinedError
 		log.WarnWithFields(m.LogFields())
 		m.WriteRest(c)
 		return
@@ -108,7 +108,7 @@ func NewFlow(c *gin.Context) {
 	)
 	// 新建失败
 	if fl == nil {
-		m := msg.UnknownError
+		m := msg.UndefinedError
 		log.WarnWithFields(m.LogFields())
 		m.WriteRest(c)
 		return
@@ -137,7 +137,7 @@ func RemoveFlow(c *gin.Context) {
 	}
 
 	if !dao.RemoveFlow(fId) {
-		m := msg.UnknownError
+		m := msg.UndefinedError
 		log.WarnWithFields(m.LogFields())
 		m.WriteRest(c)
 		return
@@ -185,7 +185,7 @@ func SetFlow(c *gin.Context) {
 		tc["Username"].(string),
 	)
 	if !ok {
-		m := msg.UnknownError
+		m := msg.UndefinedError
 		log.WarnWithFields(m.LogFields())
 		m.WriteRest(c)
 		return
@@ -210,7 +210,7 @@ func ListFlows(c *gin.Context) {
 		c.GetStringSlice("OrderBy")...,
 	)
 	if !ok {
-		m := msg.UnknownError.SetDetail("An error occurred while model.PagedListFlows.")
+		m := msg.UndefinedError.SetDetail("An error occurred while model.PagedListFlows.")
 		log.WarnWithFields(m.LogFields())
 		m.WriteRest(c)
 		return

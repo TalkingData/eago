@@ -10,7 +10,10 @@ import (
 	"strings"
 )
 
-const RPC_ERROR_SPLITOR = ", "
+const (
+	ERROR_SPLITOR     = ", "
+	RPC_ERROR_SPLITOR = ", "
+)
 
 type Message struct {
 	code int
@@ -75,6 +78,11 @@ func (m *Message) LogFields() (log.Fields, interface{}) {
 // RpcError 转换为Rpc error类型
 func (m *Message) RpcError() error {
 	return fmt.Errorf("%d%s%s", m.code, RPC_ERROR_SPLITOR, m.msg)
+}
+
+// Error 转换为error类型
+func (m *Message) Error() error {
+	return fmt.Errorf("%d%s%s", m.code, ERROR_SPLITOR, m.msg)
 }
 
 // String 转换为string类型

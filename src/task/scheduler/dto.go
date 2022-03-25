@@ -4,7 +4,7 @@ package main
 type Schedule struct {
 	TaskCodename string
 	Expression   string
-	Timeout      int64
+	Timeout      int32
 	Arguments    string
 }
 

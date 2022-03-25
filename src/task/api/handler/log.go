@@ -48,7 +48,7 @@ func ListLogs(c *gin.Context) {
 	logs, ok := dao.ListLogs(dao.Query{"result_id=?": resultId}, tableSuffix)
 	// 查询失败
 	if !ok {
-		m := msg.UnknownError
+		m := msg.UndefinedError
 		log.WarnWithFields(m.LogFields())
 		m.WriteRest(c)
 		return

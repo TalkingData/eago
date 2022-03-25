@@ -137,7 +137,7 @@ func ListRoles(query Query) (*[]model.Role, bool) {
 // PagedListRoles 查询角色-分页
 func PagedListRoles(query Query, page, pageSize int, orderBy ...string) (*pagination.Paginator, bool) {
 	var d = db.Model(&model.Role{})
-	rs := make([]model.Role, 0)
+	rs := make([]model.Role, pageSize)
 
 	for k, v := range query {
 		d = d.Where(k, v)

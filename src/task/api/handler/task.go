@@ -82,7 +82,7 @@ func NewTask(c *gin.Context) {
 	)
 	// 新建失败
 	if t == nil {
-		m := msg.UnknownError
+		m := msg.UndefinedError
 		log.WarnWithFields(m.LogFields())
 		m.WriteRest(c)
 		return
@@ -110,7 +110,7 @@ func RemoveTask(c *gin.Context) {
 
 	// 删除
 	if ok := dao.RemoveTask(taskId); !ok {
-		m := msg.UnknownError
+		m := msg.UndefinedError
 		log.WarnWithFields(m.LogFields())
 		m.WriteRest(c)
 		return
@@ -158,7 +158,7 @@ func SetTask(c *gin.Context) {
 	)
 	// 更新失败
 	if !ok {
-		m := msg.UnknownError
+		m := msg.UndefinedError
 		log.WarnWithFields(m.LogFields())
 		m.WriteRest(c)
 		return
@@ -183,7 +183,7 @@ func ListTasks(c *gin.Context) {
 		c.GetStringSlice("OrderBy")...,
 	)
 	if !ok {
-		m := msg.UnknownError
+		m := msg.UndefinedError
 		log.WarnWithFields(m.LogFields())
 		m.WriteRest(c)
 		return

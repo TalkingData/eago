@@ -39,7 +39,7 @@ func PagedListLogsByPartition(query Query, partition string, page, pageSize int,
 		tbName = GetLogTableNameByPartition(partition)
 		d      = db.Table(tbName)
 	)
-	ls := make([]model.Log, 0)
+	ls := make([]model.Log, pageSize)
 
 	for k, v := range query {
 		d = d.Where(k, v)

@@ -31,7 +31,7 @@ func NewGroup(c *gin.Context) {
 
 	group, err := dao.NewGroup(ngFrm.Name, *ngFrm.Description)
 	if err != nil {
-		m := msg.UnknownError
+		m := msg.UndefinedError
 		log.WarnWithFields(m.LogFields())
 		m.WriteRest(c)
 		return
@@ -60,7 +60,7 @@ func RemoveGroup(c *gin.Context) {
 	}
 
 	if !dao.RemoveGroup(gId) {
-		m := msg.UnknownError
+		m := msg.UndefinedError
 		log.WarnWithFields(m.LogFields())
 		m.WriteRest(c)
 		return
@@ -97,7 +97,7 @@ func SetGroup(c *gin.Context) {
 
 	group, err := dao.SetGroup(gId, sgFrm.Name, *sgFrm.Description)
 	if err != nil {
-		m := msg.UnknownError.SetError(err)
+		m := msg.UndefinedError.SetError(err)
 		log.WarnWithFields(m.LogFields())
 		m.WriteRest(c)
 		return
@@ -122,7 +122,7 @@ func ListGroups(c *gin.Context) {
 		c.GetStringSlice("OrderBy")...,
 	)
 	if !ok {
-		m := msg.UnknownError
+		m := msg.UndefinedError
 		log.WarnWithFields(m.LogFields())
 		m.WriteRest(c)
 		return
@@ -158,7 +158,7 @@ func AddUser2Group(c *gin.Context) {
 	}
 
 	if !dao.AddGroupUser(gId, augFrm.UserId, augFrm.IsOwner) {
-		m := msg.UnknownError
+		m := msg.UndefinedError
 		log.WarnWithFields(m.LogFields())
 		m.WriteRest(c)
 		return
@@ -195,7 +195,7 @@ func RemoveGroupUser(c *gin.Context) {
 	}
 
 	if !dao.RemoveGroupUser(gId, userId) {
-		m := msg.UnknownError
+		m := msg.UndefinedError
 		log.WarnWithFields(m.LogFields())
 		m.WriteRest(c)
 		return
@@ -239,7 +239,7 @@ func SetUserIsGroupOwner(c *gin.Context) {
 	}
 
 	if !dao.SetGroupUserIsOwner(gId, userId, suoFrm.IsOwner) {
-		m := msg.UnknownError
+		m := msg.UndefinedError
 		log.WarnWithFields(m.LogFields())
 		m.WriteRest(c)
 		return
@@ -274,7 +274,7 @@ func ListGroupUsers(c *gin.Context) {
 
 	u, ok := dao.ListGroupUsers(gId, query)
 	if !ok {
-		m := msg.UnknownError
+		m := msg.UndefinedError
 		log.WarnWithFields(m.LogFields())
 		m.WriteRest(c)
 		return

@@ -101,7 +101,7 @@ func ListResults(c *gin.Context) {
 	)
 	// 查询失败
 	if !ok {
-		m := msg.UnknownError
+		m := msg.UndefinedError
 		log.WarnWithFields(m.LogFields())
 		m.WriteRest(c)
 		return

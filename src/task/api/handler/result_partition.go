@@ -33,7 +33,7 @@ func NewResultPartitionsWithCreateTables(c *gin.Context) {
 	rp := dao.NewResultPartitionWithCreateTables(rpForm.Partition)
 	// 新建失败
 	if rp == nil {
-		m := msg.UnknownError
+		m := msg.UndefinedError
 		log.WarnWithFields(m.LogFields())
 		m.WriteRest(c)
 		return
@@ -54,7 +54,7 @@ func ListResultPartitions(c *gin.Context) {
 	// 列出所有分区
 	rp, ok := dao.ListResultPartitions(query)
 	if !ok {
-		m := msg.UnknownError
+		m := msg.UndefinedError
 		log.WarnWithFields(m.LogFields())
 		m.WriteRest(c)
 		return

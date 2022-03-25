@@ -4,7 +4,6 @@ package task;
 option go_package = "proto;task";
 
 service TaskService {
-
   // ListTasks 列出所有任务
   rpc ListTasks(QueryWithPage) returns (PagedTasks) {}
 
@@ -25,9 +24,6 @@ service TaskService {
 
   // AppendTaskLog 追加任务日志
   rpc AppendTaskLog(stream AppendTaskLogReq) returns (stream BoolMsg) {}
-
-  // IsAllowedSrv 判断Srv是否已经在白名单内
-  rpc IsAllowedSrv(IsAllowedSrvQuery) returns (BoolMsg) {}
 }
 
 message QueryWithPage {
@@ -63,7 +59,7 @@ message Schedule {
   int32 id = 1;
   string task_codename = 2;
   string expression = 3;
-  int64 timeout = 4;
+  int32 timeout = 4;
   string arguments = 5;
   bool disabled = 6;
 }
@@ -79,7 +75,7 @@ message Result {
 
 message CallTaskReq {
   string task_codename = 1;
-  int64 timeout = 2;
+  int32 timeout = 2;
   string caller = 3;
   bytes arguments = 4;
 }
@@ -100,9 +96,4 @@ message AppendTaskLogReq {
 
 message BoolMsg {
   bool ok = 1;
-}
-
-message IsAllowedSrvQuery {
-  string srv_addr = 1;
-  string worker_addr = 2;
 }

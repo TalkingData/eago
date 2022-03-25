@@ -181,7 +181,7 @@ func ListDepartments(query Query) (*[]model.Department, bool) {
 // PagedListDepartments 查询部门-分页
 func PagedListDepartments(query Query, page, pageSize int, orderBy ...string) (*pagination.Paginator, bool) {
 	var d = db.Model(&model.Department{})
-	ds := make([]model.Department, 0)
+	ds := make([]model.Department, pageSize)
 
 	for k, v := range query {
 		d = d.Where(k, v)

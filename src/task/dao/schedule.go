@@ -11,7 +11,7 @@ import (
 )
 
 // NewSchedule 新建计划任务
-func NewSchedule(tCodeName, expr, args, description string, timeout int64, disabled bool, createdBy string) *model.Schedule {
+func NewSchedule(tCodeName, expr, args, description string, timeout int, disabled bool, createdBy string) *model.Schedule {
 	var sch = model.Schedule{
 		TaskCodename: tCodeName,
 		Expression:   expr,
@@ -163,7 +163,7 @@ func ListSchedules(query Query) (*[]model.Schedule, bool) {
 // PagedListSchedules 查询计划任务-分页
 func PagedListSchedules(query Query, page, pageSize int, orderBy ...string) (*pagination.Paginator, bool) {
 	var d = db.Model(&model.Schedule{})
-	ss := make([]model.Schedule, 0)
+	ss := make([]model.Schedule, pageSize)
 
 	for k, v := range query {
 		d = d.Where(k, v)

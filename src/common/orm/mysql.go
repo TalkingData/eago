@@ -37,7 +37,7 @@ func InitMysql(address, user, password, dbName string, opts ...DbOption) (d *gor
 	return db
 }
 
-// MysqlDefaultLogMode 设置Mysql默认LogMOde
+// MysqlDefaultLogMode 设置Mysql默认LogMode
 func MysqlDefaultLogMode(level logger.LogLevel) DbOption {
 	return func(d *gorm.DB) {
 		if d == nil {

@@ -10,7 +10,6 @@ import (
 	"eago/task/cli"
 	"eago/task/conf"
 	"eago/task/dao"
-	"eago/task/srv/builtin"
 	"fmt"
 	"github.com/micro/go-micro/v2/registry"
 	"github.com/micro/go-micro/v2/web"
@@ -52,8 +51,8 @@ func main() {
 		web.Context(ctx),
 	)
 
-	// 初始化WorkerCli，此处不需要Handlers，API仅调用ListWorker
-	cli.InitWorkerCli(builtin.RegisterSrvWrapHandler)
+	// 初始化WorkerCli
+	cli.InitWorkerCli()
 
 	e := make(chan error)
 	go func() {

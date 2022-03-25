@@ -6,12 +6,11 @@ import (
 	"eago/common/tracer"
 	"eago/task/conf"
 	"eago/task/worker"
+	worker_proto "eago/task/worker/proto"
 	"encoding/json"
-	"errors"
 	"github.com/coreos/etcd/clientv3"
+	"google.golang.org/grpc"
 	"net"
-	"net/rpc"
-	"net/rpc/jsonrpc"
 	"time"
 )
 
@@ -20,12 +19,11 @@ type AfterConnWrapHandler func(conn net.Conn)
 var WorkerClient *workerClient
 
 type workerClient struct {
-	etcdCli           *clientv3.Client
-	afterConnHandlers []AfterConnWrapHandler
+	etcdCli *clientv3.Client
 }
 
 // InitWorkerCli 启动Worker客户端
-func InitWorkerCli(afterHandlers ...AfterConnWrapHandler) {
+func InitWorkerCli() {
 	etcdCli, err := clientv3.New(clientv3.Config{
 		Endpoints:   conf.Conf.EtcdAddresses,
 		DialTimeout: 5 * time.Second,
@@ -38,8 +36,7 @@ func InitWorkerCli(afterHandlers ...AfterConnWrapHandler) {
 	}
 
 	WorkerClient = &workerClient{
-		etcdCli:           etcdCli,
-		afterConnHandlers: afterHandlers,
+		etcdCli: etcdCli,
 	}
 }
 
@@ -98,37 +95,23 @@ func (wc *workerClient) GetWorkerById(wkId string) *worker.WorkerInfo {
 }
 
 // CallTask 调用任务
-func (wc *workerClient) CallTask(wk *worker.WorkerInfo, codename, uniqueId, arguments, caller string, timeout, startTimestamp int64) error {
-	req := worker.CallTaskReq{
+func (wc *workerClient) CallTask(wk *worker.WorkerInfo, codename, uniqueId, arguments, caller string, timeout int32, startTimestamp int64) error {
+	// 连接Worker并获取worker grpc客户端
+	cli, err := wc.getWorkerCli(wk)
+	if err != nil {
+		return err
+	}
+
+	req := &worker_proto.CallTaskReq{
 		TaskCodename: codename,
 		TaskUniqueId: uniqueId,
-		Arguments:    arguments,
+		Arguments:    []byte(arguments),
 		Timeout:      timeout,
 		Caller:       caller,
 		Timestamp:    startTimestamp,
 	}
-
-	// 连接Worker
-	conn, err := wc.connWorker(wk)
-	if err != nil {
-		return err
-	}
-	defer func() {
-		_ = conn.Close()
-	}()
-
-	// 调用 WorkerService.CallTask
-	wkRsp := worker.WorkerResponse{}
-	err = conn.Call("WorkerService.CallTask", req, &wkRsp)
-	if err != nil {
-		return err
-	}
-
-	if !wkRsp.Ok {
-		log.ErrorWithFields(log.Fields{
-			"ok":      wkRsp.Ok,
-			"message": wkRsp.Message,
-		}, "An error occurred while workerClient.CallTask, Worker returned not ok status.")
+	// 调用 TaskWorkerService.CallTask
+	if _, err = cli.CallTask(context.TODO(), req); err != nil {
 		return err
 	}
 
@@ -137,61 +120,33 @@ func (wc *workerClient) CallTask(wk *worker.WorkerInfo, codename, uniqueId, argu
 
 // KillTask 调用任务
 func (wc *workerClient) KillTask(wk *worker.WorkerInfo, taskUniqueId string) error {
-	req := worker.KillTaskReq{
+	// 连接Worker并获取worker grpc客户端
+	cli, err := wc.getWorkerCli(wk)
+	if err != nil {
+		return err
+	}
+
+	req := &worker_proto.KillTaskReq{
 		TaskUniqueId: taskUniqueId,
 		Timestamp:    time.Now().Unix(),
 	}
-
-	// 连接Worker
-	conn, err := wc.connWorker(wk)
-	if err != nil {
-		return err
-	}
-	defer func() {
-		_ = conn.Close()
-	}()
-
-	// 调用 WorkerService.KillTask
-	wkRsp := worker.WorkerResponse{}
-	err = conn.Call("WorkerService.KillTask", req, &wkRsp)
-	if err != nil {
-		return err
-	}
-
-	if !wkRsp.Ok {
-		log.ErrorWithFields(log.Fields{
-			"ok":      wkRsp.Ok,
-			"message": wkRsp.Message,
-		}, "An error occurred while workerClient.CallTask, Worker returned not ok status.")
+	// 调用 TaskWorkerService.KillTask
+	if _, err = cli.KillTask(context.TODO(), req); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-// connWorker 连接Worker
-func (wc *workerClient) connWorker(wk *worker.WorkerInfo) (*rpc.Client, error) {
-	// 创建与Worker的链接
-	conn, err := net.Dial("tcp", wk.Address)
+// getWorkerCli 连接Worker并获取worker grpc客户端
+func (wc *workerClient) getWorkerCli(wk *worker.WorkerInfo) (worker_proto.TaskWorkerServiceClient, error) {
+	conn, err := grpc.Dial(wk.Address, grpc.WithInsecure())
 	if err != nil {
 		log.ErrorWithFields(log.Fields{
 			"error": err,
-		}, "An error occurred while jsonrpc.Dial.")
-		return nil, err
-	}
-	if conn == nil {
-		err = errors.New("got an nil connection")
-		log.ErrorWithFields(log.Fields{
-			"error": err,
-		}, "An error occurred while jsonrpc.Dial.")
+		}, "An error occurred while grpc.Dial worker address.")
 		return nil, err
 	}
 
-	// 执行所有handler
-	for _, h := range wc.afterConnHandlers {
-		h(conn)
-	}
-
-	// 返回client
-	return jsonrpc.NewClient(conn), nil
+	return worker_proto.NewTaskWorkerServiceClient(conn), nil
 }

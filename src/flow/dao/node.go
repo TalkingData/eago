@@ -192,7 +192,7 @@ func PagedListNodes(query Query, page, pageSize int, orderBy ...string) (*pagina
 			"nodes.updated_at, " +
 			"nodes.updated_by",
 	).Joins("LEFT JOIN nodes AS p ON p.id = nodes.parent_id")
-	ns := make([]model.ListNodes, 0)
+	ns := make([]model.ListNodes, pageSize)
 
 	for k, v := range query {
 		d = d.Where(k, v)

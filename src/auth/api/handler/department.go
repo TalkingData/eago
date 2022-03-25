@@ -32,7 +32,7 @@ func NewDepartment(c *gin.Context) {
 	dept, err := dao.NewDepartment(deptFrm.Name, deptFrm.ParentId)
 	// 新建失败
 	if dept == nil {
-		m := msg.UnknownError.SetError(err)
+		m := msg.UndefinedError.SetError(err)
 		log.WarnWithFields(m.LogFields())
 		m.WriteRest(c)
 		return
@@ -61,7 +61,7 @@ func RemoveDepartment(c *gin.Context) {
 	}
 
 	if !dao.RemoveDepartment(deptId) {
-		m := msg.UnknownError
+		m := msg.UndefinedError
 		log.WarnWithFields(m.LogFields())
 		m.WriteRest(c)
 		return
@@ -98,7 +98,7 @@ func SetDepartment(c *gin.Context) {
 
 	dept, err := dao.SetDepartment(deptId, deptFrm.Name, deptFrm.ParentId)
 	if err != nil {
-		m := msg.UnknownError.SetError(err)
+		m := msg.UndefinedError.SetError(err)
 		log.WarnWithFields(m.LogFields())
 		m.WriteRest(c)
 		return
@@ -123,7 +123,7 @@ func ListDepartments(c *gin.Context) {
 		c.GetStringSlice("OrderBy")...,
 	)
 	if !ok {
-		m := msg.UnknownError
+		m := msg.UndefinedError
 		log.WarnWithFields(m.LogFields())
 		m.WriteRest(c)
 		return
@@ -137,7 +137,7 @@ func ListDepartmentsTree(c *gin.Context) {
 	// 查找根部门
 	dept, ok := dao.GetDepartment(dao.Query{"parent_id": nil})
 	if !ok {
-		m := msg.UnknownError
+		m := msg.UndefinedError
 		log.WarnWithFields(m.LogFields())
 		m.WriteRest(c)
 		return
@@ -151,7 +151,7 @@ func ListDepartmentsTree(c *gin.Context) {
 	// 列出所有部门
 	deptList, ok := dao.ListDepartments(dao.Query{})
 	if !ok {
-		m := msg.UnknownError
+		m := msg.UndefinedError
 		log.WarnWithFields(m.LogFields())
 		m.WriteRest(c)
 		return
@@ -177,7 +177,7 @@ func ListDepartmentTree(c *gin.Context) {
 	// 查找根部门
 	dept, ok := dao.GetDepartment(dao.Query{"id=?": deptId})
 	if !ok {
-		m := msg.UnknownError
+		m := msg.UndefinedError
 		log.WarnWithFields(m.LogFields())
 		m.WriteRest(c)
 		return
@@ -191,7 +191,7 @@ func ListDepartmentTree(c *gin.Context) {
 	// 列出所有部门
 	deptList, ok := dao.ListDepartments(dao.Query{})
 	if !ok {
-		m := msg.UnknownError
+		m := msg.UndefinedError
 		log.WarnWithFields(m.LogFields())
 		m.WriteRest(c)
 		return
@@ -232,7 +232,7 @@ func AddUser2Department(c *gin.Context) {
 	}
 
 	if !dao.AddDepartmentUser(audFrm.UserId, deptId, audFrm.IsOwner) {
-		m := msg.UnknownError
+		m := msg.UndefinedError
 		log.WarnWithFields(m.LogFields())
 		m.WriteRest(c)
 		return
@@ -269,7 +269,7 @@ func RemoveDepartmentUser(c *gin.Context) {
 	}
 
 	if !dao.RemoveDepartmentUser(userId, deptId) {
-		m := msg.UnknownError
+		m := msg.UndefinedError
 		log.WarnWithFields(m.LogFields())
 		m.WriteRest(c)
 		return
@@ -313,7 +313,7 @@ func SetUserIsDepartmentOwner(c *gin.Context) {
 	}
 
 	if !dao.SetDepartmentUserIsOwner(deptId, userId, suoFrm.IsOwner) {
-		m := msg.UnknownError
+		m := msg.UndefinedError
 		log.WarnWithFields(m.LogFields())
 		m.WriteRest(c)
 		return
@@ -348,7 +348,7 @@ func ListDepartmentUsers(c *gin.Context) {
 
 	u, ok := dao.ListDepartmentUsers(deptId, query)
 	if !ok {
-		m := msg.UnknownError
+		m := msg.UndefinedError
 		log.WarnWithFields(m.LogFields())
 		m.WriteRest(c)
 		return

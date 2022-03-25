@@ -11,7 +11,7 @@ var (
 	SerializeFailed  = m.NewMessage(http.StatusBadRequest, "无法读取提交的数据，请确保发送正确的数据格式")
 	ValidateFailed   = m.NewMessage(http.StatusBadRequest, "验证失败，提交的内容不合法")
 	NotFoundFailed   = m.NewMessage(http.StatusNotFound, "操作失败，找不到指定对象")
-	UnknownError     = m.NewMessage(http.StatusInternalServerError, "操作失败，请先尝试重试，若无效请联系管理员")
+	UndefinedError   = m.NewMessage(http.StatusInternalServerError, "操作失败，请先尝试重试，若无效请联系管理员")
 
 	// Login 1000xx
 	LoginInactiveCrowdUserFailed = m.NewMessage(100001, "登录失败，当前用户在Crowd中是禁用状态")

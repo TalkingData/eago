@@ -17,7 +17,7 @@ func (as *AuthService) GetDepartmentById(ctx context.Context, req *auth.IdQuery,
 	log.Info("Finding department.")
 	dept, ok := dao.GetDepartment(dao.Query{"id=?": req.Id})
 	if !ok {
-		m := msg.UnknownError.SetDetail("An error occurred while dao.GetDepartment.")
+		m := msg.UndefinedError.SetDetail("An error occurred while dao.GetDepartment.")
 		log.ErrorWithFields(m.LogFields())
 		return m.RpcError()
 	}
@@ -45,7 +45,7 @@ func (as *AuthService) ListDepartmentUsers(ctx context.Context, in *auth.IdQuery
 	log.Info("Finding department users.")
 	us, ok := dao.ListDepartmentUsers(int(in.Id), dao.Query{})
 	if !ok {
-		m := msg.UnknownError.SetDetail("An error occurred while dao.ListDepartmentUsers.")
+		m := msg.UndefinedError.SetDetail("An error occurred while dao.ListDepartmentUsers.")
 		log.ErrorWithFields(m.LogFields())
 		return m.RpcError()
 	}
@@ -75,7 +75,7 @@ func (as *AuthService) ListParentDepartmentUsers(ctx context.Context, in *auth.I
 	log.Info("Finding department.")
 	dept, ok := dao.GetDepartment(dao.Query{"id=?": in.Id})
 	if !ok {
-		m := msg.UnknownError.SetDetail("An error occurred while dao.GetDepartment.")
+		m := msg.UndefinedError.SetDetail("An error occurred while dao.GetDepartment.")
 		log.ErrorWithFields(m.LogFields())
 		return m.RpcError()
 	}
@@ -97,7 +97,7 @@ func (as *AuthService) ListParentDepartmentUsers(ctx context.Context, in *auth.I
 	log.Info("Finding department users.")
 	us, ok := dao.ListDepartmentUsers(*dept.ParentId, dao.Query{})
 	if !ok {
-		m := msg.UnknownError.SetDetail("An error occurred while dao.ListDepartmentUsers.")
+		m := msg.UndefinedError.SetDetail("An error occurred while dao.ListDepartmentUsers.")
 		log.ErrorWithFields(m.LogFields())
 		return m.RpcError()
 	}

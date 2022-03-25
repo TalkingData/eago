@@ -5,7 +5,6 @@ gin_mode = release
 micro_register_ttl = 10
 micro_register_interval = 3
 scheduler_register_ttl = 10
-allowed_srv_ttl_secs = 30
 
 [log]
 level = debug

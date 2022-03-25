@@ -3,11 +3,11 @@ package main
 import (
 	"context"
 	"eago/auth/conf"
+	"eago/auth/conf/msg"
 	"eago/auth/dao"
 	"eago/auth/model"
 	"eago/auth/srv/proto"
 	"eago/common/log"
-	"eago/task/conf/msg"
 )
 
 // GetUserById RPC服务::按Id查找用户
@@ -18,7 +18,7 @@ func (as *AuthService) GetUserById(ctx context.Context, req *auth.IdQuery, rsp *
 	log.Info("Finding user.")
 	user, ok := dao.GetUser(dao.Query{"id=?": req.Id})
 	if !ok {
-		m := msg.UnknownError.SetDetail("An error occurred while dao.GetUser.")
+		m := msg.UndefinedError.SetDetail("An error occurred while dao.GetUser.")
 		log.ErrorWithFields(m.LogFields())
 		return m.RpcError()
 	}
@@ -50,7 +50,7 @@ func (as *AuthService) ListUsers(ctx context.Context, req *auth.QueryWithPage, r
 
 	pagedData, ok := dao.PagedListUsers(query, int(req.Page), int(req.PageSize))
 	if !ok {
-		m := msg.UnknownError.SetDetail("An error occurred while dao.PagedListUsers.")
+		m := msg.UndefinedError.SetDetail("An error occurred while dao.PagedListUsers.")
 		log.ErrorWithFields(m.LogFields())
 		return m.RpcError()
 	}
@@ -80,7 +80,7 @@ func (as *AuthService) GetUserDepartment(ctx context.Context, in *auth.IdQuery, 
 
 	dept, ok := dao.GetUserDepartment(int(in.Id))
 	if !ok {
-		m := msg.UnknownError.SetDetail("An error occurred while dao.GetUserDepartment.")
+		m := msg.UndefinedError.SetDetail("An error occurred while dao.GetUserDepartment.")
 		log.ErrorWithFields(m.LogFields())
 		return m.RpcError()
 	}
@@ -109,7 +109,7 @@ func (as *AuthService) ListUserDepartmentUsers(ctx context.Context, in *auth.IdQ
 	log.Info("Finding user department.")
 	dept, ok := dao.GetUserDepartment(int(in.Id))
 	if !ok {
-		m := msg.UnknownError.SetDetail("An error occurred while dao.GetUserDepartment.")
+		m := msg.UndefinedError.SetDetail("An error occurred while dao.GetUserDepartment.")
 		log.ErrorWithFields(m.LogFields())
 		return m.RpcError()
 	}
@@ -121,7 +121,7 @@ func (as *AuthService) ListUserDepartmentUsers(ctx context.Context, in *auth.IdQ
 	log.Info("Finding department users.")
 	mem, ok := dao.ListDepartmentUsers(dept.Id, dao.Query{})
 	if !ok {
-		m := msg.UnknownError.SetDetail("An error occurred while dao.ListDepartmentUsers.")
+		m := msg.UndefinedError.SetDetail("An error occurred while dao.ListDepartmentUsers.")
 		log.ErrorWithFields(m.LogFields())
 		return m.RpcError()
 	}
@@ -145,7 +145,7 @@ func (as *AuthService) MakeUserHandover(ctx context.Context, in *auth.HandoverRe
 	// 获得交接用户
 	user, ok := dao.GetUser(dao.Query{"id=?": in.UserId})
 	if !ok {
-		m := msg.UnknownError.SetDetail("An error occurred while dao.GetUser.")
+		m := msg.UndefinedError.SetDetail("An error occurred while dao.GetUser.")
 		log.ErrorWithFields(log.Fields{
 			"user_id": in.UserId,
 		}, m.String())
@@ -153,7 +153,7 @@ func (as *AuthService) MakeUserHandover(ctx context.Context, in *auth.HandoverRe
 	}
 	// 找不到用户
 	if user == nil || user.Id < 1 {
-		m := msg.UnknownError.SetDetail("An nil object is returned after calling dao.GetUser.")
+		m := msg.UndefinedError.SetDetail("An nil object is returned after calling dao.GetUser.")
 		log.ErrorWithFields(log.Fields{
 			"user_id": in.UserId,
 		}, m.String())
@@ -163,7 +163,7 @@ func (as *AuthService) MakeUserHandover(ctx context.Context, in *auth.HandoverRe
 	// 获得交接目标用户
 	tgtUser, ok := dao.GetUser(dao.Query{"id=?": in.TargetUserId})
 	if !ok {
-		m := msg.UnknownError.SetDetail("An error occurred while dao.GetUser for target user.")
+		m := msg.UndefinedError.SetDetail("An error occurred while dao.GetUser for target user.")
 		log.ErrorWithFields(log.Fields{
 			"target_user_id": in.TargetUserId,
 		}, m.String())
@@ -171,7 +171,7 @@ func (as *AuthService) MakeUserHandover(ctx context.Context, in *auth.HandoverRe
 	}
 	// 找不到目标用户
 	if tgtUser == nil || tgtUser.Id < 1 {
-		m := msg.UnknownError.SetDetail("An nil object is returned after calling dao.GetUser for target user.")
+		m := msg.UndefinedError.SetDetail("An nil object is returned after calling dao.GetUser for target user.")
 		log.ErrorWithFields(log.Fields{
 			"target_user_id": in.TargetUserId,
 		}, m.String())
@@ -180,7 +180,7 @@ func (as *AuthService) MakeUserHandover(ctx context.Context, in *auth.HandoverRe
 
 	// 执行交接
 	if err := dao.MakeUserHandover(int(in.UserId), int(in.TargetUserId)); err != nil {
-		m := msg.UnknownError.SetError(err, "An error occurred while dao.MakeUserHandover.")
+		m := msg.UndefinedError.SetError(err, "An error occurred while dao.MakeUserHandover.")
 		log.ErrorWithFields(log.Fields{
 			"user_id":        in.UserId,
 			"target_user_id": in.TargetUserId,

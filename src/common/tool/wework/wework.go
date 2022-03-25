@@ -21,17 +21,33 @@ const (
 	WEWORK_GEN_TOKEN_BASEURL            = "https://qyapi.weixin.qq.com/cgi-bin/gettoken?corpid=%s&corpsecret=%s"
 )
 
-type Wework struct {
-	AgentId    string
-	CorpId     string
-	CorpSecret string
+type Wework interface {
+	ListDepartments() ([]*WeworkDepartment, error)
+	ListUsersWithDepartment() ([]*WeworkUsersDepartment, error)
+	SendWework(contentType, subject string, content interface{}, to []string) error
+}
 
+// wework struct
+type wework struct {
 	token           string
 	tokenExpireTime time.Time
+
+	agentId    string
+	corpId     string
+	corpSecret string
+}
+
+// NewWework
+func NewWework(agentId, corpId, corpSecret string) Wework {
+	return &wework{
+		agentId:    agentId,
+		corpId:     corpId,
+		corpSecret: corpSecret,
+	}
 }
 
 // SendWework 发送微信消息
-func (w *Wework) SendWework(contentType, subject string, content interface{}, to []string) error {
+func (w *wework) SendWework(contentType, subject string, content interface{}, to []string) error {
 	log.InfoWithFields(log.Fields{
 		"content_type": contentType,
 		"subject":      subject,
@@ -41,7 +57,7 @@ func (w *Wework) SendWework(contentType, subject string, content interface{}, to
 	message := make(map[string]interface{})
 	message["touser"] = strings.Join(to, "|")
 	message["msgtype"] = contentType
-	message["agentid"] = w.AgentId
+	message["agentid"] = w.agentId
 
 	// 区分不同的内容类型进行处理
 	switch contentType {
@@ -118,7 +134,7 @@ func (w *Wework) SendWework(contentType, subject string, content interface{}, to
 }
 
 // ListUsersWithDepartment 列出用户和其部门信息
-func (w *Wework) ListUsersWithDepartment() ([]*WeworkUsersDepartment, error) {
+func (w *wework) ListUsersWithDepartment() ([]*WeworkUsersDepartment, error) {
 	wud := make([]*WeworkUsersDepartment, 0)
 
 	// 超时时间：5秒
@@ -180,7 +196,7 @@ func (w *Wework) ListUsersWithDepartment() ([]*WeworkUsersDepartment, error) {
 }
 
 // ListDepartments 列出部门信息
-func (w *Wework) ListDepartments() ([]*WeworkDepartment, error) {
+func (w *wework) ListDepartments() ([]*WeworkDepartment, error) {
 	wd := make([]*WeworkDepartment, 0)
 
 	// 超时时间：5秒
@@ -237,7 +253,7 @@ func (w *Wework) ListDepartments() ([]*WeworkDepartment, error) {
 }
 
 // validateToken 验证Token是否有效
-func (w *Wework) validateToken() {
+func (w *wework) validateToken() {
 	// 如果token不为空，并且当前时间小于tokenExpireTime，则不用重新获取token
 	if w.token != "" && time.Now().Before(w.tokenExpireTime) {
 		return
@@ -251,11 +267,11 @@ func (w *Wework) validateToken() {
 }
 
 // getToken 登录获得token
-func (w *Wework) getToken() error {
+func (w *wework) getToken() error {
 	// 超时时间：5秒
 	client := &http.Client{Timeout: HTTP_TIMEOUT_SECONDS * time.Second}
 
-	url := fmt.Sprintf(WEWORK_GEN_TOKEN_BASEURL, w.CorpId, w.CorpSecret)
+	url := fmt.Sprintf(WEWORK_GEN_TOKEN_BASEURL, w.corpId, w.corpSecret)
 
 	resp, err := client.Get(url)
 	if err != nil {

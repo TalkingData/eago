@@ -6,11 +6,16 @@ import (
 	"net/http"
 )
 
+const (
+	_SUCCESS_CODE   = 0
+	_SUCCESS_MESAGE = "Success"
+)
+
 // WriteSuccessPayload 写带有数据的成功消息到RestfulApi
 func WriteSuccessPayload(c *gin.Context, key string, pld interface{}) {
 	rsp := make(gin.H)
-	rsp["code"] = 0
-	rsp["message"] = "Success"
+	rsp["code"] = _SUCCESS_CODE
+	rsp["message"] = _SUCCESS_MESAGE
 	defer c.JSON(http.StatusOK, rsp)
 
 	if pld == nil {
@@ -33,8 +38,8 @@ func WriteSuccessPayload(c *gin.Context, key string, pld interface{}) {
 // WriteSuccess 写成功消息到RestfulApi
 func WriteSuccess(c *gin.Context) {
 	rsp := make(gin.H)
-	rsp["code"] = 0
-	rsp["message"] = "Success"
+	rsp["code"] = _SUCCESS_CODE
+	rsp["message"] = _SUCCESS_MESAGE
 
 	c.JSON(http.StatusOK, rsp)
 }

@@ -8,14 +8,15 @@ import (
 	"errors"
 	"fmt"
 	"gorm.io/gorm"
+	"strings"
 	"time"
 )
 
 // NewUser 新建用户
 func NewUser(username, email string, login bool) *model.User {
 	u := model.User{
-		Username: username,
-		Email:    email,
+		Username: strings.ToLower(username),
+		Email:    strings.ToLower(email),
 	}
 
 	// 判断时候设置最近登录时间
@@ -91,7 +92,7 @@ func SetUser(id int, email, phone string) (*model.User, bool) {
 	res := db.Model(&model.User{}).
 		Where("id=?", id).
 		Updates(map[string]interface{}{
-			"email": email,
+			"email": strings.ToLower(email),
 			"phone": phone,
 		}).
 		First(&u)
@@ -183,7 +184,7 @@ func ListUsers(query Query) (*[]model.User, bool) {
 // PagedListUsers 查询用户-分页
 func PagedListUsers(query Query, page, pageSize int, orderBy ...string) (*pagination.Paginator, bool) {
 	var d = db.Model(&model.User{})
-	us := make([]model.User, 0)
+	us := make([]model.User, pageSize)
 
 	for k, v := range query {
 		d = d.Where(k, v)

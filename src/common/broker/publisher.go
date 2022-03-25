@@ -9,28 +9,27 @@ import (
 )
 
 type Publisher interface {
+	// Publish 发布消息
 	Publish(ctx context.Context, model, event string, body map[string]interface{}) error
+	// SpecificPublish 以指定服务发布消息
+	SpecificPublish(ctx context.Context, service, modelName, event string, body map[string]interface{}) error
 }
 
 type publisher struct {
-	Modular     string
-	topicPrefix string
-
-	brk broker.Broker
+	Service string
+	brk     broker.Broker
 }
 
 // NewPublisher 创建Publisher
-func NewPublisher(modular string) Publisher {
+func NewPublisher(service string) Publisher {
 	if brk == nil {
 		panic("You should create a broker by NewBroker first.")
 	}
 
-	p := &publisher{
-		Modular: modular,
+	return &publisher{
+		Service: service,
 		brk:     brk,
 	}
-	p.topicPrefix = fmt.Sprintf("%s.topic", p.Modular)
-	return p
 }
 
 // Publish 发布消息
@@ -38,11 +37,24 @@ func (p *publisher) Publish(ctx context.Context, modelName, event string, body m
 	log.Info("publisher.Publish called.")
 	defer log.Info("publisher.Publish end.")
 
-	topic := fmt.Sprintf("%s.%s.%s", p.topicPrefix, modelName, event)
+	return p.pub(ctx, p.Service, modelName, event, body)
+}
+
+// SpecificPublish 以指定服务发布消息
+func (p *publisher) SpecificPublish(ctx context.Context, service, modelName, event string, body map[string]interface{}) error {
+	log.Info("publisher.SpecificPublish called.")
+	defer log.Info("publisher.SpecificPublish end.")
+
+	return p.pub(ctx, service, modelName, event, body)
+}
+
+// pub 具体发布消息的操作方法
+func (p *publisher) pub(ctx context.Context, service, modelName, event string, body map[string]interface{}) error {
+	topic := fmt.Sprintf("%s.%s.%s.%s", service, _TOPIC_SEPARATOR, modelName, event)
 
 	msg := Message{
 		Uuid:  p.genMessageUuid(topic),
-		From:  fmt.Sprintf("%s.%s", p.topicPrefix, modelName),
+		From:  fmt.Sprintf("%s.%s.%s", service, _TOPIC_SEPARATOR, modelName),
 		Event: event,
 		Body:  body,
 	}

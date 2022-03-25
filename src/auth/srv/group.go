@@ -17,7 +17,7 @@ func (as *AuthService) GetGroupById(ctx context.Context, req *auth.IdQuery, rsp 
 	log.Info("Finding user.")
 	g, ok := dao.GetGroup(dao.Query{"id=?": req.Id})
 	if !ok {
-		m := msg.UnknownError.SetDetail("An error occurred while dao.GetGroup.")
+		m := msg.UndefinedError.SetDetail("An error occurred while dao.GetGroup.")
 		log.ErrorWithFields(m.LogFields())
 		return m.RpcError()
 	}
@@ -47,7 +47,7 @@ func (as *AuthService) ListGroups(ctx context.Context, req *auth.QueryWithPage, 
 	log.Info("Finding groups.")
 	pagedData, ok := dao.PagedListGroups(query, int(req.Page), int(req.PageSize))
 	if !ok {
-		m := msg.UnknownError.SetDetail("An error occurred while dao.PagedListGroups.")
+		m := msg.UndefinedError.SetDetail("An error occurred while dao.PagedListGroups.")
 		log.ErrorWithFields(m.LogFields())
 		return m.RpcError()
 	}
@@ -77,7 +77,7 @@ func (as *AuthService) ListGroupUsers(ctx context.Context, in *auth.IdQuery, out
 	log.Info("Finding group users.")
 	us, ok := dao.ListGroupUsers(int(in.Id), dao.Query{})
 	if !ok {
-		m := msg.UnknownError.SetDetail("An error occurred while dao.ListGroupUsers.")
+		m := msg.UndefinedError.SetDetail("An error occurred while dao.ListGroupUsers.")
 		log.ErrorWithFields(m.LogFields())
 		return m.RpcError()
 	}

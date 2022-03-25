@@ -12,10 +12,11 @@ import (
 )
 
 const (
-	MAX_LOG_SIZE       = 10
-	MAX_LOG_AGE        = 3
+	MAX_LOG_SIZE       = 3
+	MAX_LOG_AGE        = 5
 	TIMESTAMP_FORMAT   = "2006-01-02 15:04:05"
 	LOG_DATA_SEPARATOR = "; "
+	SRC_BASE_PATH      = "/td-eago/src/"
 )
 
 var (
@@ -163,13 +164,20 @@ func PanicWithFields(f Fields, args ...interface{}) {
 	entry.Panic(args...)
 }
 
+// GetRusLogger
+func GetRusLogger() *logrus.Logger {
+	return logger
+}
+
 func fileInfo(skip int) string {
 	_, file, line, ok := runtime.Caller(skip)
 	if !ok {
-		file = "<???>"
+		file = "<Unknown>"
 		line = -1
+	} else {
+		file = file[strings.Index(file, SRC_BASE_PATH)+len(SRC_BASE_PATH):]
 	}
-	return fmt.Sprintf("%s:%d", file, line)
+	return fmt.Sprintf("./%s:%d", file, line)
 }
 
 // String 将logger.Fields转换为字符串形式

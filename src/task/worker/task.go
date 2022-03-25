@@ -12,7 +12,7 @@ type TaskFunc func(ctx context.Context, param *Param) error
 type Param struct {
 	TaskUniqueId    string
 	Caller          string
-	Timeout         int64
+	Timeout         int32
 	Arguments       string
 	LocalStartTime  time.Time
 	RemoteStartTime time.Time

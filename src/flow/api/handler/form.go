@@ -33,7 +33,7 @@ func NewForm(c *gin.Context) {
 	tc := c.GetStringMap("TokenContent")
 	f := dao.NewForm(frm.Name, *frm.Disabled, *frm.Description, *frm.Body, tc["Username"].(string))
 	if f == nil {
-		m := msg.UnknownError
+		m := msg.UndefinedError
 		log.WarnWithFields(m.LogFields())
 		m.WriteRest(c)
 		return
@@ -71,7 +71,7 @@ func SetForm(c *gin.Context) {
 	tc := c.GetStringMap("TokenContent")
 	f, ok := dao.SetForm(frmId, setFrm.Name, *setFrm.Disabled, *setFrm.Description, tc["Username"].(string))
 	if !ok {
-		m := msg.UnknownError
+		m := msg.UndefinedError
 		log.WarnWithFields(m.LogFields())
 		m.WriteRest(c)
 		return
@@ -101,7 +101,7 @@ func GetForm(c *gin.Context) {
 
 	f, ok := dao.GetForm(dao.Query{"id=?": frmId})
 	if !ok {
-		m := msg.UnknownError
+		m := msg.UndefinedError
 		log.WarnWithFields(m.LogFields())
 		m.WriteRest(c)
 		return
@@ -126,7 +126,7 @@ func ListForms(c *gin.Context) {
 		c.GetStringSlice("OrderBy")...,
 	)
 	if !ok {
-		m := msg.UnknownError
+		m := msg.UndefinedError
 		log.WarnWithFields(m.LogFields())
 		m.WriteRest(c)
 		return
@@ -156,7 +156,7 @@ func ListFormFlows(c *gin.Context) {
 
 	fl, ok := dao.ListFlows(dao.Query{"form_id=?": frmId})
 	if !ok {
-		m := msg.UnknownError
+		m := msg.UndefinedError
 		log.WarnWithFields(m.LogFields())
 		m.WriteRest(c)
 		return

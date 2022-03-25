@@ -141,7 +141,7 @@ func ListGroups(query Query) (*[]model.Group, bool) {
 // PagedListGroups 查询组-分页
 func PagedListGroups(query Query, page, pageSize int, orderBy ...string) (*pagination.Paginator, bool) {
 	var d = db.Model(&model.Group{})
-	gs := make([]model.Group, 0)
+	gs := make([]model.Group, pageSize)
 
 	for k, v := range query {
 		d = d.Where(k, v)

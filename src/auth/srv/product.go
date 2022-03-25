@@ -18,7 +18,7 @@ func (as *AuthService) GetProductById(ctx context.Context, req *auth.IdQuery, rs
 	log.Info("Finding product.")
 	prod, ok := dao.GetProduct(dao.Query{"id=?": req.Id})
 	if !ok {
-		m := msg.UnknownError.SetDetail("An error occurred while dao.GetProduct.")
+		m := msg.UndefinedError.SetDetail("An error occurred while dao.GetProduct.")
 		log.ErrorWithFields(m.LogFields())
 		return m.RpcError()
 	}
@@ -50,7 +50,7 @@ func (as *AuthService) ListProducts(ctx context.Context, req *auth.QueryWithPage
 	log.Info("Finding products.")
 	pagedData, ok := dao.PagedListProducts(query, int(req.Page), int(req.PageSize))
 	if !ok {
-		m := msg.UnknownError.SetDetail("An error occurred while dao.PagedListProducts.")
+		m := msg.UndefinedError.SetDetail("An error occurred while dao.PagedListProducts.")
 		log.ErrorWithFields(m.LogFields())
 		return m.RpcError()
 	}
@@ -82,7 +82,7 @@ func (as *AuthService) ListProductUsers(ctx context.Context, in *auth.IdQuery, o
 	log.Info("Finding product users.")
 	us, ok := dao.ListProductUsers(int(in.Id), dao.Query{})
 	if !ok {
-		m := msg.UnknownError.SetDetail("An error occurred while dao.ListProductUsers.")
+		m := msg.UndefinedError.SetDetail("An error occurred while dao.ListProductUsers.")
 		log.ErrorWithFields(m.LogFields())
 		return m.RpcError()
 	}

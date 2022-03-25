@@ -25,7 +25,7 @@ func (ts *TaskService) GetResult(ctx context.Context, in *task.TaskUniqueId, out
 	// 取数据库中任务结果记录
 	obj, ok := dao.GetResult(p, id)
 	if !ok {
-		m := msg.UnknownError.SetDetail("An error occurred while dao.GetResult.")
+		m := msg.UndefinedError.SetDetail("An error occurred while dao.GetResult.")
 		log.ErrorWithFields(log.Fields{
 			"partition": p,
 			"result_id": id,

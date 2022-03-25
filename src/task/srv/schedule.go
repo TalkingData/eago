@@ -20,7 +20,7 @@ func (ts *TaskService) ListSchedules(ctx context.Context, in *task.QueryWithPage
 	}
 	pagedData, ok := dao.PagedListSchedules(query, int(in.Page), int(in.PageSize))
 	if !ok {
-		m := msg.UnknownError.SetDetail("An error occurred while dao.PagedListSchedules.")
+		m := msg.UndefinedError.SetDetail("An error occurred while dao.PagedListSchedules.")
 		log.ErrorWithFields(m.LogFields())
 		return m.RpcError()
 	}
@@ -31,7 +31,7 @@ func (ts *TaskService) ListSchedules(ctx context.Context, in *task.QueryWithPage
 			Id:           int32(s.Id),
 			TaskCodename: s.TaskCodename,
 			Expression:   s.Expression,
-			Timeout:      *s.Timeout,
+			Timeout:      int32(*s.Timeout),
 			Arguments:    s.Arguments,
 			Disabled:     *s.Disabled,
 		})

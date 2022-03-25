@@ -12,37 +12,41 @@ import (
 type HandleFunc func(ctx context.Context, m *Message) error
 
 type Subscriber interface {
-	RegAndSub(topic string, fn HandleFunc)
+	// Subscribe 订阅
+	Subscribe(service, model, event string, fn HandleFunc)
 }
 
+// subscriber struct
 type subscriber struct {
-	Modular  string
+	Service  string
 	consumer string
 
 	brk broker.Broker
 }
 
 // NewSubscriber 创建Subscriber
-func NewSubscriber(modular string) Subscriber {
+func NewSubscriber(service string) Subscriber {
 	if brk == nil {
 		panic("You should create a broker by NewBroker first.")
 	}
 
-	s := &subscriber{
-		Modular: modular,
-		brk:     brk,
+	return &subscriber{
+		Service:  service,
+		consumer: fmt.Sprintf("%s.consumers", service),
+		brk:      brk,
 	}
-	s.consumer = fmt.Sprintf("%s.consumers", s.Modular)
-	return s
 }
 
-func (s *subscriber) RegAndSub(topic string, fn HandleFunc) {
-	log.Info("subscriber.RegAndSub called.")
-	defer log.Info("subscriber.RegAndSub end.")
+// Subscribe 订阅
+func (s *subscriber) Subscribe(service, model, event string, fn HandleFunc) {
+	log.Info("subscriber.Subscribe called.")
+	defer log.Info("subscriber.Subscribe end.")
+
+	fullTopic := fmt.Sprintf("%s.%s.%s.%s", service, _TOPIC_SEPARATOR, model, event)
 
 	foo := func(e broker.Event) error {
 		log.InfoWithFields(log.Fields{
-			"topic":    topic,
+			"topic":    fullTopic,
 			"consumer": s.consumer,
 		}, "Got message from broker.")
 
@@ -51,8 +55,9 @@ func (s *subscriber) RegAndSub(topic string, fn HandleFunc) {
 		// 序列化map到Message结构体
 		if err := mapstructure.Decode(e.Message().Header, &msg); err != nil {
 			log.ErrorWithFields(log.Fields{
-				"topic":    topic,
+				"topic":    fullTopic,
 				"consumer": s.consumer,
+				"error":    err,
 			}, "Error in mapstructure.Decode e.Message().Header, Ignore this message.")
 		}
 
@@ -60,7 +65,7 @@ func (s *subscriber) RegAndSub(topic string, fn HandleFunc) {
 		err := json.Unmarshal(e.Message().Body, &bd)
 		if err != nil {
 			log.ErrorWithFields(log.Fields{
-				"topic":         topic,
+				"topic":         fullTopic,
 				"consumer":      s.consumer,
 				"message_uuid":  msg.Uuid,
 				"message_from":  msg.From,
@@ -75,7 +80,7 @@ func (s *subscriber) RegAndSub(topic string, fn HandleFunc) {
 		err = fn(context.Background(), msg)
 		if err != nil {
 			log.ErrorWithFields(log.Fields{
-				"topic":    topic,
+				"topic":    fullTopic,
 				"consumer": s.consumer,
 				"error":    err,
 			}, "Error in HandleFunc.")
@@ -85,10 +90,9 @@ func (s *subscriber) RegAndSub(topic string, fn HandleFunc) {
 		return nil
 	}
 
-	_, err := s.brk.Subscribe(topic, foo, broker.Queue(s.consumer))
-	if err != nil {
+	if _, err := s.brk.Subscribe(fullTopic, foo, broker.Queue(s.consumer)); err != nil {
 		log.ErrorWithFields(log.Fields{
-			"topic":    topic,
+			"topic":    fullTopic,
 			"consumer": s.consumer,
 			"error":    err,
 		}, "Error in s.opts.Broker.Subscribe.")

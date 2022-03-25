@@ -13,8 +13,8 @@ import (
 )
 
 // CallTask 调用任务
-func CallTask(taskCodename, arguments, caller string, timeout int64) (taskUniqueId string, err error) {
-	taskResult := dao.NewResult(taskCodename, caller, arguments, timeout, worker.TASK_INITIALIZATION_STATUS)
+func CallTask(taskCodename, arguments, caller string, timeout int32) (taskUniqueId string, err error) {
+	taskResult := dao.NewResult(taskCodename, caller, arguments, int(timeout), worker.TASK_INITIALIZATION_STATUS)
 	if taskResult == nil {
 		err = fmt.Errorf("result object not found")
 		log.ErrorWithFields(log.Fields{

@@ -42,7 +42,7 @@ func NewSchedule(c *gin.Context) {
 	)
 	// 新建失败
 	if s == nil {
-		m := msg.UnknownError
+		m := msg.UndefinedError
 		log.WarnWithFields(m.LogFields())
 		m.WriteRest(c)
 		return
@@ -69,7 +69,7 @@ func RemoveSchedule(c *gin.Context) {
 	}
 
 	if ok := dao.RemoveSchedule(schId); !ok {
-		m := msg.UnknownError
+		m := msg.UndefinedError
 		log.WarnWithFields(m.LogFields())
 		m.WriteRest(c)
 		return
@@ -116,7 +116,7 @@ func SetSchedule(c *gin.Context) {
 		tc["Username"].(string),
 	)
 	if !ok {
-		m := msg.UnknownError
+		m := msg.UndefinedError
 		log.WarnWithFields(m.LogFields())
 		m.WriteRest(c)
 		return
@@ -141,7 +141,7 @@ func ListSchedules(c *gin.Context) {
 		c.GetStringSlice("OrderBy")...,
 	)
 	if !ok {
-		m := msg.UnknownError
+		m := msg.UndefinedError
 		log.WarnWithFields(m.LogFields())
 		m.WriteRest(c)
 		return

@@ -13,7 +13,6 @@ const (
 	_DEFAULT_MICRO_REGISTER_TTL      = 10
 	_DEFAULT_MICRO_REGISTER_INTERVAL = 3
 	_DEFAULT_SCHEDULER_REGISTER_TTL  = 10
-	_DEFAULT_ALLOWED_SRV_TTL_IN_SECS = 30
 
 	_DEFAULT_LOG_LEVEL = "debug"
 	_DEFAULT_LOG_PATH  = "./logs"
@@ -48,7 +47,6 @@ type conf struct {
 	MicroRegisterTtl      time.Duration
 	MicroRegisterInterval time.Duration
 	SchedulerRegisterTtl  int64
-	AllowedSrvTtlSecs     time.Duration
 
 	LogLevel string
 	LogPath  string
@@ -90,7 +88,6 @@ func newLocalConf() *conf {
 		MicroRegisterTtl:      time.Duration(cfg.MustInt("main", "micro_register_ttl", _DEFAULT_MICRO_REGISTER_TTL)) * time.Second,
 		MicroRegisterInterval: time.Duration(cfg.MustInt("main", "micro_register_interval", _DEFAULT_MICRO_REGISTER_INTERVAL)) * time.Second,
 		SchedulerRegisterTtl:  cfg.MustInt64("main", "scheduler_register_ttl", _DEFAULT_SCHEDULER_REGISTER_TTL),
-		AllowedSrvTtlSecs:     time.Duration(cfg.MustInt("main", "allowed_srv_ttl_secs", _DEFAULT_ALLOWED_SRV_TTL_IN_SECS)) * time.Second,
 
 		LogLevel: cfg.MustValue("log", "level", _DEFAULT_LOG_LEVEL),
 		LogPath:  cfg.MustValue("log", "path", _DEFAULT_LOG_PATH),

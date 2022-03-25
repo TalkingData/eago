@@ -7,13 +7,6 @@ import (
 	"math"
 )
 
-type GormParams struct {
-	Db       *gorm.DB
-	Page     int
-	PageSize int
-	OrderBy  []string
-}
-
 // GormPaging gorm分页处理
 func GormPaging(p *GormParams, result interface{}) (*Paginator, error) {
 	var (
@@ -32,8 +25,8 @@ func GormPaging(p *GormParams, result interface{}) (*Paginator, error) {
 	}
 
 	// 设置PageSize
-	if p.PageSize < 1 || p.PageSize > MAX_PAGE_SIZE {
-		p.PageSize = DEFAULT_PAGE_SIZE
+	if p.PageSize < 1 || p.PageSize > _MAX_PAGE_SIZE {
+		p.PageSize = _DEFAULT_PAGE_SIZE
 	}
 	paginator.PageSize = p.PageSize
 

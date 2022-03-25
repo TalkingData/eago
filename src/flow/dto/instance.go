@@ -30,7 +30,7 @@ func (hi *HandleInstance) Validate(iId int, currUname string) *message.Message {
 	q := dao.Query{"id=?": iId, "status=?": conf.INSTANCE_STATUS_RUNNING}
 	insObj, err := dao.GetInstance(q)
 	if err != nil {
-		m := msg.UnknownError.SetDetail("查找流程时失败")
+		m := msg.UndefinedError.SetDetail("查找流程时失败")
 		log.Error(log.Fields{
 			"query": q,
 			"error": err,
@@ -63,7 +63,7 @@ func (hi *HandleInstance) Validate(iId int, currUname string) *message.Message {
 	// 判断当前用户是否有权限审批
 	res, err := utils.IsInSlice(assignees, hi.CreatedBy)
 	if err != nil {
-		m := msg.UnknownError.SetDetail("判断当前用户是否有权限审批时失败")
+		m := msg.UndefinedError.SetDetail("判断当前用户是否有权限审批时失败")
 		log.Error(log.Fields{
 			"instance_id": insObj.Id,
 			"username":    hi.CreatedBy,

@@ -13,7 +13,7 @@ import (
 )
 
 // NewResult 新建结果
-func NewResult(taskCodename, caller, arguments string, timeout int64, status int) *model.Result {
+func NewResult(taskCodename, caller, arguments string, timeout int, status int) *model.Result {
 	var (
 		t    = time.Now()
 		part = t.Format(conf.TASK_PARTITION_TIMESTAMP_FORMAT)
@@ -133,7 +133,7 @@ func PagedListResultsByPartition(query Query, partition string, page, pageSize i
 		tbName = GetResultTableNameByPartition(partition)
 		d      = db.Table(tbName)
 	)
-	rs := make([]model.Result, 0)
+	rs := make([]model.Result, pageSize)
 
 	for k, v := range query {
 		d = d.Where(k, v)

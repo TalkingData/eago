@@ -1,0 +1,28 @@
+syntax = "proto3";
+
+import "google/protobuf/empty.proto";
+
+package worker_proto;
+
+service TaskWorkerService {
+  // CallTask 调用任务
+  rpc CallTask(CallTaskReq) returns(google.protobuf.Empty);
+  // KillTask 结束任务
+  rpc KillTask(KillTaskReq) returns(google.protobuf.Empty);
+}
+
+message CallTaskReq {
+  string task_codename = 1;
+
+  string task_unique_id = 2;
+  bytes arguments = 3;
+  int32 timeout = 4;
+  string caller = 5;
+
+  int64 timestamp = 6;
+}
+
+message KillTaskReq {
+  string task_unique_id = 1;
+  int64 timestamp = 6;
+}

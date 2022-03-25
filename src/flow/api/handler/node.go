@@ -42,7 +42,7 @@ func NewNode(c *gin.Context) {
 		tc["Username"].(string),
 	)
 	if n == nil {
-		m := msg.UnknownError
+		m := msg.UndefinedError
 		log.WarnWithFields(m.LogFields())
 		m.WriteRest(c)
 		return
@@ -71,7 +71,7 @@ func RemoveNode(c *gin.Context) {
 	}
 
 	if ok := dao.RemoveNode(nId); !ok {
-		m := msg.UnknownError
+		m := msg.UndefinedError
 		log.WarnWithFields(m.LogFields())
 		m.WriteRest(c)
 		return
@@ -119,7 +119,7 @@ func SetNode(c *gin.Context) {
 		tc["Username"].(string),
 	)
 	if !ok {
-		m := msg.UnknownError
+		m := msg.UndefinedError
 		log.WarnWithFields(m.LogFields())
 		m.WriteRest(c)
 		return
@@ -141,7 +141,7 @@ func GetNodeChain(c *gin.Context) {
 	// 查找根节点
 	node, ok := dao.GetNode(dao.Query{"id=?": nId})
 	if !ok {
-		m := msg.UnknownError
+		m := msg.UndefinedError
 		log.ErrorWithFields(m.LogFields())
 		m.WriteRest(c)
 		return
@@ -155,7 +155,7 @@ func GetNodeChain(c *gin.Context) {
 	// 将根节点转化为链结构
 	root := dao.Node2Chain(node)
 	if ok = dao.GetNodeChain(root); !ok {
-		m := msg.UnknownError
+		m := msg.UndefinedError
 		log.WarnWithFields(log.Fields{"node_id": nId}, m.String())
 		m.WriteRest(c)
 		return
@@ -180,7 +180,7 @@ func ListNodes(c *gin.Context) {
 		c.GetStringSlice("OrderBy")...,
 	)
 	if !ok {
-		m := msg.UnknownError.SetDetail("An error occurred while model.PagedListNodes.")
+		m := msg.UndefinedError.SetDetail("An error occurred while model.PagedListNodes.")
 		log.WarnWithFields(m.LogFields())
 		m.WriteRest(c)
 		return
@@ -217,7 +217,7 @@ func AddTrigger2Node(c *gin.Context) {
 
 	tc := c.GetStringMap("TokenContent")
 	if !dao.AddNodeTrigger(nId, atnFrm.TriggerId, tc["Username"].(string)) {
-		m := msg.UnknownError
+		m := msg.UndefinedError
 		log.WarnWithFields(m.LogFields())
 		m.WriteRest(c)
 		return
@@ -254,7 +254,7 @@ func RemoveNodeTrigger(c *gin.Context) {
 	}
 
 	if !dao.RemoveNodeTrigger(nId, tId) {
-		m := msg.UnknownError
+		m := msg.UndefinedError
 		log.WarnWithFields(m.LogFields())
 		m.WriteRest(c)
 		return
@@ -284,7 +284,7 @@ func ListNodeTriggers(c *gin.Context) {
 
 	u, ok := dao.ListNodeTriggers(nId)
 	if !ok {
-		m := msg.UnknownError
+		m := msg.UndefinedError
 		log.WarnWithFields(m.LogFields())
 		m.WriteRest(c)
 		return
@@ -314,7 +314,7 @@ func ListNodeFlows(c *gin.Context) {
 
 	fl, ok := dao.ListFlows(dao.Query{"first_node_id=?": nId})
 	if !ok {
-		m := msg.UnknownError
+		m := msg.UndefinedError
 		log.WarnWithFields(m.LogFields())
 		m.WriteRest(c)
 		return

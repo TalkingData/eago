@@ -170,7 +170,7 @@ func PagedListInstances(query Query, page, pageSize int, orderBy ...string) (*pa
 	defer log.Info("dao.PagedListInstances end.")
 
 	var d = db.Model(&model.Instance{})
-	ins := make([]model.Instance, 0)
+	ins := make([]model.Instance, pageSize)
 
 	for k, v := range query {
 		d = d.Where(k, v)

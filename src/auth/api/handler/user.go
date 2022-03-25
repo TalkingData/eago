@@ -41,7 +41,7 @@ func SetUser(c *gin.Context) {
 
 	u, ok := dao.SetUser(userId, setUserFrm.Email, setUserFrm.Phone)
 	if !ok {
-		m := msg.UnknownError
+		m := msg.UndefinedError
 		log.WarnWithFields(m.LogFields())
 		m.WriteRest(c)
 		return
@@ -66,7 +66,7 @@ func ListUsers(c *gin.Context) {
 		c.GetStringSlice("OrderBy")...,
 	)
 	if !ok {
-		m := msg.UnknownError
+		m := msg.UndefinedError
 		log.WarnWithFields(m.LogFields())
 		m.WriteRest(c)
 		return
@@ -87,7 +87,7 @@ func ListUserRoles(c *gin.Context) {
 
 	roles, ok := dao.ListUserRoles(userId)
 	if !ok {
-		m := msg.UnknownError
+		m := msg.UndefinedError
 		log.WarnWithFields(m.LogFields())
 		m.WriteRest(c)
 		return
@@ -108,7 +108,7 @@ func ListUserProducts(c *gin.Context) {
 
 	prods, ok := dao.ListUserProducts(userId)
 	if !ok {
-		m := msg.UnknownError
+		m := msg.UndefinedError
 		log.WarnWithFields(m.LogFields())
 		m.WriteRest(c)
 		return
@@ -129,7 +129,7 @@ func ListUserGroups(c *gin.Context) {
 
 	gps, ok := dao.ListUserGroups(userId)
 	if !ok {
-		m := msg.UnknownError
+		m := msg.UndefinedError
 		log.WarnWithFields(m.LogFields())
 		m.WriteRest(c)
 		return
@@ -150,7 +150,7 @@ func GetUserDepartment(c *gin.Context) {
 
 	dept, ok := dao.GetUserDepartment(userId)
 	if !ok {
-		m := msg.UnknownError
+		m := msg.UndefinedError
 		log.WarnWithFields(m.LogFields())
 		m.WriteRest(c)
 		return

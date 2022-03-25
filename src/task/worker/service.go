@@ -1,43 +1,51 @@
 package worker
 
 import (
+	"context"
 	"eago/common/log"
+	worker_proto "eago/task/worker/proto"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
-type WorkerService struct {
+// TaskWorkerService struct
+type TaskWorkerService struct {
 	wk *worker
 }
 
-// KillTask
-func (s *WorkerService) KillTask(req KillTaskReq, rsp *WorkerResponse) error {
-	defer func() {
-		rsp.Ok = true
-		rsp.Message = "Success"
-	}()
-
-	log.InfoWithFields(log.Fields{
-		"worker_id":      s.wk.workerId,
-		"task_unique_id": req.TaskUniqueId,
-	}, "Got a kill task request.")
-	s.wk.killTask(req.TaskUniqueId)
-
-	return nil
+// NewTaskWorkerService 创建Worker服务
+func NewTaskWorkerService(wk *worker) *TaskWorkerService {
+	return &TaskWorkerService{
+		wk: wk,
+	}
 }
 
-// CallTask
-func (s *WorkerService) CallTask(req CallTaskReq, rsp *WorkerResponse) error {
-	defer func() {
-		rsp.Ok = true
-		rsp.Message = "Success"
-	}()
-
+// CallTask 调用任务
+func (tws *TaskWorkerService) CallTask(_ context.Context, req *worker_proto.CallTaskReq) (*emptypb.Empty, error) {
 	log.InfoWithFields(log.Fields{
-		"worker_id":      s.wk.workerId,
+		"worker_id":      tws.wk.workerId,
 		"task_codename":  req.TaskCodename,
 		"task_unique_id": req.TaskUniqueId,
 		"caller":         req.Caller,
 	}, "Got a call task request.")
-	s.wk.callTask(&req)
+	tws.wk.callTask(
+		req.TaskCodename,
+		req.TaskUniqueId,
+		string(req.Arguments),
+		req.Timeout,
+		req.Caller,
+		req.Timestamp,
+	)
 
-	return nil
+	return new(emptypb.Empty), nil
+}
+
+// KillTask 结束任务
+func (tws *TaskWorkerService) KillTask(ctx context.Context, req *worker_proto.KillTaskReq) (*emptypb.Empty, error) {
+	log.InfoWithFields(log.Fields{
+		"worker_id":      tws.wk.workerId,
+		"task_unique_id": req.TaskUniqueId,
+	}, "Got a kill task request.")
+	tws.wk.killTask(req.TaskUniqueId)
+
+	return new(emptypb.Empty), nil
 }

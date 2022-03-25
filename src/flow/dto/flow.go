@@ -22,7 +22,7 @@ type InstantiateFlow struct {
 func (i *InstantiateFlow) Validate(fId int) *message.Message {
 	flow, ok := dao.GetFlow(dao.Query{"id=?": fId})
 	if !ok {
-		return msg.UnknownError
+		return msg.UndefinedError
 	}
 
 	if flow == nil || flow.Id == 0 {

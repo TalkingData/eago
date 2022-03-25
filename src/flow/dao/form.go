@@ -152,7 +152,7 @@ func ListForms(query Query) ([]model.Form, bool) {
 // PagedListForms 查询表单-分页
 func PagedListForms(query Query, page, pageSize int, orderBy ...string) (*pagination.Paginator, bool) {
 	var d = db.Model(&model.Form{})
-	fs := make([]model.FormWithoutBody, 0)
+	fs := make([]model.FormWithoutBody, pageSize)
 
 	for k, v := range query {
 		d = d.Where(k, v)

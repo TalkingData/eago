@@ -13,7 +13,7 @@ import (
 type NewSchedule struct {
 	TaskCodename string  `json:"task_codename" valid:"Required;MinSize(3);MaxSize(100);Match(/^[a-zA-Z][a-zA-Z0-9_-.]{1,}$/)"`
 	Expression   string  `json:"expression" valid:"Required"`
-	Timeout      *int64  `json:"timeout" valid:"Min(0)"`
+	Timeout      *int    `json:"timeout" valid:"Min(0)"`
 	Arguments    string  `json:"arguments" valid:"Required;MinSize(2)"`
 	Disabled     *bool   `json:"disabled" gorm:"default:0" valid:"Required"`
 	Description  *string `json:"description" valid:"MinSize(0);MaxSize(500)"`

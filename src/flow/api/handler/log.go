@@ -40,7 +40,7 @@ func NewLog(c *gin.Context) {
 	tc := c.GetStringMap("TokenContent")
 	l := dao.NewLog(insId, lgFrm.Result, *lgFrm.Content, tc["Username"].(string))
 	if l == nil {
-		m := msg.UnknownError
+		m := msg.UndefinedError
 		log.WarnWithFields(m.LogFields())
 		m.WriteRest(c)
 		return
@@ -71,7 +71,7 @@ func ListLogs(c *gin.Context) {
 
 	logs, ok := dao.ListLogs(dao.Query{"instance_id=?": insId})
 	if !ok {
-		m := msg.UnknownError
+		m := msg.UndefinedError
 		log.WarnWithFields(m.LogFields())
 		m.WriteRest(c)
 		return

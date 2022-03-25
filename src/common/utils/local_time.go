@@ -14,6 +14,11 @@ type LocalTime struct {
 	time.Time
 }
 
+// NewLocalTimeByTimestamp 通过时间戳获取LocalTime
+func NewLocalTimeByTimestamp(ts int64) *LocalTime {
+	return &LocalTime{Time: time.Unix(ts, 0)}
+}
+
 func (t *LocalTime) MarshalJSON() ([]byte, error) {
 	formatted := fmt.Sprintf("\"%s\"", t.Format(TIMESTAMP_FORMAT))
 	return []byte(formatted), nil

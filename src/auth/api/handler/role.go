@@ -30,7 +30,7 @@ func NewRole(c *gin.Context) {
 
 	r, err := dao.NewRole(newRoleFrm.Name, *newRoleFrm.Description)
 	if err != nil {
-		m := msg.UnknownError.SetError(err)
+		m := msg.UndefinedError.SetError(err)
 		log.WarnWithFields(m.LogFields())
 		m.WriteRest(c)
 		return
@@ -59,7 +59,7 @@ func RemoveRole(c *gin.Context) {
 
 	// 删除
 	if dbErr := dao.RemoveRole(roleId); dbErr != nil {
-		m := msg.UnknownError
+		m := msg.UndefinedError
 		log.WarnWithFields(m.LogFields())
 		m.WriteRest(c)
 		return
@@ -96,7 +96,7 @@ func SetRole(c *gin.Context) {
 
 	role, err := dao.SetRole(roleId, setRoleFrm.Name, *setRoleFrm.Description)
 	if err != nil {
-		m := msg.UnknownError
+		m := msg.UndefinedError
 		log.WarnWithFields(m.LogFields())
 		m.WriteRest(c)
 		return
@@ -121,7 +121,7 @@ func ListRoles(c *gin.Context) {
 		c.GetStringSlice("OrderBy")...,
 	)
 	if !ok {
-		m := msg.UnknownError
+		m := msg.UndefinedError
 		log.WarnWithFields(m.LogFields())
 		m.WriteRest(c)
 		return
@@ -157,7 +157,7 @@ func AddUser2Role(c *gin.Context) {
 	}
 
 	if !dao.AddRoleUser(roleId, aurFrm.UserId) {
-		m := msg.UnknownError
+		m := msg.UndefinedError
 		log.WarnWithFields(m.LogFields())
 		m.WriteRest(c)
 		return
@@ -194,7 +194,7 @@ func RemoveRoleUser(c *gin.Context) {
 	}
 
 	if !dao.RemoveRoleUser(roleId, userId) {
-		m := msg.UnknownError
+		m := msg.UndefinedError
 		log.WarnWithFields(m.LogFields())
 		m.WriteRest(c)
 		return
@@ -215,7 +215,7 @@ func ListRoleUsers(c *gin.Context) {
 
 	u, ok := dao.ListRoleUsers(roleId)
 	if !ok {
-		m := msg.UnknownError
+		m := msg.UndefinedError
 		log.WarnWithFields(m.LogFields())
 		m.WriteRest(c)
 		return

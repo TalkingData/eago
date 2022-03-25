@@ -16,7 +16,7 @@ func (as *AuthService) ListRoleUsers(ctx context.Context, in *auth.NameQuery, ou
 	log.Info("Finding role.")
 	r, ok := dao.GetRole(dao.Query{"name=?": in.Name})
 	if !ok {
-		m := msg.UnknownError.SetDetail("An error occurred while dao.GetRole.")
+		m := msg.UndefinedError.SetDetail("An error occurred while dao.GetRole.")
 		log.ErrorWithFields(m.LogFields())
 		return m.RpcError()
 	}
@@ -31,7 +31,7 @@ func (as *AuthService) ListRoleUsers(ctx context.Context, in *auth.NameQuery, ou
 	log.Info("Finding role users.")
 	us, ok := dao.ListRoleUsers(r.Id)
 	if !ok {
-		m := msg.UnknownError.SetDetail("An error occurred while dao.ListRoleUsers.")
+		m := msg.UndefinedError.SetDetail("An error occurred while dao.ListRoleUsers.")
 		log.ErrorWithFields(m.LogFields())
 		return m.RpcError()
 	}

@@ -4,6 +4,7 @@ import (
 	"context"
 	"eago/common/log"
 	proto "eago/task/srv/proto"
+	worker_proto "eago/task/worker/proto"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -12,13 +13,9 @@ import (
 	"github.com/micro/go-micro/v2/registry"
 	"github.com/micro/go-plugins/registry/etcdv3/v2"
 	uuid "github.com/satori/go.uuid"
+	"google.golang.org/grpc"
 	"net"
-	"net/rpc"
-	"net/rpc/jsonrpc"
-	"os"
-	"os/signal"
 	"sync"
-	"syscall"
 	"time"
 )
 
@@ -48,8 +45,9 @@ func newWorker(opts ...Option) *worker {
 type worker struct {
 	workerId string
 
-	endpoint string
-	listener net.Listener
+	endpoint   string
+	listener   net.Listener
+	grpcServer *grpc.Server
 
 	taskList *taskList
 	runList  *taskList
@@ -65,16 +63,16 @@ type worker struct {
 }
 
 // callTask 运行任务务
-func (w *worker) callTask(req *CallTaskReq) {
+func (w *worker) callTask(codename, uniqueId, args string, timeout int32, caller string, ts int64) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
 	// 查看当前Worker是否注册了调用的任务
-	if !w.taskList.Exists(req.TaskCodename) {
-		err := w.setTaskStatus(req.TaskUniqueId, TASK_WORKER_TASK_NOT_FOUND_ERROR_END_STATUS)
+	if !w.taskList.Exists(codename) {
+		err := w.setTaskStatus(uniqueId, TASK_WORKER_TASK_NOT_FOUND_ERROR_END_STATUS)
 		if err != nil {
 			log.ErrorWithFields(log.Fields{
-				"task_unique_id": req.TaskUniqueId,
+				"task_unique_id": uniqueId,
 				"error":          err,
 			}, "An error occurred while taskServiceClient.SetTaskStatus.")
 			return
@@ -83,27 +81,27 @@ func (w *worker) callTask(req *CallTaskReq) {
 	}
 
 	// 查看调用的任务是否在运行
-	if w.runList.Exists(req.TaskUniqueId) {
+	if w.runList.Exists(uniqueId) {
 		log.ErrorWithFields(log.Fields{
-			"task_unique_id": req.TaskUniqueId,
+			"task_unique_id": uniqueId,
 		}, "An error occurred while worker.runTask, Task already running.")
 		return
 	}
 
 	// 设置任务为Pending状态
-	err := w.setTaskStatus(req.TaskUniqueId, TASK_PENDING_STATUS)
+	err := w.setTaskStatus(uniqueId, TASK_PENDING_STATUS)
 	if err != nil {
 		log.ErrorWithFields(log.Fields{
-			"task_unique_id": req.TaskUniqueId,
+			"task_unique_id": uniqueId,
 			"error":          err,
 		}, "An error occurred while taskServiceClient.SetTaskStatus.")
 		// 失败仅记录日志，不跳出
 	}
 
-	task := w.taskList.CopyGet(req.TaskCodename)
+	task := w.taskList.CopyGet(codename)
 	ctx := context.Background()
-	if req.Timeout > 0 {
-		task.Cxt, task.Cancel = context.WithTimeout(ctx, time.Duration(req.Timeout)*time.Second)
+	if timeout > 0 {
+		task.Cxt, task.Cancel = context.WithTimeout(ctx, time.Duration(timeout)*time.Second)
 	} else {
 		task.Cxt, task.Cancel = context.WithCancel(ctx)
 	}
@@ -111,23 +109,23 @@ func (w *worker) callTask(req *CallTaskReq) {
 	task.logger = newLogger(w.opts.LogBufferSize)
 
 	task.Param = &Param{
-		TaskUniqueId:    req.TaskUniqueId,
-		Caller:          req.Caller,
-		Timeout:         req.Timeout,
-		Arguments:       req.Arguments,
+		TaskUniqueId:    uniqueId,
+		Caller:          caller,
+		Timeout:         timeout,
+		Arguments:       args,
 		LocalStartTime:  time.Now(),
-		RemoteStartTime: time.Unix(req.Timestamp, 0),
+		RemoteStartTime: time.Unix(ts, 0),
 		Log:             task.logger,
 	}
 
-	w.runList.Put(req.TaskUniqueId, &task)
+	w.runList.Put(uniqueId, &task)
 	go func() {
 		defer func() {
 			// recover here for task panic end.
 			if r := recover(); r != nil {
 				task.logger.Error("Task panic: %s", r)
 				log.ErrorWithFields(log.Fields{
-					"task_unique_id": req.TaskUniqueId,
+					"task_unique_id": uniqueId,
 					"panic":          r,
 				}, "An error occurred while task.Run, Task panic.")
 				w.callback(&task, TASK_PANIC_END_STATUS)
@@ -135,10 +133,10 @@ func (w *worker) callTask(req *CallTaskReq) {
 		}()
 
 		// 设置任务为Running状态
-		err := w.setTaskStatus(req.TaskUniqueId, TASK_RUNNING_STATUS)
+		err := w.setTaskStatus(uniqueId, TASK_RUNNING_STATUS)
 		if err != nil {
 			log.ErrorWithFields(log.Fields{
-				"task_unique_id": req.TaskUniqueId,
+				"task_unique_id": uniqueId,
 				"error":          err,
 			}, "An error occurred while taskServiceClient.SetTaskStatus.")
 			// 失败仅记录日志，不跳出
@@ -309,15 +307,7 @@ func (w *worker) RegTask(codename string, fn TaskFunc) {
 }
 
 // Start 启动Worker
-func (w *worker) Start() error {
-	err := rpc.Register(&WorkerService{wk: w})
-	if err != nil {
-		log.ErrorWithFields(log.Fields{
-			"error": err,
-		}, "An error occurred while rpc.Register.")
-		return err
-	}
-
+func (w *worker) Start() (err error) {
 	// 开启RPC监听端口
 	w.listener, err = net.Listen("tcp", fmt.Sprintf("%s:0", w.opts.WorkerIp))
 	if err != nil {
@@ -327,45 +317,19 @@ func (w *worker) Start() error {
 		return err
 	}
 
+	// 创建worker的grpc server
+	w.grpcServer = grpc.NewServer()
+	// 注册GRPC服务
+	worker_proto.RegisterTaskWorkerServiceServer(w.grpcServer, NewTaskWorkerService(w))
+
 	// 设置当前Worker的IP和端口(endpoint)信息
 	w.endpoint = w.listener.Addr().String()
 	log.Info(fmt.Sprintf("Worker %s starting at %s", w.workerId, w.endpoint))
 
-	go func() {
-		for {
-			conn, err := w.listener.Accept()
-			if err != nil {
-				log.ErrorWithFields(log.Fields{
-					"error": err,
-				}, "An error occurred while listener.Accept.")
-				continue
-			}
-
-			// 判断是否是在白名单内的srv
-			if err = w.isAllowedSrv(conn); err != nil {
-				log.WarnWithFields(log.Fields{
-					"srv_addr":    conn.RemoteAddr().String(),
-					"worker_addr": conn.LocalAddr().String(),
-					"error":       err,
-				}, "Worker.isAllowedSrv error, Connection rejected.")
-				_ = conn.Close()
-				continue
-			}
-
-			// 处理实际请求
-			go jsonrpc.ServeConn(conn)
-		}
-	}()
-
 	// 向注册中心注册Worker
 	w.register()
 
-	// 等待退出信号
-	quit := make(chan os.Signal)
-	signal.Notify(quit, syscall.SIGKILL, syscall.SIGQUIT, syscall.SIGINT, syscall.SIGTERM, os.Interrupt, os.Kill)
-	<-quit
-	w.Stop()
-	return nil
+	return w.grpcServer.Serve(w.listener)
 }
 
 // init 初始化Worker
@@ -414,8 +378,15 @@ func (w *worker) Stop() {
 
 	w.unregister()
 
-	_ = w.etcdCli.Close()
-	_ = w.listener.Close()
+	if w.grpcServer != nil {
+		w.grpcServer.Stop()
+	}
+	if w.etcdCli != nil {
+		_ = w.etcdCli.Close()
+	}
+	if w.listener != nil {
+		_ = w.listener.Close()
+	}
 }
 
 // register
@@ -498,22 +469,4 @@ func (w *worker) unregister() {
 	}
 
 	w.startTime = nil
-}
-
-// isAllowedSrv 判断Srv是否已经在白名单内
-func (w *worker) isAllowedSrv(conn net.Conn) error {
-	req := &proto.IsAllowedSrvQuery{
-		SrvAddr:    conn.RemoteAddr().String(),
-		WorkerAddr: conn.LocalAddr().String(),
-	}
-
-	ret, err := w.taskServiceClient.IsAllowedSrv(context.TODO(), req)
-	if err != nil {
-		return err
-	}
-	if !ret.Ok {
-		return errors.New("srv not allowed")
-	}
-
-	return nil
 }

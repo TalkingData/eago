@@ -34,7 +34,7 @@ func NewCategory(c *gin.Context) {
 	cat := dao.NewCategory(cFrm.Name, tc["Username"].(string))
 	// 新建失败
 	if cat == nil {
-		m := msg.UnknownError
+		m := msg.UndefinedError
 		log.WarnWithFields(m.LogFields())
 		m.WriteRest(c)
 		return
@@ -63,7 +63,7 @@ func RemoveCategory(c *gin.Context) {
 	}
 
 	if !dao.RemoveCategory(cId) {
-		m := msg.UnknownError
+		m := msg.UndefinedError
 		log.WarnWithFields(m.LogFields())
 		m.WriteRest(c)
 		return
@@ -101,7 +101,7 @@ func SetCategory(c *gin.Context) {
 	tc := c.GetStringMap("TokenContent")
 	cat, ok := dao.SetCategory(cId, cFrm.Name, tc["Username"].(string))
 	if !ok {
-		m := msg.UnknownError
+		m := msg.UndefinedError
 		log.WarnWithFields(m.LogFields())
 		m.WriteRest(c)
 		return
@@ -121,7 +121,7 @@ func ListCategories(c *gin.Context) {
 
 	cs, ok := dao.ListCategories(query)
 	if !ok {
-		m := msg.UnknownError
+		m := msg.UndefinedError
 		log.WarnWithFields(m.LogFields())
 		m.WriteRest(c)
 		return
@@ -156,7 +156,7 @@ func ListCategoryFlows(c *gin.Context) {
 
 	fl, ok := dao.ListFlows(query)
 	if !ok {
-		m := msg.UnknownError
+		m := msg.UndefinedError
 		log.WarnWithFields(m.LogFields())
 		m.WriteRest(c)
 		return

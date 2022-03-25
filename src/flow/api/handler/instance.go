@@ -41,7 +41,7 @@ func HandleInstance(c *gin.Context) {
 
 	// 执行实际流程实例处理
 	if err = builtin.HandleInstance(hdIns.Instance, &hdIns); err != nil {
-		m := msg.UnknownError
+		m := msg.UndefinedError
 		log.ErrorWithFields(m.LogFields())
 		m.WriteRest(c)
 		return
@@ -115,7 +115,7 @@ func listInstances(c *gin.Context, query dao.Query) {
 		c.GetStringSlice("OrderBy")...,
 	)
 	if !ok {
-		m := msg.UnknownError
+		m := msg.UndefinedError
 		log.ErrorWithFields(m.LogFields())
 		m.WriteRest(c)
 		return

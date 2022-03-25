@@ -12,7 +12,7 @@ type Result struct {
 	Status       int              `json:"status" gorm:"type:int(11) NOT NULL;index"`
 	Caller       string           `json:"caller" gorm:"type:varchar(100) NOT NULL;index"`
 	Worker       string           `json:"worker" gorm:"type:varchar(100) NOT NULL;default:'';index"`
-	Timeout      *int64           `json:"timeout" gorm:"type:int(11) NOT NULL"`
+	Timeout      *int             `json:"timeout" gorm:"type:int(11) NOT NULL"`
 	Arguments    string           `json:"arguments" gorm:"type:json NOT NULL"`
 	StartAt      *utils.LocalTime `json:"start_at" gorm:"type:datetime NOT NULL;index"`
 	EndAt        *utils.LocalTime `json:"end_at" gorm:"type:datetime"`
