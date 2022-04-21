@@ -50,11 +50,11 @@ func SetUser(c *gin.Context) {
 	w.WriteSuccessPayload(c, "user", u)
 }
 
-// ListUsers 列出所有用户
-func ListUsers(c *gin.Context) {
+// PagedListUsers 列出所有用户-分页
+func PagedListUsers(c *gin.Context) {
 	query := dao.Query{}
 	// 设置查询filter
-	luQ := dto.ListUsersQuery{}
+	luQ := dto.PagedListUsersQuery{}
 	if c.ShouldBindQuery(&luQ) == nil {
 		_ = luQ.UpdateQuery(query)
 	}

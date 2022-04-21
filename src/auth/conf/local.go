@@ -2,7 +2,6 @@ package conf
 
 import (
 	"github.com/Unknwon/goconfig"
-	"strings"
 	"time"
 )
 
@@ -123,7 +122,7 @@ func newLocalConf() *conf {
 		LogLevel: cfg.MustValue("log", "level", _DEFAULT_LOG_LEVEL),
 		LogPath:  cfg.MustValue("log", "path", _DEFAULT_LOG_PATH),
 
-		EtcdAddresses: strings.Split(cfg.MustValue("etcd", "addresses", _DEFAULT_ETCD_ADDRESSES), ","),
+		EtcdAddresses: cfg.MustValueArray("etcd", "addresses", _DEFAULT_CONFIG_SEPARATOR),
 		EtcdUsername:  cfg.MustValue("etcd", "username", _DEFAULT_ETCD_USERNAME),
 		EtcdPassword:  cfg.MustValue("etcd", "password", _DEFAULT_ETCD_PASSWORD),
 
@@ -144,7 +143,7 @@ func newLocalConf() *conf {
 		RedisPassword: cfg.MustValue("redis", "password", _DEFAULT_REDIS_PASSWORD),
 		RedisDb:       cfg.MustInt("redis", "db", _DEFAULT_REDIS_DB),
 
-		KafkaAddresses: strings.Split(cfg.MustValue("kafka", "addresses", _DEFAULT_KAFKA_ADDRESSES), ","),
+		KafkaAddresses: cfg.MustValueArray("kafka", "addresses", _DEFAULT_CONFIG_SEPARATOR),
 
 		JaegerAddress: cfg.MustValue("tracer", "jaeger_address", _DEFAULT_JAEGER_ADDRESS),
 

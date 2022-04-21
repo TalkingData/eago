@@ -10,7 +10,6 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// NewGinEngine
 func NewGinEngine() *gin.Engine {
 	gin.SetMode(conf.Conf.GinMode)
 
@@ -26,14 +25,14 @@ func NewGinEngine() *gin.Engine {
 			iR.PUT("/:instance_id/handle", h.HandleInstance)
 
 			// 列出我发起的流程实例
-			iR.GET("/my", pg.ListPageHelper(), h.ListMyInstances)
+			iR.GET("/my", pg.ListPageHelper(), h.PagedListMyInstances)
 			// 列出我代办的流程实例
-			iR.GET("/todo", pg.ListPageHelper(), h.ListTodoInstances)
+			iR.GET("/todo", pg.ListPageHelper(), h.PagedListTodoInstances)
 			// 列出我已办的流程实例
-			iR.GET("/done", pg.ListPageHelper(), h.ListDoneInstances)
+			iR.GET("/done", pg.ListPageHelper(), h.PagedListDoneInstances)
 
 			// 列出所有流程实例，要求管理员权限
-			iR.GET("", perm.MustRole(conf.ADMIN_ROLE_NAME), pg.ListPageHelper(), h.ListInstances)
+			iR.GET("", perm.MustRole(conf.ADMIN_ROLE_NAME), pg.ListPageHelper(), h.PagedListInstances)
 		}
 
 		// Log审批日志模块
@@ -69,7 +68,7 @@ func NewGinEngine() *gin.Engine {
 			flR.POST("/:flow_id/instantiate", h.InstantiateFlow)
 
 			// 分页列出所有流程
-			flR.GET("", pg.ListPageHelper(), h.ListFlows)
+			flR.GET("", pg.ListPageHelper(), h.PagedListFlows)
 
 			// 新建流程，要求管理员权限
 			flR.POST("", perm.MustRole(conf.ADMIN_ROLE_NAME), h.NewFlow)
@@ -90,7 +89,7 @@ func NewGinEngine() *gin.Engine {
 			// 变更表单，要求管理员权限
 			fR.PUT("/:form_id", perm.MustRole(conf.ADMIN_ROLE_NAME), h.SetForm)
 			// 列出所有表单，要求管理员权限
-			fR.GET("", perm.MustRole(conf.ADMIN_ROLE_NAME), pg.ListPageHelper(), h.ListForms)
+			fR.GET("", perm.MustRole(conf.ADMIN_ROLE_NAME), pg.ListPageHelper(), h.PagedListForms)
 
 			// 列出指定表单所关联流程，要求管理员权限
 			fR.GET("/:form_id/flows", perm.MustRole(conf.ADMIN_ROLE_NAME), h.ListFormFlows)
@@ -109,7 +108,7 @@ func NewGinEngine() *gin.Engine {
 			// 更新节点，要求管理员权限
 			nR.PUT("/:node_id", perm.MustRole(conf.ADMIN_ROLE_NAME), h.SetNode)
 			// 列出所有节点，要求管理员权限
-			nR.GET("", perm.MustRole(conf.ADMIN_ROLE_NAME), pg.ListPageHelper(), h.ListNodes)
+			nR.GET("", perm.MustRole(conf.ADMIN_ROLE_NAME), pg.ListPageHelper(), h.PagedListNodes)
 
 			// 添加触发器至节点，要求管理员权限
 			nR.POST("/:node_id/triggers", perm.MustRole(conf.ADMIN_ROLE_NAME), h.AddTrigger2Node)
@@ -132,7 +131,7 @@ func NewGinEngine() *gin.Engine {
 			// 变更触发器，要求管理员权限
 			tR.PUT("/:trigger_id", h.SetTrigger)
 			// 列出所有触发器，要求管理员权限
-			tR.GET("", pg.ListPageHelper(), h.ListTriggers)
+			tR.GET("", pg.ListPageHelper(), h.PagedListTriggers)
 
 			// 列出指定触发器所关联节点，要求管理员权限
 			tR.GET("/:trigger_id/nodes", perm.MustRole(conf.ADMIN_ROLE_NAME), h.ListTriggerNodes)

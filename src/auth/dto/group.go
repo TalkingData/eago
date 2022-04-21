@@ -14,14 +14,12 @@ type NewGroup struct {
 	Description *string `json:"description" valid:"MinSize(0)"`
 }
 
-// Valid
 func (ng *NewGroup) Valid(v *validation.Validation) {
 	if ct, _ := dao.GetGroupCount(dao.Query{"name=?": ng.Name}); ct > 0 {
 		_ = v.SetError("Name", "组名称已存在")
 	}
 }
 
-// Validate
 func (ng *NewGroup) Validate() *message.Message {
 	valid := validation.Validation{}
 	// 验证数据
@@ -40,7 +38,6 @@ func (ng *NewGroup) Validate() *message.Message {
 // RemoveGroup struct
 type RemoveGroup struct{}
 
-// Validate
 func (*RemoveGroup) Validate(gId int) *message.Message {
 	// 验证组是否存在
 	if ct, _ := dao.GetGroupCount(dao.Query{"id=?": gId}); ct < 1 {
@@ -62,14 +59,12 @@ type SetGroup struct {
 	Description *string `json:"description" valid:"MinSize(0)"`
 }
 
-// Valid
 func (sg *SetGroup) Valid(v *validation.Validation) {
 	if ct, _ := dao.GetGroupCount(dao.Query{"name=?": sg.Name, "id<>?": sg.groupId}); ct > 0 {
 		_ = v.SetError("Name", "组名称已存在")
 	}
 }
 
-// Validate
 func (sg *SetGroup) Validate(gId int) *message.Message {
 	sg.groupId = gId
 	valid := validation.Validation{}
@@ -86,17 +81,17 @@ func (sg *SetGroup) Validate(gId int) *message.Message {
 	return nil
 }
 
-// ListGroupsQuery struct
-type ListGroupsQuery struct {
+// PagedListGroupsQuery struct
+type PagedListGroupsQuery struct {
 	Query *string `form:"query"`
 }
 
-// UpdateQuery
-func (lgq *ListGroupsQuery) UpdateQuery(query dao.Query) error {
+func (lgq *PagedListGroupsQuery) UpdateQuery(query dao.Query) error {
 	// 通用Query
 	if lgq.Query != nil && *lgq.Query != "" {
 		likeQuery := fmt.Sprintf("%%%s%%", *lgq.Query)
-		query["name LIKE @query OR id LIKE @query"] = sql.Named("query", likeQuery)
+		query["(name LIKE @query OR "+
+			"id LIKE @query)"] = sql.Named("query", likeQuery)
 	}
 
 	return nil
@@ -110,7 +105,6 @@ type AddUser2Group struct {
 	IsOwner bool `json:"is_owner" valid:"Required"`
 }
 
-// Valid
 func (aug *AddUser2Group) Valid(v *validation.Validation) {
 	// 验证用户是否存在
 	if ct, _ := dao.GetUserCount(dao.Query{"id=?": aug.UserId}); ct < 1 {
@@ -123,7 +117,6 @@ func (aug *AddUser2Group) Valid(v *validation.Validation) {
 	}
 }
 
-// Validate
 func (aug *AddUser2Group) Validate(gId int) *message.Message {
 	// 验证组是否存在
 	if ct, _ := dao.GetGroupCount(dao.Query{"id=?": gId}); ct < 1 {
@@ -148,7 +141,6 @@ func (aug *AddUser2Group) Validate(gId int) *message.Message {
 // RemoveGroupUser struct
 type RemoveGroupUser struct{}
 
-// Validate
 func (*RemoveGroupUser) Validate(gId, userId int) *message.Message {
 	// 验证用户是否已经属于该组
 	if ct, _ := dao.GetGroupUserCount(dao.Query{"group_id=?": gId, "user_id": userId}); ct < 1 {
@@ -163,7 +155,6 @@ type SetUserIsGroupOwner struct {
 	IsOwner bool `json:"is_owner" valid:"Required"`
 }
 
-// Validate
 func (suo *SetUserIsGroupOwner) Validate(groupId, userId int) *message.Message {
 	// 验证用户是否已经属于该组
 	if ct, _ := dao.GetGroupUserCount(dao.Query{"group_id=?": groupId, "user_id": userId}); ct < 1 {
@@ -198,7 +189,6 @@ func (*ListGroupUsersQuery) Validate(groupId int) *message.Message {
 	return nil
 }
 
-// UpdateQuery
 func (lgu *ListGroupUsersQuery) UpdateQuery(query dao.Query) error {
 	if lgu.IsOwner != nil {
 		query["is_owner=?"] = *lgu.IsOwner

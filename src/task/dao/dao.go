@@ -8,7 +8,6 @@ var db *gorm.DB
 
 type Query map[string]interface{}
 
-// Init
 func Init(d *gorm.DB) {
 	if d == nil {
 		panic("Got a nil gorm db object.")

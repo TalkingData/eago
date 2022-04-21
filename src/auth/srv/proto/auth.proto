@@ -10,14 +10,14 @@ service AuthService {
 
   // User
   rpc GetUserById(IdQuery) returns (User) {}
-  rpc ListUsers(QueryWithPage) returns (PagedUsers) {}
+  rpc PagedListUsers(QueryWithPage) returns (PagedUsers) {}
   rpc GetUserDepartment(IdQuery) returns (UserDepartment) {}
   rpc ListUserDepartmentUsers(IdQuery) returns (MemberUsers) {}
   rpc MakeUserHandover(HandoverRequest) returns (BoolMsg) {}
 
   // Product
   rpc GetProductById(IdQuery) returns (Product) {}
-  rpc ListProducts(QueryWithPage) returns (PagedProducts) {}
+  rpc PagedListProducts(QueryWithPage) returns (PagedProducts) {}
   rpc ListProductUsers(IdQuery) returns (MemberUsers) {}
 
   // Department
@@ -27,7 +27,7 @@ service AuthService {
 
   // Group
   rpc GetGroupById(IdQuery) returns (Group) {}
-  rpc ListGroups(QueryWithPage) returns (PagedGroups) {}
+  rpc PagedListGroups(QueryWithPage) returns (PagedGroups) {}
   rpc ListGroupUsers(IdQuery) returns (MemberUsers) {}
 
   // Role

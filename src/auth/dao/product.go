@@ -98,7 +98,7 @@ func GetProduct(query Query) (*model.Product, bool) {
 	return &p, true
 }
 
-//  GetProductCount 查询产品线数量
+// GetProductCount 查询产品线数量
 func GetProductCount(query Query) (count int64, ok bool) {
 	d := db.Model(&model.Product{})
 

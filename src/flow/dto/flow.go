@@ -18,7 +18,6 @@ type InstantiateFlow struct {
 	FormData *string `json:"form_data" valid:"MinSize(2)"`
 }
 
-// Validate
 func (i *InstantiateFlow) Validate(fId int) *message.Message {
 	flow, ok := dao.GetFlow(dao.Query{"id=?": fId})
 	if !ok {
@@ -60,7 +59,6 @@ type NewFlow struct {
 	FirstNodeId   int     `json:"first_node_id" valid:"Required"`
 }
 
-// Valid
 func (n *NewFlow) Valid(v *validation.Validation) {
 	if ct, _ := dao.GetFlowCount(dao.Query{"name=?": n.Name}); ct > 0 {
 		_ = v.SetError("Name", "流程名称已存在")
@@ -71,7 +69,6 @@ func (n *NewFlow) Valid(v *validation.Validation) {
 	}
 }
 
-// Validate
 func (n *NewFlow) Validate() *message.Message {
 	valid := validation.Validation{}
 	// 验证数据
@@ -90,7 +87,6 @@ func (n *NewFlow) Validate() *message.Message {
 // RemoveFlow struct
 type RemoveFlow struct{}
 
-// Validate
 func (*RemoveFlow) Validate(tId int) *message.Message {
 	// 验证流程是否存在
 	if ct, _ := dao.GetFlowCount(dao.Query{"id=?": tId}); ct < 1 {
@@ -113,7 +109,6 @@ type SetFlow struct {
 	FirstNodeId   int     `json:"first_node_id" valid:"Required"`
 }
 
-// Valid
 func (s *SetFlow) Valid(v *validation.Validation) {
 	if ct, _ := dao.GetFlowCount(dao.Query{"name=?": s.Name, "id<>?": s.flowId}); ct > 0 {
 		_ = v.SetError("Name", "流程名称已存在")
@@ -124,7 +119,6 @@ func (s *SetFlow) Valid(v *validation.Validation) {
 	}
 }
 
-// Validate
 func (s *SetFlow) Validate(flId int) *message.Message {
 	s.flowId = flId
 	valid := validation.Validation{}
@@ -141,15 +135,14 @@ func (s *SetFlow) Validate(flId int) *message.Message {
 	return nil
 }
 
-// ListFlowsQuery struct
-type ListFlowsQuery struct {
+// PagedListFlowsQuery struct
+type PagedListFlowsQuery struct {
 	Query        *string `form:"query"`
 	Disabled     *bool   `form:"disabled"`
 	CategoriesId *int    `form:"categories_id"`
 }
 
-// UpdateQuery
-func (q *ListFlowsQuery) UpdateQuery(query dao.Query) error {
+func (q *PagedListFlowsQuery) UpdateQuery(query dao.Query) error {
 	// 通用Query
 	if q.Query != nil && *q.Query != "" {
 		likeQuery := fmt.Sprintf("%%%s%%", *q.Query)

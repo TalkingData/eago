@@ -14,14 +14,12 @@ type NewCategory struct {
 	Name string `json:"name" valid:"Required;MinSize(3);MaxSize(100)"`
 }
 
-// Valid
 func (n *NewCategory) Valid(v *validation.Validation) {
 	if ct, _ := dao.GetCategoriesCount(dao.Query{"name=?": n.Name}); ct > 0 {
 		_ = v.SetError("Name", "类别名称已存在")
 	}
 }
 
-// Validate
 func (n *NewCategory) Validate() *message.Message {
 	valid := validation.Validation{}
 	// 验证数据
@@ -40,7 +38,6 @@ func (n *NewCategory) Validate() *message.Message {
 // RemoveCategory struct
 type RemoveCategory struct{}
 
-// Validate
 func (*RemoveCategory) Validate(cId int) *message.Message {
 	// 验证类别是否存在
 	if ct, _ := dao.GetCategoriesCount(dao.Query{"id=?": cId}); ct < 1 {
@@ -62,14 +59,12 @@ type SetCategory struct {
 	Name string `json:"name" valid:"Required;MinSize(3);MaxSize(100)"`
 }
 
-// Valid
 func (s *SetCategory) Valid(v *validation.Validation) {
 	if ct, _ := dao.GetCategoriesCount(dao.Query{"name=?": s.Name, "id<>?": s.categoryId}); ct > 0 {
 		_ = v.SetError("Name", "类别名称已存在")
 	}
 }
 
-// Validate
 func (s *SetCategory) Validate(cId int) *message.Message {
 	s.categoryId = cId
 	valid := validation.Validation{}
@@ -91,12 +86,14 @@ type ListCategoriesQuery struct {
 	Query *string `form:"query"`
 }
 
-// UpdateQuery
 func (q *ListCategoriesQuery) UpdateQuery(query dao.Query) error {
 	// 通用Query
 	if q.Query != nil && *q.Query != "" {
 		likeQuery := fmt.Sprintf("%%%s%%", *q.Query)
-		query["name LIKE @query OR id LIKE @query OR created_by LIKE @query OR updated_by LIKE @query"] = sql.Named("query", likeQuery)
+		query["(name LIKE @query OR "+
+			"id LIKE @query OR "+
+			"created_by LIKE @query OR "+
+			"updated_by LIKE @query)"] = sql.Named("query", likeQuery)
 	}
 
 	return nil
@@ -107,7 +104,6 @@ type ListCategoriesRelations struct {
 	Disabled *bool `form:"disabled"`
 }
 
-// Validate
 func (*ListCategoriesRelations) Validate(cId int) *message.Message {
 	// 验证类别是否存在
 	if ct, _ := dao.GetCategoriesCount(dao.Query{"id=?": cId}); ct < 1 {
@@ -117,7 +113,6 @@ func (*ListCategoriesRelations) Validate(cId int) *message.Message {
 	return nil
 }
 
-// UpdateQuery
 func (q *ListCategoriesRelations) UpdateQuery(query dao.Query) error {
 	if q.Disabled != nil {
 		query["flows.disabled=?"] = *q.Disabled

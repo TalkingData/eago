@@ -2,7 +2,6 @@ package conf
 
 import (
 	"github.com/Unknwon/goconfig"
-	"strings"
 	"time"
 )
 
@@ -29,11 +28,6 @@ const (
 	_DEFAULT_MYSQL_PASSWORD             = "root"
 	_DEFAULT_MYSQL_MAX_OPEN_CONNECTIONS = 20
 	_DEFAULT_MYSQL_MAX_IDLE_CONNECTIONS = 5
-
-	// Redis默认配置
-	_DEFAULT_REDIS_ADDRESS  = "127.0.0.1:6379"
-	_DEFAULT_REDIS_PASSWORD = ""
-	_DEFAULT_REDIS_DB       = 1
 
 	// Jaeger默认配置
 	_DEFAULT_JAEGER_ADDRESS = "127.0.0.1:5775"
@@ -62,10 +56,6 @@ type conf struct {
 	MysqlMaxOpenConnections int
 	MysqlMaxIdleConnections int
 
-	RedisAddress  string
-	RedisPassword string
-	RedisDb       int
-
 	JaegerAddress string
 }
 
@@ -92,7 +82,7 @@ func newLocalConf() *conf {
 		LogLevel: cfg.MustValue("log", "level", _DEFAULT_LOG_LEVEL),
 		LogPath:  cfg.MustValue("log", "path", _DEFAULT_LOG_PATH),
 
-		EtcdAddresses: strings.Split(cfg.MustValue("etcd", "addresses", _DEFAULT_ETCD_ADDRESSES), ","),
+		EtcdAddresses: cfg.MustValueArray("etcd", "addresses", _DEFAULT_CONFIG_SEPARATOR),
 		EtcdUsername:  cfg.MustValue("etcd", "username", _DEFAULT_ETCD_USERNAME),
 		EtcdPassword:  cfg.MustValue("etcd", "password", _DEFAULT_ETCD_PASSWORD),
 
@@ -102,10 +92,6 @@ func newLocalConf() *conf {
 		MysqlPassword:           cfg.MustValue("mysql", "password", _DEFAULT_MYSQL_PASSWORD),
 		MysqlMaxOpenConnections: cfg.MustInt("mysql", "max_open_connections", _DEFAULT_MYSQL_MAX_OPEN_CONNECTIONS),
 		MysqlMaxIdleConnections: cfg.MustInt("mysql", "max_idle_connections", _DEFAULT_MYSQL_MAX_IDLE_CONNECTIONS),
-
-		RedisAddress:  cfg.MustValue("redis", "address", _DEFAULT_REDIS_ADDRESS),
-		RedisPassword: cfg.MustValue("redis", "password", _DEFAULT_REDIS_PASSWORD),
-		RedisDb:       cfg.MustInt("redis", "db", _DEFAULT_REDIS_DB),
 
 		JaegerAddress: cfg.MustValue("tracer", "jaeger_address", _DEFAULT_JAEGER_ADDRESS),
 	}

@@ -105,11 +105,11 @@ func SetProduct(c *gin.Context) {
 	w.WriteSuccessPayload(c, "product", prod)
 }
 
-// ListProducts 列出所有产品线
-func ListProducts(c *gin.Context) {
+// PagedListProducts 列出所有产品线-分页
+func PagedListProducts(c *gin.Context) {
 	query := dao.Query{}
 	// 设置查询filter
-	lpq := dto.ListProductsQuery{}
+	lpq := dto.PagedListProductsQuery{}
 	if c.ShouldBindQuery(&lpq) == nil {
 		_ = lpq.UpdateQuery(query)
 	}

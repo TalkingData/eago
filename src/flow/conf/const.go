@@ -13,9 +13,11 @@ const (
 	TIMESTAMP_FORMAT = "2006-01-02 15:04:05"
 
 	CONFIG_FILE_PATHNAME = "../conf/eago_flow.conf"
+
+	_DEFAULT_CONFIG_SEPARATOR = ","
 )
 
-// 流程实例名称最大长度
+// INSTANCE_NAME_MAX_LENGTH 流程实例名称最大长度
 const INSTANCE_NAME_MAX_LENGTH = 200
 
 // 流程实例状态
@@ -27,7 +29,7 @@ const (
 	INSTANCE_STATUS_RUNNING      = 2    // 流转中
 )
 
-// 审批人分隔符
+// ASSIGNEES_SPILT_TAG 审批人分隔符
 const ASSIGNEES_SPILT_TAG = ","
 
 // AssigneeCondition 取值枚举范围

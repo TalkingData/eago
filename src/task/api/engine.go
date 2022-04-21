@@ -10,7 +10,6 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// NewGinEngine
 func NewGinEngine() *gin.Engine {
 	gin.SetMode(conf.Conf.GinMode)
 
@@ -28,7 +27,7 @@ func NewGinEngine() *gin.Engine {
 			tr.POST("", perm.MustRole(conf.ADMIN_ROLE_NAME), h.NewTask)
 			tr.DELETE("/:task_id", perm.MustRole(conf.ADMIN_ROLE_NAME), h.RemoveTask)
 			tr.PUT("/:task_id", perm.MustRole(conf.ADMIN_ROLE_NAME), h.SetTask)
-			tr.GET("", perm.MustRole(conf.ADMIN_ROLE_NAME), pg.ListPageHelper(), h.ListTasks)
+			tr.GET("", perm.MustRole(conf.ADMIN_ROLE_NAME), pg.ListPageHelper(), h.PagedListTasks)
 
 			// 调用任务
 			tr.POST("/:task_id/call", perm.MustRole(conf.ADMIN_ROLE_NAME), h.CallTask)
@@ -40,7 +39,7 @@ func NewGinEngine() *gin.Engine {
 			sr.POST("", perm.MustRole(conf.ADMIN_ROLE_NAME), h.NewSchedule)
 			sr.DELETE("/:schedule_id", perm.MustRole(conf.ADMIN_ROLE_NAME), h.RemoveSchedule)
 			sr.PUT("/:schedule_id", perm.MustRole(conf.ADMIN_ROLE_NAME), h.SetSchedule)
-			sr.GET("", perm.MustRole(conf.ADMIN_ROLE_NAME), pg.ListPageHelper(), h.ListSchedules)
+			sr.GET("", perm.MustRole(conf.ADMIN_ROLE_NAME), pg.ListPageHelper(), h.PagedListSchedules)
 		}
 
 		// ResultTables模块
@@ -58,7 +57,7 @@ func NewGinEngine() *gin.Engine {
 		rr := tGroup.Group("/results")
 		{
 			// 按分区ID列出所有结果
-			rr.GET("/:result_partition_id", pg.ListPageHelper(), h.ListResults)
+			rr.GET("/:result_partition_id", pg.ListPageHelper(), h.PagedListResults)
 			// 手动结束任务
 			rr.DELETE("/:result_partition_id/:result_id", perm.MustRole(conf.ADMIN_ROLE_NAME), h.KillTask)
 		}

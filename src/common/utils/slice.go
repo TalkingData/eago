@@ -19,7 +19,7 @@ func IsInSlice(haystack, needle interface{}) (bool, error) {
 		return false, nil
 	}
 
-	return false, errors.New("Not supported haystack.")
+	return false, errors.New("not supported haystack")
 }
 
 // MergeStringSlice 合并除空出串外的字符串切片

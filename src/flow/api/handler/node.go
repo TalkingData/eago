@@ -164,11 +164,11 @@ func GetNodeChain(c *gin.Context) {
 	w.WriteSuccessPayload(c, "chain", root)
 }
 
-// ListNodes 列出所有节点
-func ListNodes(c *gin.Context) {
+// PagedListNodes 列出所有节点-分页
+func PagedListNodes(c *gin.Context) {
 	query := dao.Query{}
 	// 设置查询filter
-	ltq := dto.ListNodesQuery{}
+	ltq := dto.PagedListNodesQuery{}
 	if c.ShouldBindQuery(&ltq) == nil {
 		_ = ltq.UpdateQuery(query)
 	}

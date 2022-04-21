@@ -31,7 +31,6 @@ func (n *NewNode) Valid(v *validation.Validation) {
 	}
 }
 
-// Validate
 func (n *NewNode) Validate() *message.Message {
 	if n.ParentId != nil {
 		// 验证父节点是否存在
@@ -62,7 +61,6 @@ func (n *NewNode) Validate() *message.Message {
 // RemoveNode struct
 type RemoveNode struct{}
 
-// Validate
 func (*RemoveNode) Validate(nId int) *message.Message {
 	// 验证节点是否存在
 	if ct, _ := dao.GetNodeCount(dao.Query{"id=?": nId}); ct < 1 {
@@ -104,7 +102,6 @@ func (s *SetNode) Valid(v *validation.Validation) {
 	}
 }
 
-// Validate
 func (s *SetNode) Validate(nId int) *message.Message {
 	if s.ParentId != nil {
 		// 验证父节点是否存在
@@ -142,16 +139,15 @@ func (s *SetNode) Validate(nId int) *message.Message {
 	return nil
 }
 
-// ListNodesQuery struct
-type ListNodesQuery struct {
+// PagedListNodesQuery struct
+type PagedListNodesQuery struct {
 	Query    *string `form:"query"`
 	Name     *string `form:"name"`
 	ParentId *string `form:"parent_id"`
 	Category *int    `form:"category"`
 }
 
-// UpdateQuery
-func (q *ListNodesQuery) UpdateQuery(query dao.Query) error {
+func (q *PagedListNodesQuery) UpdateQuery(query dao.Query) error {
 	// 通用Query
 	if q.Query != nil && *q.Query != "" {
 		likeQuery := fmt.Sprintf("%%%s%%", *q.Query)
@@ -187,7 +183,6 @@ type AddTrigger2Node struct {
 	TriggerId int `json:"trigger_id" valid:"Required"`
 }
 
-// Valid
 func (apr *AddTrigger2Node) Valid(v *validation.Validation) {
 	// 验证触发器是否存在
 	if ct, _ := dao.GetTriggerCount(dao.Query{"id=?": apr.TriggerId}); ct < 1 {
@@ -200,7 +195,6 @@ func (apr *AddTrigger2Node) Valid(v *validation.Validation) {
 	}
 }
 
-// Validate
 func (apr *AddTrigger2Node) Validate(nId int) *message.Message {
 	// 验证节点是否存在
 	if ct, _ := dao.GetNodeCount(dao.Query{"id=?": nId}); ct < 1 {
@@ -225,7 +219,6 @@ func (apr *AddTrigger2Node) Validate(nId int) *message.Message {
 // RemoveNodeTrigger struct
 type RemoveNodeTrigger struct{}
 
-// Validate
 func (*RemoveNodeTrigger) Validate(nId, tId int) *message.Message {
 	// 验证用户是否已经属于该产品线
 	if ct, _ := dao.GetNodeTriggerCount(dao.Query{"node_id": nId, "trigger_id=?": tId}); ct < 1 {
@@ -238,7 +231,6 @@ func (*RemoveNodeTrigger) Validate(nId, tId int) *message.Message {
 // ListNodeRelations struct
 type ListNodeRelations struct{}
 
-// Validate
 func (*ListNodeRelations) Validate(nId int) *message.Message {
 	// 验证节点是否存在
 	if ct, _ := dao.GetNodeCount(dao.Query{"id=?": nId}); ct < 1 {

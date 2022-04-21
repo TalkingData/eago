@@ -15,7 +15,6 @@ type SetUser struct {
 	Phone string `json:"phone" valid:"Required;Phone;MinSize(8);MaxSize(20)"`
 }
 
-// Validate
 func (su *SetUser) Validate(userId int) *message.Message {
 	// 户不存在
 	if ct, _ := dao.GetUserCount(dao.Query{"id=?": userId}); ct < 1 {
@@ -39,7 +38,6 @@ func (su *SetUser) Validate(userId int) *message.Message {
 // MakeUserHandover struct
 type MakeUserHandover struct{}
 
-// Validate
 func (*MakeUserHandover) Validate(frmUserId, tgtUserId int) *message.Message {
 	// 原用户不存在
 	if ct, _ := dao.GetUserCount(dao.Query{"id=?": frmUserId}); ct < 1 {
@@ -54,19 +52,20 @@ func (*MakeUserHandover) Validate(frmUserId, tgtUserId int) *message.Message {
 	return nil
 }
 
-// ListUsersQuery struct
-type ListUsersQuery struct {
+// PagedListUsersQuery struct
+type PagedListUsersQuery struct {
 	Query       *string `form:"query"`
 	IsSuperuser *bool   `form:"is_superuser"`
 	Disabled    *bool   `form:"disabled"`
 }
 
-// UpdateQuery
-func (luq *ListUsersQuery) UpdateQuery(query dao.Query) error {
+func (luq *PagedListUsersQuery) UpdateQuery(query dao.Query) error {
 	// 通用Query
 	if luq.Query != nil && *luq.Query != "" {
 		likeQuery := fmt.Sprintf("%%%s%%", *luq.Query)
-		query["(username LIKE @query OR id LIKE @query OR email LIKE @query)"] = sql.Named("query", likeQuery)
+		query["(username LIKE @query OR "+
+			"id LIKE @query OR "+
+			"email LIKE @query)"] = sql.Named("query", likeQuery)
 	}
 
 	if luq.Disabled != nil {

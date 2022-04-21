@@ -19,7 +19,6 @@ type NewSchedule struct {
 	Description  *string `json:"description" valid:"MinSize(0);MaxSize(500)"`
 }
 
-// Validate
 func (n *NewSchedule) Validate() *message.Message {
 	valid := validation.Validation{}
 	// 验证数据
@@ -38,7 +37,6 @@ func (n *NewSchedule) Validate() *message.Message {
 // RemoveSchedule struct
 type RemoveSchedule struct{}
 
-// Validate
 func (*RemoveSchedule) Validate(schId int) *message.Message {
 	// 验证任务是否存在
 	if ct, _ := dao.GetScheduleCount(dao.Query{"id=?": schId}); ct < 1 {
@@ -58,7 +56,6 @@ type SetSchedule struct {
 	Description  *string `json:"description" valid:"MinSize(0);MaxSize(500)"`
 }
 
-// Validate
 func (n *SetSchedule) Validate(schId int) *message.Message {
 	// 验证任务是否存在
 	if ct, _ := dao.GetScheduleCount(dao.Query{"id=?": schId}); ct < 1 {
@@ -85,12 +82,13 @@ type ListSchedulesQuery struct {
 	Disabled *bool   `form:"disabled"`
 }
 
-// UpdateQuery
 func (q *ListSchedulesQuery) UpdateQuery(query dao.Query) error {
 	// 通用Query
 	if q.Query != nil && *q.Query != "" {
 		likeQuery := fmt.Sprintf("%%%s%%", *q.Query)
-		query["(task_codename LIKE @query OR description LIKE @query OR id LIKE @query)"] = sql.Named("query", likeQuery)
+		query["(task_codename LIKE @query OR "+
+			"description LIKE @query OR "+
+			"id LIKE @query)"] = sql.Named("query", likeQuery)
 	}
 
 	if q.Disabled != nil {

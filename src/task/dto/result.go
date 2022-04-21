@@ -12,12 +12,13 @@ type ListResultsQuery struct {
 	Status *int    `form:"status"`
 }
 
-// UpdateQuery
 func (q *ListResultsQuery) UpdateQuery(query dao.Query) error {
 	// 通用Query
 	if q.Query != nil && *q.Query != "" {
 		likeQuery := fmt.Sprintf("%%%s%%", *q.Query)
-		query["(task_codename LIKE @query OR caller LIKE @query OR id LIKE @query)"] = sql.Named("query", likeQuery)
+		query["(task_codename LIKE @query OR "+
+			"caller LIKE @query OR "+
+			"id LIKE @query)"] = sql.Named("query", likeQuery)
 	}
 
 	if q.Status != nil {

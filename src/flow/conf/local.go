@@ -2,7 +2,6 @@ package conf
 
 import (
 	"github.com/Unknwon/goconfig"
-	"strings"
 	"time"
 )
 
@@ -81,7 +80,7 @@ func newLocalConf() *conf {
 		NotifyTitle:   cfg.MustValue("notify", "title", _DEFAULT_NOTIFY_TITLE),
 		NotifyBaseUrl: cfg.MustValue("notify", "base_url", _DEFAULT_NOTIFY_BASE_URL),
 
-		EtcdAddresses: strings.Split(cfg.MustValue("etcd", "addresses", _DEFAULT_ETCD_ADDRESSES), ","),
+		EtcdAddresses: cfg.MustValueArray("etcd", "addresses", _DEFAULT_CONFIG_SEPARATOR),
 		EtcdUsername:  cfg.MustValue("etcd", "username", _DEFAULT_ETCD_USERNAME),
 		EtcdPassword:  cfg.MustValue("etcd", "password", _DEFAULT_ETCD_PASSWORD),
 

@@ -38,10 +38,10 @@ func (as *AuthService) GetUserById(ctx context.Context, req *auth.IdQuery, rsp *
 	return nil
 }
 
-// ListUsers RPC服务::列出所有用户
-func (as *AuthService) ListUsers(ctx context.Context, req *auth.QueryWithPage, rsp *auth.PagedUsers) error {
-	log.Info("srv.ListUsers called.")
-	defer log.Info("srv.ListUsers end.")
+// PagedListUsers RPC服务::列出所有用户-分页
+func (as *AuthService) PagedListUsers(ctx context.Context, req *auth.QueryWithPage, rsp *auth.PagedUsers) error {
+	log.Info("srv.PagedListUsers called.")
+	defer log.Info("srv.PagedListUsers end.")
 
 	query := make(dao.Query)
 	for k, v := range req.Query {

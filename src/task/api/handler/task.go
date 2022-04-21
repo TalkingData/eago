@@ -167,8 +167,8 @@ func SetTask(c *gin.Context) {
 	w.WriteSuccessPayload(c, "task", task)
 }
 
-// ListTasks 列出所有任务
-func ListTasks(c *gin.Context) {
+// PagedListTasks 列出所有任务-分页
+func PagedListTasks(c *gin.Context) {
 	query := dao.Query{}
 	// 设置查询filter
 	ltq := dto.ListTasksQuery{}

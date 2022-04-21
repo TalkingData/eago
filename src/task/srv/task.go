@@ -12,10 +12,10 @@ import (
 	"io"
 )
 
-// ListTasks 列出所有任务
-func (ts *TaskService) ListTasks(ctx context.Context, in *task.QueryWithPage, out *task.PagedTasks) error {
-	log.Info("Got rpc call ListTasks.")
-	defer log.Info("Rpc call ListTasks done.")
+// PagedListTasks 列出所有任务-分页
+func (ts *TaskService) PagedListTasks(ctx context.Context, in *task.QueryWithPage, out *task.PagedTasks) error {
+	log.Info("Got rpc call PagedListTasks.")
+	defer log.Info("Rpc call PagedListTasks done.")
 
 	query := make(dao.Query)
 	for k, v := range in.Query {

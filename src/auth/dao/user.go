@@ -340,7 +340,7 @@ func GetUserDepartment(userId int) (*model.UserDepartmentMember, bool) {
 	return &uDeptMember, true
 }
 
-// GetUserDepartment 关联表操作::获得用户所在部门
+// MakeUserHandover 用户交接
 func MakeUserHandover(uId, tgtId int) error {
 	tx := db.Begin()
 

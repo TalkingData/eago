@@ -37,7 +37,6 @@ type wework struct {
 	corpSecret string
 }
 
-// NewWework
 func NewWework(agentId, corpId, corpSecret string) Wework {
 	return &wework{
 		agentId:    agentId,

@@ -24,7 +24,6 @@ type HandleInstance struct {
 	Content  *string `json:"content" valid:"MinSize(0)"`
 }
 
-// Validate
 func (hi *HandleInstance) Validate(iId int, currUname string) *message.Message {
 	// 验证实例是否存在
 	q := dao.Query{"id=?": iId, "status=?": conf.INSTANCE_STATUS_RUNNING}
@@ -80,18 +79,18 @@ func (hi *HandleInstance) Validate(iId int, currUname string) *message.Message {
 	return nil
 }
 
-// ListInstancesQuery struct
-type ListInstancesQuery struct {
+// PagedListInstancesQuery struct
+type PagedListInstancesQuery struct {
 	Query  *string `form:"query"`
 	Status *int    `form:"status"`
 }
 
-// UpdateDefaultQuery
-func (q *ListInstancesQuery) UpdateDefaultQuery(query dao.Query, currUname string) error {
+func (q *PagedListInstancesQuery) UpdateDefaultQuery(query dao.Query, currUname string) error {
 	// 通用Query
 	if q.Query != nil && *q.Query != "" {
 		likeQuery := fmt.Sprintf("%%%s%%", *q.Query)
-		query["(name LIKE @query OR id LIKE @query)"] = sql.Named("query", likeQuery)
+		query["(name LIKE @query OR "+
+			"id LIKE @query)"] = sql.Named("query", likeQuery)
 	}
 
 	if q.Status != nil {
@@ -101,12 +100,12 @@ func (q *ListInstancesQuery) UpdateDefaultQuery(query dao.Query, currUname strin
 	return nil
 }
 
-// UpdateMyInstancesQuery
-func (q *ListInstancesQuery) UpdateMyInstancesQuery(query dao.Query, currUname string) error {
+func (q *PagedListInstancesQuery) UpdateMyInstancesQuery(query dao.Query, currUname string) error {
 	// 通用Query
 	if q.Query != nil && *q.Query != "" {
 		likeQuery := fmt.Sprintf("%%%s%%", *q.Query)
-		query["(name LIKE @query OR id LIKE @query)"] = sql.Named("query", likeQuery)
+		query["(name LIKE @query OR "+
+			"id LIKE @query)"] = sql.Named("query", likeQuery)
 	}
 
 	if q.Status != nil {
@@ -119,12 +118,12 @@ func (q *ListInstancesQuery) UpdateMyInstancesQuery(query dao.Query, currUname s
 	return nil
 }
 
-// UpdateTodoInstancesQuery
-func (q *ListInstancesQuery) UpdateTodoInstancesQuery(query dao.Query, currUname string) error {
+func (q *PagedListInstancesQuery) UpdateTodoInstancesQuery(query dao.Query, currUname string) error {
 	// 通用Query
 	if q.Query != nil && *q.Query != "" {
 		likeQuery := fmt.Sprintf("%%%s%%", *q.Query)
-		query["(name LIKE @query OR id LIKE @query)"] = sql.Named("query", likeQuery)
+		query["(name LIKE @query OR "+
+			"id LIKE @query)"] = sql.Named("query", likeQuery)
 	}
 
 	if q.Status != nil {
@@ -138,12 +137,12 @@ func (q *ListInstancesQuery) UpdateTodoInstancesQuery(query dao.Query, currUname
 	return nil
 }
 
-// UpdateDoneInstancesQuery
-func (q *ListInstancesQuery) UpdateDoneInstancesQuery(query dao.Query, currUname string) error {
+func (q *PagedListInstancesQuery) UpdateDoneInstancesQuery(query dao.Query, currUname string) error {
 	// 通用Query
 	if q.Query != nil && *q.Query != "" {
 		likeQuery := fmt.Sprintf("%%%s%%", *q.Query)
-		query["(name LIKE @query OR id LIKE @query)"] = sql.Named("query", likeQuery)
+		query["(name LIKE @query OR "+
+			"id LIKE @query)"] = sql.Named("query", likeQuery)
 	}
 
 	if q.Status != nil {

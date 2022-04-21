@@ -105,11 +105,11 @@ func SetRole(c *gin.Context) {
 	w.WriteSuccessPayload(c, "role", role)
 }
 
-// ListRoles 列出所有角色
-func ListRoles(c *gin.Context) {
+// PagedListRoles 列出所有角色-分页
+func PagedListRoles(c *gin.Context) {
 	query := dao.Query{}
 	// 设置查询filter
-	lrq := dto.ListRolesQuery{}
+	lrq := dto.PagedListRolesQuery{}
 	if c.ShouldBindQuery(&lrq) == nil {
 		_ = lrq.UpdateQuery(query)
 	}

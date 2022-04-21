@@ -194,11 +194,11 @@ func SetFlow(c *gin.Context) {
 	w.WriteSuccessPayload(c, "flow", f)
 }
 
-// ListFlows 列出所有流程
-func ListFlows(c *gin.Context) {
+// PagedListFlows 列出所有流程-分页
+func PagedListFlows(c *gin.Context) {
 	query := dao.Query{}
 	// 设置查询filter
-	lfq := dto.ListFlowsQuery{}
+	lfq := dto.PagedListFlowsQuery{}
 	if c.ShouldBindQuery(&lfq) == nil {
 		_ = lfq.UpdateQuery(query)
 	}

@@ -13,7 +13,6 @@ type NewLog struct {
 	Content *string `json:"content" valid:"MinSize(0);MaxSize(500)"`
 }
 
-// Validate
 func (n *NewLog) Validate(insId int) *message.Message {
 	// 验证流程实例是否存在
 	if ct, _ := dao.GetInstancesCount(dao.Query{"id=?": insId}); ct < 1 {
@@ -37,7 +36,6 @@ func (n *NewLog) Validate(insId int) *message.Message {
 // ListLog struct
 type ListLog struct{}
 
-// Validate
 func (*ListLog) Validate(insId int) *message.Message {
 	// 验证流程实例是否存在
 	if ct, _ := dao.GetInstancesCount(dao.Query{"id=?": insId}); ct < 1 {

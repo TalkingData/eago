@@ -125,8 +125,8 @@ func SetSchedule(c *gin.Context) {
 	w.WriteSuccessPayload(c, "schedule", sch)
 }
 
-// ListSchedules 列出所有计划任务
-func ListSchedules(c *gin.Context) {
+// PagedListSchedules 列出所有计划任务-分页
+func PagedListSchedules(c *gin.Context) {
 	query := dao.Query{}
 	// 设置查询filter
 	ltq := dto.ListTasksQuery{}

@@ -14,7 +14,6 @@ type NewResultPartition struct {
 	Partition string `json:"partition" valid:"Required;MinSize(2);MaxSize(10)"`
 }
 
-// Validate
 func (rp *NewResultPartition) Validate() *message.Message {
 	valid := validation.Validation{}
 	// 验证数据
@@ -35,7 +34,6 @@ type ListResultPartitionsQuery struct {
 	Query *string `form:"query"`
 }
 
-// UpdateQuery
 func (q *ListResultPartitionsQuery) UpdateQuery(query dao.Query) error {
 	// 通用Query
 	if q.Query != nil && *q.Query != "" {

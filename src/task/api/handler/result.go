@@ -63,8 +63,8 @@ func KillTask(c *gin.Context) {
 	w.WriteSuccess(c)
 }
 
-// ListResults 按分区列出所有结果
-func ListResults(c *gin.Context) {
+// PagedListResults 按分区列出所有结果-分页
+func PagedListResults(c *gin.Context) {
 	// 获得分区ID
 	rpId, err := strconv.Atoi(c.Param("result_partition_id"))
 	if err != nil {

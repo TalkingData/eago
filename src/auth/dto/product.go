@@ -17,7 +17,6 @@ type NewProduct struct {
 	Description *string `json:"description" valid:"MinSize(0);MaxSize(500)"`
 }
 
-// Valid
 func (np *NewProduct) Valid(v *validation.Validation) {
 	nameQ := dao.Query{"name=@name OR alias=@name": sql.Named("name", np.Name)}
 	if ct, _ := dao.GetProductCount(nameQ); ct > 0 {
@@ -30,7 +29,6 @@ func (np *NewProduct) Valid(v *validation.Validation) {
 	}
 }
 
-// Validate
 func (np *NewProduct) Validate() *message.Message {
 	valid := validation.Validation{}
 	// 验证数据
@@ -49,7 +47,6 @@ func (np *NewProduct) Validate() *message.Message {
 // RemoveProduct struct
 type RemoveProduct struct{}
 
-// Validate
 func (*RemoveProduct) Validate(prodId int) *message.Message {
 	// 验证产品线是否存在
 	if ct, _ := dao.GetProductCount(dao.Query{"id=?": prodId}); ct < 1 {
@@ -74,7 +71,6 @@ type SetProduct struct {
 	Description *string `json:"description" valid:"MinSize(0);MaxSize(500)"`
 }
 
-// Valid
 func (sp *SetProduct) Valid(v *validation.Validation) {
 	nameQ := dao.Query{
 		"id<>?":                       sp.prodId,
@@ -93,7 +89,6 @@ func (sp *SetProduct) Valid(v *validation.Validation) {
 	}
 }
 
-// Validate
 func (sp *SetProduct) Validate(prodId int) *message.Message {
 	// 验证产品线是否存在
 	if ct, _ := dao.GetProductCount(dao.Query{"id=?": prodId}); ct < 1 {
@@ -115,18 +110,19 @@ func (sp *SetProduct) Validate(prodId int) *message.Message {
 	return nil
 }
 
-// ListProductsQuery struct
-type ListProductsQuery struct {
+// PagedListProductsQuery struct
+type PagedListProductsQuery struct {
 	Query    *string `form:"query"`
 	Disabled *bool   `form:"disabled"`
 }
 
-// UpdateQuery
-func (lpq *ListProductsQuery) UpdateQuery(query dao.Query) error {
+func (lpq *PagedListProductsQuery) UpdateQuery(query dao.Query) error {
 	// 通用Query
 	if lpq.Query != nil && *lpq.Query != "" {
 		likeQuery := fmt.Sprintf("%%%s%%", *lpq.Query)
-		query["(name LIKE @query OR alias LIKE @query OR id LIKE @query)"] = sql.Named("query", likeQuery)
+		query["(name LIKE @query OR "+
+			"alias LIKE @query OR "+
+			"id LIKE @query)"] = sql.Named("query", likeQuery)
 	}
 
 	if lpq.Disabled != nil {
@@ -144,7 +140,6 @@ type AddUser2Product struct {
 	IsOwner bool `json:"is_owner" valid:"Required"`
 }
 
-// Valid
 func (apr *AddUser2Product) Valid(v *validation.Validation) {
 	// 验证用户是否存在
 	if ct, _ := dao.GetUserCount(dao.Query{"id=?": apr.UserId}); ct < 1 {
@@ -157,7 +152,6 @@ func (apr *AddUser2Product) Valid(v *validation.Validation) {
 	}
 }
 
-// Validate
 func (apr *AddUser2Product) Validate(prodId int) *message.Message {
 	// 验证产品线是否存在
 	if ct, _ := dao.GetProductCount(dao.Query{"id=?": prodId}); ct < 1 {
@@ -182,7 +176,6 @@ func (apr *AddUser2Product) Validate(prodId int) *message.Message {
 // RemoveProductUser struct
 type RemoveProductUser struct{}
 
-// Validate
 func (*RemoveProductUser) Validate(prodId, userId int) *message.Message {
 	// 验证用户是否已经属于该产品线
 	if ct, _ := dao.GetProductUserCount(dao.Query{"product_id=?": prodId, "user_id": userId}); ct < 1 {
@@ -197,7 +190,6 @@ type SetUserIsProductOwner struct {
 	IsOwner bool `json:"is_owner" valid:"Required"`
 }
 
-// Validate
 func (suo *SetUserIsProductOwner) Validate(prodId, userId int) *message.Message {
 	// 验证用户是否已经属于该产品线
 	if ct, _ := dao.GetProductUserCount(dao.Query{"product_id=?": prodId, "user_id": userId}); ct < 1 {
@@ -232,7 +224,6 @@ func (*ListProductUsersQuery) Validate(prodId int) *message.Message {
 	return nil
 }
 
-// UpdateQuery
 func (lpu *ListProductUsersQuery) UpdateQuery(query dao.Query) error {
 	if lpu.IsOwner != nil {
 		query["is_owner=?"] = *lpu.IsOwner

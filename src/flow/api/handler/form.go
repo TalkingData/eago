@@ -110,11 +110,11 @@ func GetForm(c *gin.Context) {
 	w.WriteSuccessPayload(c, "form", f)
 }
 
-// ListForms 列出所有表单
-func ListForms(c *gin.Context) {
+// PagedListForms 列出所有表单-分页
+func PagedListForms(c *gin.Context) {
 	query := dao.Query{}
 	// 设置查询filter
-	lfq := dto.ListFormsQuery{}
+	lfq := dto.PagedListFormsQuery{}
 	if c.ShouldBindQuery(&lfq) == nil {
 		_ = lfq.UpdateQuery(query)
 	}

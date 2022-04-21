@@ -5,7 +5,6 @@ import (
 	"html/template"
 )
 
-// RenderString
 func RenderString(tpl string, vars interface{}) (string, error) {
 	t, err := template.New("tpl").Parse(tpl)
 

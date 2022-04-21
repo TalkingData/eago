@@ -17,7 +17,6 @@ type logger struct {
 	LogCh chan *string
 }
 
-// Debug
 func (l *logger) Debug(format string, a ...interface{}) {
 	l.Wg.Add(1)
 	msg := "[DEBUG] " + fmt.Sprintf(format, a...)
@@ -25,7 +24,6 @@ func (l *logger) Debug(format string, a ...interface{}) {
 	l.LogCh <- &msg
 }
 
-// Info
 func (l *logger) Info(format string, a ...interface{}) {
 	l.Wg.Add(1)
 	msg := "[INFO] " + fmt.Sprintf(format, a...)
@@ -33,7 +31,6 @@ func (l *logger) Info(format string, a ...interface{}) {
 	l.LogCh <- &msg
 }
 
-// Warn
 func (l *logger) Warn(format string, a ...interface{}) {
 	l.Wg.Add(1)
 	msg := "[WARNING] " + fmt.Sprintf(format, a...)

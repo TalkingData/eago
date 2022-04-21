@@ -4,7 +4,6 @@ import (
 	"runtime"
 )
 
-// GetFuncName
 func GetFuncName(skip int) string {
 	pc := make([]uintptr, 1)
 	runtime.Callers(skip, pc)

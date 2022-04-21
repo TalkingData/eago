@@ -44,7 +44,6 @@ func (t *Task) Run(callback func(err error)) {
 	callback(err)
 }
 
-// Info
 func (t *Task) Info() string {
 	return fmt.Sprintf("TaskCodename: %s.", t.Codename)
 }

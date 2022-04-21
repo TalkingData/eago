@@ -4,11 +4,11 @@ package task;
 option go_package = "proto;task";
 
 service TaskService {
-  // ListTasks 列出所有任务
-  rpc ListTasks(QueryWithPage) returns (PagedTasks) {}
+  // PagedListTasks 列出所有任务-分页
+  rpc PagedListTasks(QueryWithPage) returns (PagedTasks) {}
 
-  // ListSchedules 列出所有计划任务
-  rpc ListSchedules(QueryWithPage) returns (PagedSchedules) {}
+  // PagedListSchedules 列出所有计划任务-分页
+  rpc PagedListSchedules(QueryWithPage) returns (PagedSchedules) {}
 
   // GetResult 查看任务结果
   rpc GetResult(TaskUniqueId) returns (Result) {}

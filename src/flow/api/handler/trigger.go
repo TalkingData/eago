@@ -108,11 +108,11 @@ func SetTrigger(c *gin.Context) {
 	w.WriteSuccessPayload(c, "trigger", t)
 }
 
-// ListTriggers 列出所有触发器
-func ListTriggers(c *gin.Context) {
+// PagedListTriggers 列出所有触发器-分页
+func PagedListTriggers(c *gin.Context) {
 	query := dao.Query{}
 	// 设置查询filter
-	ltq := dto.ListTriggersQuery{}
+	ltq := dto.PagedListTriggersQuery{}
 	if c.ShouldBindQuery(&ltq) == nil {
 		_ = ltq.UpdateQuery(query)
 	}

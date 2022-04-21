@@ -37,10 +37,10 @@ func (as *AuthService) GetProductById(ctx context.Context, req *auth.IdQuery, rs
 	return nil
 }
 
-// ListProducts RPC服务::列出所有产品线
-func (as *AuthService) ListProducts(ctx context.Context, req *auth.QueryWithPage, rsp *auth.PagedProducts) error {
-	log.Info("srv.ListProducts called.")
-	defer log.Info("srv.ListProducts end.")
+// PagedListProducts RPC服务::列出所有产品线-分页
+func (as *AuthService) PagedListProducts(ctx context.Context, req *auth.QueryWithPage, rsp *auth.PagedProducts) error {
+	log.Info("srv.PagedListProducts called.")
+	defer log.Info("srv.PagedListProducts end.")
 
 	query := make(dao.Query)
 	for k, v := range req.Query {

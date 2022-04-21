@@ -7,12 +7,20 @@ import (
 	"eago/common/utils"
 	"github.com/gin-gonic/gin"
 	"strconv"
+	"strings"
 )
 
 // MustRole 检测当前用户是指定角色
-func MustRole(role string) gin.HandlerFunc {
+func MustRole(roleRequired string) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		isRoleHandler(c, role)
+		isRoleHandler(c, roleRequired)
+	}
+}
+
+// MustRoleIn 检测当前用户属于指定角色数组中的任意义一个
+func MustRoleIn(rolesRequired []string) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		isRoleInHandler(c, rolesRequired)
 	}
 }
 
@@ -130,10 +138,10 @@ func isCurrUserInGroupHandler(c *gin.Context, groupIdField string, isOwner bool)
 	return false, nil
 }
 
-// isRoleHandler 是否是指定角色处理
-func isRoleHandler(c *gin.Context, role string) {
+// isRoleHandler 判断当前用户的角色，是否是指定角色的处理
+func isRoleHandler(c *gin.Context, roleRequired string) {
 	tc := c.GetStringMap("TokenContent")
-	roles := tc["Roles"].([]string)
+	myRoles := tc["Roles"].([]string)
 
 	// 超级用户拥有所有权限，跳过判断
 	if tc["IsSuperuser"].(bool) {
@@ -141,27 +149,77 @@ func isRoleHandler(c *gin.Context, role string) {
 	}
 
 	// 判断是否是对应角色
-	res, err := utils.IsInSlice(roles, role)
+	res, err := utils.IsInSlice(myRoles, roleRequired)
 	if err != nil {
 		log.ErrorWithFields(log.Fields{
 			"user_id":       tc["UserId"].(int32),
 			"username":      tc["Username"].(string),
 			"is_superuser":  tc["IsSuperuser"].(bool),
-			"roles":         tc["Roles"].([]string),
-			"role_required": role,
+			"myRoles":       tc["Roles"].([]string),
+			"role_required": roleRequired,
 			"error":         err,
 		}, CheckRoleError.String())
 
 		w.WriteAnyAndAbort(c, CheckRoleError.Code(), CheckRoleError.String())
 		return
 	} else if !res {
-		m := UserNotRole.SetDetail(role)
+		m := UserNotRole.SetDetail(roleRequired)
 		log.WarnWithFields(log.Fields{
 			"user_id":       tc["UserId"].(int32),
 			"username":      tc["Username"].(string),
 			"is_superuser":  tc["IsSuperuser"].(bool),
-			"roles":         tc["Roles"].([]string),
-			"role_required": role,
+			"myRoles":       tc["Roles"].([]string),
+			"role_required": roleRequired,
+		}, m.String())
+		w.WriteAnyAndAbort(c, m.Code(), m.String())
+		return
+	}
+
+	return
+}
+
+// isRoleInHandler 判断当前用户的角色，是否是指定角色数组中的任意一个的处理
+func isRoleInHandler(c *gin.Context, rolesRequired []string) {
+	tc := c.GetStringMap("TokenContent")
+	myRoles := tc["Roles"].([]string)
+
+	// 超级用户拥有所有权限，跳过判断
+	if tc["IsSuperuser"].(bool) {
+		return
+	}
+
+	ok := false
+
+	// 判断是否是对应角色之一
+	for _, roleReq := range rolesRequired {
+		res, err := utils.IsInSlice(myRoles, roleReq)
+		if err != nil {
+			log.ErrorWithFields(log.Fields{
+				"user_id":        tc["UserId"].(int32),
+				"username":       tc["Username"].(string),
+				"is_superuser":   tc["IsSuperuser"].(bool),
+				"myRoles":        tc["Roles"].([]string),
+				"roles_required": rolesRequired,
+				"error":          err,
+			}, CheckRoleError.String())
+
+			w.WriteAnyAndAbort(c, CheckRoleError.Code(), CheckRoleError.String())
+			return
+		}
+		if res {
+			ok = true
+			break
+		}
+	}
+
+	if !ok {
+		m := UserNotRole.SetDetail(strings.Join(rolesRequired, ","))
+		log.WarnWithFields(log.Fields{
+			"user_id":        tc["UserId"].(int32),
+			"username":       tc["Username"].(string),
+			"is_superuser":   tc["IsSuperuser"].(bool),
+			"myRoles":        tc["Roles"].([]string),
+			"roles_required": rolesRequired,
 		}, m.String())
 		w.WriteAnyAndAbort(c, m.Code(), m.String())
 		return

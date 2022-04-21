@@ -15,14 +15,12 @@ type NewDepartment struct {
 	ParentId *int   `json:"parent_id"`
 }
 
-// Valid
 func (nd *NewDepartment) Valid(v *validation.Validation) {
 	if ct, _ := dao.GetDepartmentCount(dao.Query{"name=?": nd.Name}); ct > 0 {
 		_ = v.SetError("Name", "部门名称已存在")
 	}
 }
 
-// Validate
 func (nd *NewDepartment) Validate() *message.Message {
 	valid := validation.Validation{}
 	// 验证数据
@@ -41,7 +39,6 @@ func (nd *NewDepartment) Validate() *message.Message {
 // RemoveDepartment struct
 type RemoveDepartment struct{}
 
-// Validate
 func (*RemoveDepartment) Validate(deptId int) *message.Message {
 	// 验证部门是否存在
 	if ct, _ := dao.GetDepartmentCount(dao.Query{"id=?": deptId}); ct < 1 {
@@ -70,14 +67,12 @@ type SetDepartment struct {
 	ParentId *int   `json:"parent_id"`
 }
 
-// Valid
 func (sd *SetDepartment) Valid(v *validation.Validation) {
 	if ct, _ := dao.GetDepartmentCount(dao.Query{"name=?": sd.Name, "id<>?": sd.departmentId}); ct > 0 {
 		_ = v.SetError("Name", "部门名称已存在")
 	}
 }
 
-// Validate
 func (sd *SetDepartment) Validate(deptId int) *message.Message {
 	// 验证部门是否存在
 	if ct, _ := dao.GetDepartmentCount(dao.Query{"id=?": deptId}); ct < 1 {
@@ -99,17 +94,17 @@ func (sd *SetDepartment) Validate(deptId int) *message.Message {
 	return nil
 }
 
-// ListDepartmentsQuery struct
-type ListDepartmentsQuery struct {
+// PagedListDepartmentsQuery struct
+type PagedListDepartmentsQuery struct {
 	Query *string `form:"query"`
 }
 
-// UpdateQuery
-func (ldq *ListDepartmentsQuery) UpdateQuery(query dao.Query) error {
+func (ldq *PagedListDepartmentsQuery) UpdateQuery(query dao.Query) error {
 	// 通用Query
 	if ldq.Query != nil && *ldq.Query != "" {
 		likeQuery := fmt.Sprintf("%%%s%%", *ldq.Query)
-		query["name LIKE @query OR id LIKE @query"] = sql.Named("query", likeQuery)
+		query["(name LIKE @query OR "+
+			"id LIKE @query)"] = sql.Named("query", likeQuery)
 	}
 
 	return nil
@@ -123,7 +118,6 @@ type AddUser2Department struct {
 	IsOwner bool `json:"is_owner" valid:"Required"`
 }
 
-// Valid
 func (aud *AddUser2Department) Valid(v *validation.Validation) {
 	// 验证用户是否存在
 	if ct, _ := dao.GetUserCount(dao.Query{"id=?": aud.UserId}); ct < 1 {
@@ -136,7 +130,6 @@ func (aud *AddUser2Department) Valid(v *validation.Validation) {
 	}
 }
 
-// Validate
 func (aug *AddUser2Department) Validate(deptId int) *message.Message {
 	// 验证组是否存在
 	if ct, _ := dao.GetDepartmentCount(dao.Query{"id=?": deptId}); ct < 1 {
@@ -161,7 +154,6 @@ func (aug *AddUser2Department) Validate(deptId int) *message.Message {
 // RemoveDepartmentUser struct
 type RemoveDepartmentUser struct{}
 
-// Validate
 func (*RemoveDepartmentUser) Validate(deptId, userId int) *message.Message {
 	// 验证用户是否已经属于该部门
 	if ct, _ := dao.GetDepartmentUserCount(dao.Query{"department_id=?": deptId, "user_id": userId}); ct < 1 {
@@ -176,7 +168,6 @@ type SetUserIsDepartmentOwner struct {
 	IsOwner bool `json:"is_owner" valid:"Required"`
 }
 
-// Validate
 func (suo *SetUserIsDepartmentOwner) Validate(deptId, userId int) *message.Message {
 	// 验证用户是否已经属于该组
 	if ct, _ := dao.GetDepartmentUserCount(dao.Query{"department_id=?": deptId, "user_id": userId}); ct < 1 {
@@ -211,7 +202,6 @@ func (*ListDepartmentUsersQuery) Validate(deptId int) *message.Message {
 	return nil
 }
 
-// UpdateQuery
 func (ldu *ListDepartmentUsersQuery) UpdateQuery(query dao.Query) error {
 	if ldu.IsOwner != nil {
 		query["is_owner=?"] = *ldu.IsOwner

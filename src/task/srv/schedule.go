@@ -9,10 +9,10 @@ import (
 	task "eago/task/srv/proto"
 )
 
-// ListSchedule 列出所有计划任务
-func (ts *TaskService) ListSchedules(ctx context.Context, in *task.QueryWithPage, out *task.PagedSchedules) error {
-	log.Info("Got rpc call ListSchedules.")
-	defer log.Info("Rpc call ListSchedules done.")
+// PagedListSchedules 列出所有计划任务-分页
+func (ts *TaskService) PagedListSchedules(ctx context.Context, in *task.QueryWithPage, out *task.PagedSchedules) error {
+	log.Info("Got rpc call PagedListSchedules.")
+	defer log.Info("Rpc call PagedListSchedules done.")
 
 	query := make(dao.Query)
 	for k, v := range in.Query {

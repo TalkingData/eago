@@ -106,11 +106,11 @@ func SetGroup(c *gin.Context) {
 	w.WriteSuccessPayload(c, "group", group)
 }
 
-// ListGroups 列出所有组
-func ListGroups(c *gin.Context) {
+// PagedListGroups 列出所有组-分页
+func PagedListGroups(c *gin.Context) {
 	query := dao.Query{}
 	// 设置查询filter
-	lgq := dto.ListGroupsQuery{}
+	lgq := dto.PagedListGroupsQuery{}
 	if c.ShouldBindQuery(&lgq) == nil {
 		_ = lgq.UpdateQuery(query)
 	}

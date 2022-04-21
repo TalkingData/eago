@@ -34,10 +34,10 @@ func (as *AuthService) GetGroupById(ctx context.Context, req *auth.IdQuery, rsp 
 	return nil
 }
 
-// ListGroups RPC服务::列出所有组
-func (as *AuthService) ListGroups(ctx context.Context, req *auth.QueryWithPage, rsp *auth.PagedGroups) error {
-	log.Info("srv.ListGroups called.")
-	defer log.Info("srv.ListGroups end.")
+// PagedListGroups RPC服务::列出所有组-分页
+func (as *AuthService) PagedListGroups(ctx context.Context, req *auth.QueryWithPage, rsp *auth.PagedGroups) error {
+	log.Info("srv.PagedListGroups called.")
+	defer log.Info("srv.PagedListGroups end.")
 
 	query := make(dao.Query)
 	for k, v := range req.Query {

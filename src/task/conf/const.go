@@ -15,6 +15,8 @@ const (
 
 	TASK_UNIQUE_ID_SEPARATOR        = "::"
 	TASK_PARTITION_TIMESTAMP_FORMAT = "2006"
+
+	_DEFAULT_CONFIG_SEPARATOR = ","
 )
 
 // 任务类别

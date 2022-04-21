@@ -5,7 +5,6 @@ import (
 	perm "eago/common/api-suite/permission"
 	"eago/common/log"
 	"eago/common/orm"
-	"eago/common/redis"
 	"eago/common/tracer"
 	"eago/task/cli"
 	"eago/task/conf"
@@ -109,11 +108,4 @@ func init() {
 		conf.Conf.MysqlPassword,
 		conf.Conf.MysqlDbName,
 	))
-	// 初始化Redis
-	redis.InitRedis(
-		conf.Conf.RedisAddress,
-		conf.Conf.RedisPassword,
-		conf.SERVICE_NAME,
-		conf.Conf.RedisDb,
-	)
 }

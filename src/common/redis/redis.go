@@ -35,27 +35,22 @@ func Close() {
 	_ = Redis.client.Close()
 }
 
-// Set
 func (rt *RedisTool) Set(key string, value interface{}, expiration time.Duration) error {
 	return rt.client.Set(context.Background(), rt.getFinalKey(key), value, expiration).Err()
 }
 
-// Del
 func (rt *RedisTool) Del(key string) error {
 	return rt.client.Del(context.Background(), rt.getFinalKey(key)).Err()
 }
 
-// Expire
 func (rt *RedisTool) Expire(key string, expiration time.Duration) error {
 	return rt.client.PExpire(context.Background(), rt.getFinalKey(key), expiration).Err()
 }
 
-// Get
 func (rt *RedisTool) Get(key string) (string, error) {
 	return rt.client.Get(context.Background(), rt.getFinalKey(key)).Result()
 }
 
-// HasKey
 func (rt *RedisTool) HasKey(key string) bool {
 	if err := rt.client.Get(context.Background(), rt.getFinalKey(key)).Err(); err == nil {
 		return true

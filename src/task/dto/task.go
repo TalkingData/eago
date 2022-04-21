@@ -17,7 +17,6 @@ type CallTask struct {
 	Arguments string `json:"arguments" valid:"Required;MinSize(2)"`
 }
 
-// Validate
 func (ct *CallTask) Validate(tId int) *message.Message {
 	valid := validation.Validation{}
 	// 验证数据
@@ -54,7 +53,6 @@ type NewTask struct {
 	Description  *string `json:"description" valid:"MinSize(0);MaxSize(500)"`
 }
 
-// Valid
 func (n *NewTask) Valid(v *validation.Validation) {
 	if n.Category != nil && *n.Category > conf.BUTILIN_TASK_CATEGORY {
 		_ = v.SetError("Category", "目前仅支持内置任务")
@@ -65,7 +63,6 @@ func (n *NewTask) Valid(v *validation.Validation) {
 	}
 }
 
-// Validate
 func (n *NewTask) Validate() *message.Message {
 	valid := validation.Validation{}
 	// 验证数据
@@ -84,7 +81,6 @@ func (n *NewTask) Validate() *message.Message {
 // RemoveTask struct
 type RemoveTask struct{}
 
-// Validate
 func (*RemoveTask) Validate(tId int) *message.Message {
 	// 验证任务是否存在
 	tObj, _ := dao.GetTask(dao.Query{"id=?": tId})
@@ -112,14 +108,12 @@ type SetTask struct {
 	Description  *string `json:"description" valid:"MinSize(0);MaxSize(500)"`
 }
 
-// Valid
 func (s *SetTask) Valid(v *validation.Validation) {
 	if ct, _ := dao.GetTaskCount(dao.Query{"codename=?": s.Codename, "id<>?": s.taskId}); ct > 0 {
 		_ = v.SetError("Name", "已有相同代号的任务存在")
 	}
 }
 
-// Validate
 func (s *SetTask) Validate(taskId int) *message.Message {
 	// 验证角色是否存在
 	if ct, _ := dao.GetTaskCount(dao.Query{"id=?": taskId}); ct < 1 {
@@ -147,12 +141,13 @@ type ListTasksQuery struct {
 	Disabled *bool   `form:"disabled"`
 }
 
-// UpdateQuery
 func (q *ListTasksQuery) UpdateQuery(query dao.Query) error {
 	// 通用Query
 	if q.Query != nil && *q.Query != "" {
 		likeQuery := fmt.Sprintf("%%%s%%", *q.Query)
-		query["(codename LIKE @query OR description LIKE @query OR id LIKE @query)"] = sql.Named("query", likeQuery)
+		query["(codename LIKE @query OR "+
+			"description LIKE @query OR "+
+			"id LIKE @query)"] = sql.Named("query", likeQuery)
 	}
 
 	if q.Disabled != nil {

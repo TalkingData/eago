@@ -11,7 +11,6 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// NewGinEngine
 func NewGinEngine() *gin.Engine {
 	gin.SetMode(conf.Conf.GinMode)
 
@@ -37,7 +36,7 @@ func NewGinEngine() *gin.Engine {
 			// 更新产品线
 			pr.PUT("/:product_id", perm.MustRole(conf.ADMIN_ROLE_NAME), h.SetProduct)
 			// 列出所有产品线
-			pr.GET("", pg.ListPageHelper(), h.ListProducts)
+			pr.GET("", pg.ListPageHelper(), h.PagedListProducts)
 
 			// 添加用户至产品线
 			pr.POST(
@@ -67,7 +66,7 @@ func NewGinEngine() *gin.Engine {
 			// 更新部门
 			dr.PUT("/:department_id", perm.MustRole(conf.ADMIN_ROLE_NAME), h.SetDepartment)
 			// 列出所有部门
-			dr.GET("", pg.ListPageHelper(), h.ListDepartments)
+			dr.GET("", pg.ListPageHelper(), h.PagedListDepartments)
 			// 列出指定部门子树
 			dr.GET("/:department_id/tree", h.ListDepartmentTree)
 			// 以树结构列出所有部门
@@ -93,7 +92,7 @@ func NewGinEngine() *gin.Engine {
 			// 更新组
 			gr.PUT("/:group_id", perm.MustRole(conf.ADMIN_ROLE_NAME), h.SetGroup)
 			// 列出所有组
-			gr.GET("", pg.ListPageHelper(), h.ListGroups)
+			gr.GET("", pg.ListPageHelper(), h.PagedListGroups)
 
 			// 添加用户至组
 			gr.POST(
@@ -123,7 +122,7 @@ func NewGinEngine() *gin.Engine {
 			// 更新角色
 			rr.PUT("/:role_id", perm.MustRole(conf.ADMIN_ROLE_NAME), h.SetRole)
 			// 列出所有角色
-			rr.GET("", pg.ListPageHelper(), h.ListRoles)
+			rr.GET("", pg.ListPageHelper(), h.PagedListRoles)
 
 			// 添加用户至角色
 			rr.POST("/:role_id/users", perm.MustRole(conf.ADMIN_ROLE_NAME), h.AddUser2Role)
@@ -139,7 +138,7 @@ func NewGinEngine() *gin.Engine {
 			// 更新用户
 			ur.PUT("/:user_id", perm.MustCurrUserOrRole("user_id", conf.ADMIN_ROLE_NAME), h.SetUser)
 			// 列出所有用户
-			ur.GET("", pg.ListPageHelper(), h.ListUsers)
+			ur.GET("", pg.ListPageHelper(), h.PagedListUsers)
 
 			// 列出用户所有角色
 			ur.GET("/:user_id/roles", perm.MustCurrUserOrRole("user_id", conf.ADMIN_ROLE_NAME), h.ListUserRoles)

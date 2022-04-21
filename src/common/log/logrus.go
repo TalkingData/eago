@@ -60,7 +60,6 @@ func Close() {
 	_ = fw.Close()
 }
 
-// Debug
 func Debug(args ...interface{}) {
 	if logger.Level >= logrus.DebugLevel {
 		entry := logger.WithFields(logrus.Fields{})
@@ -69,7 +68,6 @@ func Debug(args ...interface{}) {
 	}
 }
 
-// DebugWithFields
 func DebugWithFields(f Fields, args ...interface{}) {
 	if logger.Level >= logrus.DebugLevel {
 		entry := logger.WithFields(f.RusFields())
@@ -78,7 +76,6 @@ func DebugWithFields(f Fields, args ...interface{}) {
 	}
 }
 
-// Info
 func Info(args ...interface{}) {
 	if logger.Level >= logrus.InfoLevel {
 		entry := logger.WithFields(logrus.Fields{})
@@ -87,7 +84,6 @@ func Info(args ...interface{}) {
 	}
 }
 
-// InfoWithFields
 func InfoWithFields(f Fields, args ...interface{}) {
 	if logger.Level >= logrus.InfoLevel {
 		entry := logger.WithFields(f.RusFields())
@@ -96,7 +92,6 @@ func InfoWithFields(f Fields, args ...interface{}) {
 	}
 }
 
-// Warn
 func Warn(args ...interface{}) {
 	if logger.Level >= logrus.WarnLevel {
 		entry := logger.WithFields(logrus.Fields{})
@@ -105,7 +100,6 @@ func Warn(args ...interface{}) {
 	}
 }
 
-// WarnWithFields
 func WarnWithFields(f Fields, args ...interface{}) {
 	if logger.Level >= logrus.WarnLevel {
 		entry := logger.WithFields(f.RusFields())
@@ -114,7 +108,6 @@ func WarnWithFields(f Fields, args ...interface{}) {
 	}
 }
 
-// Error
 func Error(args ...interface{}) {
 	if logger.Level >= logrus.ErrorLevel {
 		entry := logger.WithFields(logrus.Fields{})
@@ -123,7 +116,6 @@ func Error(args ...interface{}) {
 	}
 }
 
-// ErrorWithFields
 func ErrorWithFields(f Fields, args ...interface{}) {
 	if logger.Level >= logrus.ErrorLevel {
 		entry := logger.WithFields(f.RusFields())
@@ -132,7 +124,6 @@ func ErrorWithFields(f Fields, args ...interface{}) {
 	}
 }
 
-// Fatal
 func Fatal(args ...interface{}) {
 	if logger.Level >= logrus.FatalLevel {
 		entry := logger.WithFields(logrus.Fields{})
@@ -141,7 +132,6 @@ func Fatal(args ...interface{}) {
 	}
 }
 
-// FatalWithFields
 func FatalWithFields(f Fields, args ...interface{}) {
 	if logger.Level >= logrus.FatalLevel {
 		entry := logger.WithFields(f.RusFields())
@@ -150,33 +140,26 @@ func FatalWithFields(f Fields, args ...interface{}) {
 	}
 }
 
-// Panic
 func Panic(args ...interface{}) {
 	entry := logger.WithFields(logrus.Fields{})
 	entry.Data["file"] = fileInfo(skipFiles)
 	entry.Panic(args...)
 }
 
-// PanicWithFields
 func PanicWithFields(f Fields, args ...interface{}) {
 	entry := logger.WithFields(f.RusFields())
 	entry.Data["file"] = fileInfo(skipFiles)
 	entry.Panic(args...)
 }
 
-// GetRusLogger
-func GetRusLogger() *logrus.Logger {
-	return logger
-}
-
+// fileInfo
 func fileInfo(skip int) string {
 	_, file, line, ok := runtime.Caller(skip)
 	if !ok {
-		file = "<Unknown>"
-		line = -1
-	} else {
-		file = file[strings.Index(file, SRC_BASE_PATH)+len(SRC_BASE_PATH):]
+		return "<Unknown>:-1"
 	}
+
+	file = file[strings.Index(file, SRC_BASE_PATH)+len(SRC_BASE_PATH):]
 	return fmt.Sprintf("./%s:%d", file, line)
 }
 
@@ -190,31 +173,36 @@ func (f Fields) String() string {
 	return strings.Join(data, LOG_DATA_SEPARATOR)
 }
 
-// 将logger.Fields转换为logrus.Fields
+// RusFields 将logger.Fields转换为logrus.Fields
 func (f Fields) RusFields() logrus.Fields {
 	res := logrus.Fields{}
 
+	// 从data中提取code字段，code字段不会出现在最终输入的data中
 	if f["code"] != nil {
 		res["code"] = f["code"]
 		delete(f, "code")
 	}
 
+	// 从data中提取error字段，error字段不会出现在最终输入的data中
 	if f["error"] != nil {
 		switch errType := f["error"].(type) {
+		// 如果是error类型，设置最终error字段为err.Error()
 		case error:
 			res["error"] = errType.Error()
-
+		// 如果是其他类型，设置最终error字段为error（不变）
 		default:
 			res["error"] = f["error"]
 		}
 		delete(f, "error")
 	}
 
+	// 从data中提取trace_id字段，trace_id字段不会出现在最终输入的data中
 	if f["trace_id"] != nil {
 		res["trace_id"] = f["trace_id"]
 		delete(f, "trace_id")
 	}
 
+	// 将data转为字符串形式
 	res["data"] = f.String()
 
 	return res

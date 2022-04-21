@@ -19,7 +19,6 @@ func (w ginBodyWriter) Write(b []byte) (int, error) {
 	return w.ResponseWriter.Write(b)
 }
 
-// GetBodyString
 func (w *ginBodyWriter) GetBodyString() string {
 	return w.buffer.String()
 }

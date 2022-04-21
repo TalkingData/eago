@@ -154,12 +154,12 @@ func (s *Scheduler) getScheduleTask() []*Schedule {
 			Page:     pg,
 			PageSize: CLIENT_MAX_PAGESIZE,
 		}
-		rsp, err := s.taskSrvClient.ListSchedules(ctx, req)
+		rsp, err := s.taskSrvClient.PagedListSchedules(ctx, req)
 		if err != nil {
 			log.ErrorWithFields(log.Fields{
 				"page":  pg,
 				"error": err,
-			}, "An error occurred while taskSrvClient.ListSchedules.")
+			}, "An error occurred while taskSrvClient.PagedListSchedules.")
 			panic(fmt.Errorf("failed to list schedule tasks, error: %s", err.Error()))
 		}
 		maxPg = rsp.Pages

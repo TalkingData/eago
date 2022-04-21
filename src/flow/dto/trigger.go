@@ -17,14 +17,12 @@ type NewTrigger struct {
 	Arguments    string  `json:"arguments" valid:"Required;MinSize(2);MaxSize(4000)"`
 }
 
-// Valid
 func (nt *NewTrigger) Valid(v *validation.Validation) {
 	if ct, _ := dao.GetTriggerCount(dao.Query{"name=?": nt.Name}); ct > 0 {
 		_ = v.SetError("Name", "触发器名称已存在")
 	}
 }
 
-// Validate
 func (nt *NewTrigger) Validate() *message.Message {
 	valid := validation.Validation{}
 	// 验证数据
@@ -43,7 +41,6 @@ func (nt *NewTrigger) Validate() *message.Message {
 // RemoveTrigger struct
 type RemoveTrigger struct{}
 
-// Validate
 func (*RemoveTrigger) Validate(tId int) *message.Message {
 	// 验证触发器是否存在
 	if ct, _ := dao.GetTriggerCount(dao.Query{"id=?": tId}); ct < 1 {
@@ -68,14 +65,12 @@ type SetTrigger struct {
 	Arguments    string  `json:"arguments" valid:"Required;MinSize(2);MaxSize(4000)"`
 }
 
-// Valid
 func (sg *SetTrigger) Valid(v *validation.Validation) {
 	if ct, _ := dao.GetTriggerCount(dao.Query{"name=?": sg.Name, "id<>?": sg.triggerId}); ct > 0 {
 		_ = v.SetError("Name", "触发器名称已存在")
 	}
 }
 
-// Validate
 func (sg *SetTrigger) Validate(tId int) *message.Message {
 	sg.triggerId = tId
 	valid := validation.Validation{}
@@ -92,17 +87,21 @@ func (sg *SetTrigger) Validate(tId int) *message.Message {
 	return nil
 }
 
-// ListTriggersQuery struct
-type ListTriggersQuery struct {
+// PagedListTriggersQuery struct
+type PagedListTriggersQuery struct {
 	Query *string `form:"query"`
 }
 
-// UpdateQuery
-func (ltq *ListTriggersQuery) UpdateQuery(query dao.Query) error {
+func (ltq *PagedListTriggersQuery) UpdateQuery(query dao.Query) error {
 	// 通用Query
 	if ltq.Query != nil && *ltq.Query != "" {
 		likeQuery := fmt.Sprintf("%%%s%%", *ltq.Query)
-		query["name LIKE @query OR description LIKE @query OR task_codename LIKE @query OR id LIKE @query OR created_by LIKE @query OR updated_by LIKE @query"] = sql.Named("query", likeQuery)
+		query["(name LIKE @query OR "+
+			"description LIKE @query OR "+
+			"task_codename LIKE @query OR "+
+			"id LIKE @query OR "+
+			"created_by LIKE @query OR "+
+			"updated_by LIKE @query)"] = sql.Named("query", likeQuery)
 	}
 
 	return nil
@@ -111,7 +110,6 @@ func (ltq *ListTriggersQuery) UpdateQuery(query dao.Query) error {
 // ListTriggerNodes struct
 type ListTriggerNodes struct{}
 
-// Validate
 func (*ListTriggerNodes) Validate(tId int) *message.Message {
 	// 验证触发器是否存在
 	if ct, _ := dao.GetTriggerCount(dao.Query{"id=?": tId}); ct < 1 {

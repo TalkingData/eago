@@ -17,14 +17,12 @@ type NewForm struct {
 	Body        *string `json:"body" valid:"MinSize(2)"`
 }
 
-// Valid
 func (n *NewForm) Valid(v *validation.Validation) {
 	if ct, _ := dao.GetFormCount(dao.Query{"name=?": n.Name}); ct > 0 {
 		_ = v.SetError("Name", "表单名称已存在")
 	}
 }
 
-// Validate
 func (n *NewForm) Validate() *message.Message {
 	valid := validation.Validation{}
 	// 验证数据
@@ -49,14 +47,12 @@ type SetForm struct {
 	Description *string `json:"description" valid:"MinSize(0);MaxSize(500)"`
 }
 
-// Valid
 func (s *SetForm) Valid(v *validation.Validation) {
 	if ct, _ := dao.GetFormCount(dao.Query{"name=?": s.Name, "id<>?": s.formId}); ct > 0 {
 		_ = v.SetError("Name", "表单名称已存在")
 	}
 }
 
-// Validate
 func (s *SetForm) Validate(frmId int) *message.Message {
 	s.formId = frmId
 	valid := validation.Validation{}
@@ -76,7 +72,6 @@ func (s *SetForm) Validate(frmId int) *message.Message {
 // GetForm struct
 type GetForm struct{}
 
-// Validate
 func (*GetForm) Validate(frmId int) *message.Message {
 	// 验证表单是否存在
 	if ct, _ := dao.GetFormCount(dao.Query{"id=?": frmId}); ct < 1 {
@@ -86,14 +81,13 @@ func (*GetForm) Validate(frmId int) *message.Message {
 	return nil
 }
 
-// ListFormsQuery struct
-type ListFormsQuery struct {
+// PagedListFormsQuery struct
+type PagedListFormsQuery struct {
 	Query    *string `form:"query"`
 	Disabled *bool   `form:"disabled"`
 }
 
-// UpdateQuery
-func (q *ListFormsQuery) UpdateQuery(query dao.Query) error {
+func (q *PagedListFormsQuery) UpdateQuery(query dao.Query) error {
 	// 通用Query
 	if q.Query != nil && *q.Query != "" {
 		likeQuery := fmt.Sprintf("%%%s%%", *q.Query)
@@ -114,7 +108,6 @@ func (q *ListFormsQuery) UpdateQuery(query dao.Query) error {
 // ListFormRelations struct
 type ListFormRelations struct{}
 
-// Validate
 func (*ListFormRelations) Validate(frmId int) *message.Message {
 	// 验证表单是否存在
 	if ct, _ := dao.GetFormCount(dao.Query{"id=?": frmId}); ct < 1 {

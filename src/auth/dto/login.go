@@ -10,7 +10,6 @@ type Login struct {
 	Password string `json:"password" valid:"Required;MinSize(6);MaxSize(100)"`
 }
 
-// Validate
 func (l *Login) Validate() (err interface{}) {
 	valid := validation.Validation{}
 	// 验证数据

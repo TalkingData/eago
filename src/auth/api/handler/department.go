@@ -107,11 +107,11 @@ func SetDepartment(c *gin.Context) {
 	w.WriteSuccessPayload(c, "department", dept)
 }
 
-// ListDepartments 列出所有部门
-func ListDepartments(c *gin.Context) {
+// PagedListDepartments 列出所有部门-分页
+func PagedListDepartments(c *gin.Context) {
 	query := dao.Query{}
 	// 设置查询filter
-	ldq := dto.ListDepartmentsQuery{}
+	ldq := dto.PagedListDepartmentsQuery{}
 	if c.ShouldBindQuery(&ldq) == nil {
 		_ = ldq.UpdateQuery(query)
 	}
@@ -322,7 +322,7 @@ func SetUserIsDepartmentOwner(c *gin.Context) {
 	w.WriteSuccess(c)
 }
 
-// ListProductUsers 列出部门中所有用户
+// ListDepartmentUsers 列出部门中所有用户
 func ListDepartmentUsers(c *gin.Context) {
 	deptId, err := strconv.Atoi(c.Param("department_id"))
 	if err != nil {
