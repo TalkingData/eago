@@ -10,9 +10,9 @@ import (
 )
 
 // PagedListSchedules 列出所有计划任务-分页
-func (ts *TaskService) PagedListSchedules(ctx context.Context, in *task.QueryWithPage, out *task.PagedSchedules) error {
-	log.Info("Got rpc call PagedListSchedules.")
-	defer log.Info("Rpc call PagedListSchedules done.")
+func (taskSrv *TaskService) PagedListSchedules(ctx context.Context, in *task.QueryWithPage, out *task.PagedSchedules) error {
+	log.Info("Got rpc call taskSrv.PagedListSchedules.")
+	defer log.Info("Rpc call taskSrv.PagedListSchedules done.")
 
 	query := make(dao.Query)
 	for k, v := range in.Query {

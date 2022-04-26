@@ -11,7 +11,7 @@ import (
 )
 
 // GetResult 查看任务结果
-func (ts *TaskService) GetResult(ctx context.Context, in *task.TaskUniqueId, out *task.Result) error {
+func (taskSrv *TaskService) GetResult(ctx context.Context, in *task.TaskUniqueId, out *task.Result) error {
 	// 将任务唯一Id解码为任务结果Id和分区
 	p, id, err := builtin.TaskUniqueIdDecode(in.TaskUniqueId)
 	if err != nil {

@@ -13,9 +13,9 @@ import (
 )
 
 // PagedListTasks 列出所有任务-分页
-func (ts *TaskService) PagedListTasks(ctx context.Context, in *task.QueryWithPage, out *task.PagedTasks) error {
-	log.Info("Got rpc call PagedListTasks.")
-	defer log.Info("Rpc call PagedListTasks done.")
+func (taskSrv *TaskService) PagedListTasks(ctx context.Context, in *task.QueryWithPage, out *task.PagedTasks) error {
+	log.Info("taskSrv.PagedListTasks called.")
+	defer log.Info("taskSrv.PagedListTasks end.")
 
 	query := make(dao.Query)
 	for k, v := range in.Query {
@@ -47,9 +47,9 @@ func (ts *TaskService) PagedListTasks(ctx context.Context, in *task.QueryWithPag
 }
 
 // CallTask 调用任务
-func (ts *TaskService) CallTask(ctx context.Context, in *task.CallTaskReq, out *task.TaskUniqueId) error {
-	log.Info("Got rpc call TaskCall.")
-	defer log.Info("Rpc call TaskCall done.")
+func (taskSrv *TaskService) CallTask(ctx context.Context, in *task.CallTaskReq, out *task.TaskUniqueId) error {
+	log.Info("taskSrv.CallTask called.")
+	defer log.Info("taskSrv.CallTask end.")
 
 	tId, err := builtin.CallTask(in.TaskCodename, string(in.Arguments), in.Caller, in.Timeout)
 	if err != nil {
@@ -73,9 +73,9 @@ func (ts *TaskService) CallTask(ctx context.Context, in *task.CallTaskReq, out *
 }
 
 // KillTask 结束任务
-func (ts *TaskService) KillTask(ctx context.Context, in *task.TaskUniqueId, out *task.BoolMsg) error {
-	log.Info("Got rpc call KillTask.")
-	defer log.Info("Rpc call KillTask done.")
+func (taskSrv *TaskService) KillTask(ctx context.Context, in *task.TaskUniqueId, out *task.BoolMsg) error {
+	log.Info("taskSrv.CallTask KillTask.")
+	defer log.Info("taskSrv.KillTask end.")
 
 	err := builtin.KillTask(in.TaskUniqueId)
 	if err != nil {
@@ -96,9 +96,9 @@ func (ts *TaskService) KillTask(ctx context.Context, in *task.TaskUniqueId, out 
 }
 
 // SetTaskStatus 设置任务状态
-func (ts *TaskService) SetTaskStatus(ctx context.Context, in *task.SetTaskStatusReq, out *task.BoolMsg) error {
-	log.Info("Got rpc call TaskDone.")
-	defer log.Info("Rpc call TaskDone done.")
+func (taskSrv *TaskService) SetTaskStatus(ctx context.Context, in *task.SetTaskStatusReq, out *task.BoolMsg) error {
+	log.Info("taskSrv.SetTaskStatus KillTask.")
+	defer log.Info("taskSrv.SetTaskStatus end.")
 
 	// 将任务唯一Id解码为任务结果Id和分区
 	p, id, err := builtin.TaskUniqueIdDecode(in.TaskUniqueId)
@@ -166,9 +166,9 @@ func (ts *TaskService) SetTaskStatus(ctx context.Context, in *task.SetTaskStatus
 }
 
 // AppendTaskLog 追加任务日志
-func (ts *TaskService) AppendTaskLog(ctx context.Context, stream task.TaskService_AppendTaskLogStream) error {
-	log.Info("Got rpc call TaskLog.")
-	defer log.Info("Rpc call TaskLog done.")
+func (taskSrv *TaskService) AppendTaskLog(ctx context.Context, stream task.TaskService_AppendTaskLogStream) error {
+	log.Info("taskSrv.AppendTaskLog KillTask.")
+	defer log.Info("taskSrv.AppendTaskLog end.")
 
 	for {
 		// 接受请求流数据

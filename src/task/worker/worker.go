@@ -4,7 +4,7 @@ import (
 	"context"
 	"eago/common/log"
 	proto "eago/task/srv/proto"
-	worker_proto "eago/task/worker/proto"
+	workerProto "eago/task/worker/proto"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -63,13 +63,13 @@ type worker struct {
 }
 
 // callTask 运行任务务
-func (w *worker) callTask(codename, uniqueId, args string, timeout int32, caller string, ts int64) {
-	w.mu.Lock()
-	defer w.mu.Unlock()
+func (wk *worker) callTask(codename, uniqueId, args string, timeout int32, caller string, ts int64) {
+	wk.mu.Lock()
+	defer wk.mu.Unlock()
 
 	// 查看当前Worker是否注册了调用的任务
-	if !w.taskList.Exists(codename) {
-		err := w.setTaskStatus(uniqueId, TASK_WORKER_TASK_NOT_FOUND_ERROR_END_STATUS)
+	if !wk.taskList.Exists(codename) {
+		err := wk.setTaskStatus(uniqueId, TASK_WORKER_TASK_NOT_FOUND_ERROR_END_STATUS)
 		if err != nil {
 			log.ErrorWithFields(log.Fields{
 				"task_unique_id": uniqueId,
@@ -81,7 +81,7 @@ func (w *worker) callTask(codename, uniqueId, args string, timeout int32, caller
 	}
 
 	// 查看调用的任务是否在运行
-	if w.runList.Exists(uniqueId) {
+	if wk.runList.Exists(uniqueId) {
 		log.ErrorWithFields(log.Fields{
 			"task_unique_id": uniqueId,
 		}, "An error occurred while worker.runTask, Task already running.")
@@ -89,7 +89,7 @@ func (w *worker) callTask(codename, uniqueId, args string, timeout int32, caller
 	}
 
 	// 设置任务为Pending状态
-	err := w.setTaskStatus(uniqueId, TASK_PENDING_STATUS)
+	err := wk.setTaskStatus(uniqueId, TASK_PENDING_STATUS)
 	if err != nil {
 		log.ErrorWithFields(log.Fields{
 			"task_unique_id": uniqueId,
@@ -98,7 +98,7 @@ func (w *worker) callTask(codename, uniqueId, args string, timeout int32, caller
 		// 失败仅记录日志，不跳出
 	}
 
-	task := w.taskList.CopyGet(codename)
+	task := wk.taskList.CopyGet(codename)
 	ctx := context.Background()
 	if timeout > 0 {
 		task.Cxt, task.Cancel = context.WithTimeout(ctx, time.Duration(timeout)*time.Second)
@@ -106,7 +106,7 @@ func (w *worker) callTask(codename, uniqueId, args string, timeout int32, caller
 		task.Cxt, task.Cancel = context.WithCancel(ctx)
 	}
 
-	task.logger = newLogger(w.opts.LogBufferSize)
+	task.logger = newLogger(wk.opts.LogBufferSize)
 
 	task.Param = &Param{
 		TaskUniqueId:    uniqueId,
@@ -118,7 +118,7 @@ func (w *worker) callTask(codename, uniqueId, args string, timeout int32, caller
 		Log:             task.logger,
 	}
 
-	w.runList.Put(uniqueId, &task)
+	wk.runList.Put(uniqueId, &task)
 	go func() {
 		defer func() {
 			// recover here for task panic end.
@@ -128,12 +128,12 @@ func (w *worker) callTask(codename, uniqueId, args string, timeout int32, caller
 					"task_unique_id": uniqueId,
 					"panic":          r,
 				}, "An error occurred while task.Run, Task panic.")
-				w.callback(&task, TASK_PANIC_END_STATUS)
+				wk.callback(&task, TASK_PANIC_END_STATUS)
 			}
 		}()
 
 		// 设置任务为Running状态
-		err := w.setTaskStatus(uniqueId, TASK_RUNNING_STATUS)
+		err := wk.setTaskStatus(uniqueId, TASK_RUNNING_STATUS)
 		if err != nil {
 			log.ErrorWithFields(log.Fields{
 				"task_unique_id": uniqueId,
@@ -147,31 +147,31 @@ func (w *worker) callTask(codename, uniqueId, args string, timeout int32, caller
 			switch err {
 			case nil:
 				// 成功结束
-				w.callback(&task, TASK_SUCCESS_END_STATUS)
+				wk.callback(&task, TASK_SUCCESS_END_STATUS)
 			case context.DeadlineExceeded:
 				// 超时结束
-				w.callback(&task, TASK_TIMEOUT_END_STATUS)
+				wk.callback(&task, TASK_TIMEOUT_END_STATUS)
 			case context.Canceled:
 				// 任务取消
-				w.callback(&task, TASK_MANUAL_END_STATUS)
+				wk.callback(&task, TASK_MANUAL_END_STATUS)
 			default:
 				// 任务失败结束
-				w.callback(&task, TASK_FAILED_END_STATUS)
+				wk.callback(&task, TASK_FAILED_END_STATUS)
 			}
 		})
 	}()
 
 	// 为新任务开启日志消费者
-	go w.logConsumer(&task)
+	go wk.logConsumer(&task)
 }
 
 // killTask 杀任务
-func (w *worker) killTask(taskUniqueId string) {
-	w.mu.Lock()
-	defer w.mu.Unlock()
+func (wk *worker) killTask(taskUniqueId string) {
+	wk.mu.Lock()
+	defer wk.mu.Unlock()
 
 	// 查看要杀死的任务是否在运行
-	if w.runList.Exists(taskUniqueId) {
+	if wk.runList.Exists(taskUniqueId) {
 		log.ErrorWithFields(log.Fields{
 			"task_unique_id": taskUniqueId,
 		}, "An error occurred while worker.killTask, Task is not in running state.")
@@ -179,11 +179,11 @@ func (w *worker) killTask(taskUniqueId string) {
 	}
 
 	// 结束任务
-	t := w.runList.Get(taskUniqueId)
+	t := wk.runList.Get(taskUniqueId)
 	t.Cancel()
 
 	// 设置任务为手动结束状态
-	err := w.setTaskStatus(taskUniqueId, TASK_MANUAL_END_STATUS)
+	err := wk.setTaskStatus(taskUniqueId, TASK_MANUAL_END_STATUS)
 	if err != nil {
 		log.ErrorWithFields(log.Fields{
 			"task_unique_id": taskUniqueId,
@@ -197,24 +197,24 @@ func (w *worker) killTask(taskUniqueId string) {
 	close(t.logger.LogCh)
 
 	// 删除任务
-	w.runList.Delete(taskUniqueId)
+	wk.runList.Delete(taskUniqueId)
 }
 
 // callback 回调调度中心
-func (w *worker) callback(task *Task, status int) {
+func (wk *worker) callback(task *Task, status int) {
 	defer func() {
 		// 通过context结束任务
 		task.Cancel()
 
 		// 删除任务
-		w.runList.Delete(task.Param.TaskUniqueId)
+		wk.runList.Delete(task.Param.TaskUniqueId)
 	}()
 
 	// 关闭日志通道
 	task.logger.Wg.Wait()
 	close(task.logger.LogCh)
 
-	err := w.setTaskStatus(task.Param.TaskUniqueId, status)
+	err := wk.setTaskStatus(task.Param.TaskUniqueId, status)
 	if err != nil {
 		log.ErrorWithFields(log.Fields{
 			"task_unique_id": task.Param.TaskUniqueId,
@@ -226,7 +226,7 @@ func (w *worker) callback(task *Task, status int) {
 }
 
 // logConsumer 对应任务日志的消费并发送至Task模块
-func (w *worker) logConsumer(task *Task) {
+func (wk *worker) logConsumer(task *Task) {
 	log.InfoWithFields(log.Fields{
 		"task_unique_id": task.Param.TaskUniqueId,
 	}, "Worker log consumer started.")
@@ -236,7 +236,7 @@ func (w *worker) logConsumer(task *Task) {
 		}, "Worker log consumer end.")
 	}()
 
-	stream, err := w.taskServiceClient.AppendTaskLog(context.Background())
+	stream, err := wk.taskServiceClient.AppendTaskLog(context.Background())
 	if err != nil {
 		log.ErrorWithFields(log.Fields{
 			"task_unique_id": task.Param.TaskUniqueId,
@@ -280,9 +280,9 @@ func (w *worker) logConsumer(task *Task) {
 }
 
 // setTaskStatus 设置任务状态
-func (w *worker) setTaskStatus(taskUniqueId string, status int) error {
+func (wk *worker) setTaskStatus(taskUniqueId string, status int) error {
 	req := &proto.SetTaskStatusReq{TaskUniqueId: taskUniqueId, Status: int32(status)}
-	res, err := w.taskServiceClient.SetTaskStatus(context.Background(), req)
+	res, err := wk.taskServiceClient.SetTaskStatus(context.Background(), req)
 	if err != nil {
 		return err
 	}
@@ -295,21 +295,21 @@ func (w *worker) setTaskStatus(taskUniqueId string, status int) error {
 }
 
 // RegTask 注册任务
-func (w *worker) RegTask(codename string, fn TaskFunc) {
-	w.mu.Lock()
-	defer w.mu.Unlock()
+func (wk *worker) RegTask(codename string, fn TaskFunc) {
+	wk.mu.Lock()
+	defer wk.mu.Unlock()
 
 	var t = &Task{}
 	t.Codename = codename
 	t.fn = fn
 
-	w.taskList.Put(codename, t)
+	wk.taskList.Put(codename, t)
 }
 
 // Start 启动Worker
-func (w *worker) Start() (err error) {
+func (wk *worker) Start() (err error) {
 	// 开启RPC监听端口
-	w.listener, err = net.Listen("tcp", fmt.Sprintf("%s:0", w.opts.WorkerIp))
+	wk.listener, err = net.Listen("tcp", fmt.Sprintf("%s:0", wk.opts.WorkerIp))
 	if err != nil {
 		log.ErrorWithFields(log.Fields{
 			"error": err,
@@ -318,43 +318,43 @@ func (w *worker) Start() (err error) {
 	}
 
 	// 创建worker的grpc server
-	w.grpcServer = grpc.NewServer()
+	wk.grpcServer = grpc.NewServer()
 	// 注册GRPC服务
-	worker_proto.RegisterTaskWorkerServiceServer(w.grpcServer, NewTaskWorkerService(w))
+	workerProto.RegisterTaskWorkerServiceServer(wk.grpcServer, NewTaskWorkerService(wk))
 
 	// 设置当前Worker的IP和端口(endpoint)信息
-	w.endpoint = w.listener.Addr().String()
-	log.Info(fmt.Sprintf("Worker %s starting at %s", w.workerId, w.endpoint))
+	wk.endpoint = wk.listener.Addr().String()
+	log.Info(fmt.Sprintf("Worker %s starting at %s", wk.workerId, wk.endpoint))
 
 	// 向注册中心注册Worker
-	w.register()
+	wk.register()
 
-	return w.grpcServer.Serve(w.listener)
+	return wk.grpcServer.Serve(wk.listener)
 }
 
 // init 初始化Worker
-func (w *worker) init() {
+func (wk *worker) init() {
 	// 生成WorkerId
-	if w.opts.MultiInstance {
-		w.workerId = fmt.Sprintf("%s.worker-%s", w.opts.ServiceName, uuid.NewV4().String())
+	if wk.opts.MultiInstance {
+		wk.workerId = fmt.Sprintf("%s.worker-%s", wk.opts.ServiceName, uuid.NewV4().String())
 	} else {
-		w.workerId = fmt.Sprintf("%s.worker-unique", w.opts.ServiceName)
+		wk.workerId = fmt.Sprintf("%s.worker-unique", wk.opts.ServiceName)
 	}
 
-	w.taskList = NewTaskList()
-	w.runList = NewTaskList()
+	wk.taskList = NewTaskList()
+	wk.runList = NewTaskList()
 
 	etcdReg := etcdv3.NewRegistry(
-		registry.Addrs(w.opts.EtcdAddresses...),
-		etcdv3.Auth(w.opts.EtcdUsername, w.opts.EtcdPassword),
+		registry.Addrs(wk.opts.EtcdAddresses...),
+		etcdv3.Auth(wk.opts.EtcdUsername, wk.opts.EtcdPassword),
 	)
 	cli := micro.NewService(micro.Registry(etcdReg))
-	w.taskServiceClient = proto.NewTaskService(w.opts.TaskRpcServiceName, cli.Client())
+	wk.taskServiceClient = proto.NewTaskService(wk.opts.TaskRpcServiceName, cli.Client())
 
 	etcdCfg := clientv3.Config{
-		Endpoints:   w.opts.EtcdAddresses,
-		Username:    w.opts.EtcdUsername,
-		Password:    w.opts.EtcdPassword,
+		Endpoints:   wk.opts.EtcdAddresses,
+		Username:    wk.opts.EtcdUsername,
+		Password:    wk.opts.EtcdPassword,
 		DialTimeout: 5 * time.Second,
 	}
 
@@ -366,43 +366,43 @@ func (w *worker) init() {
 		panic(err)
 	}
 
-	w.etcdCli = etcdCli
+	wk.etcdCli = etcdCli
 }
 
 // Stop 关闭Worker服务
-func (w *worker) Stop() {
-	log.Info(fmt.Sprintf("Worker %s Stop called.", w.workerId))
-	defer log.Info(fmt.Sprintf("Worker %s Stop end.", w.workerId))
+func (wk *worker) Stop() {
+	log.Info(fmt.Sprintf("Worker %s Stop called.", wk.workerId))
+	defer log.Info(fmt.Sprintf("Worker %s Stop end.", wk.workerId))
 
 	// 等待所有任务结束
 
-	w.unregister()
+	wk.unregister()
 
-	if w.grpcServer != nil {
-		w.grpcServer.Stop()
+	if wk.grpcServer != nil {
+		wk.grpcServer.Stop()
 	}
-	if w.etcdCli != nil {
-		_ = w.etcdCli.Close()
+	if wk.etcdCli != nil {
+		_ = wk.etcdCli.Close()
 	}
-	if w.listener != nil {
-		_ = w.listener.Close()
+	if wk.listener != nil {
+		_ = wk.listener.Close()
 	}
 }
 
 // register
-func (w *worker) register() {
-	log.Info(fmt.Sprintf("Worker %s register called.", w.workerId))
-	defer log.Info(fmt.Sprintf("Worker %s register end.", w.workerId))
+func (wk *worker) register() {
+	log.Info(fmt.Sprintf("Worker %s register called.", wk.workerId))
+	defer log.Info(fmt.Sprintf("Worker %s register end.", wk.workerId))
 
 	ctx := context.TODO()
 
 	// 设置worker开始时间
 	n := time.Now()
-	w.startTime = &n
+	wk.startTime = &n
 
 	// 建立etcd租约
-	w.etcdLease = clientv3.NewLease(w.etcdCli)
-	leaseGrantResp, err := w.etcdLease.Grant(ctx, w.opts.RegisterTtl)
+	wk.etcdLease = clientv3.NewLease(wk.etcdCli)
+	leaseGrantResp, err := wk.etcdLease.Grant(ctx, wk.opts.RegisterTtl)
 	if err != nil {
 		log.ErrorWithFields(log.Fields{
 			"error": err,
@@ -410,7 +410,7 @@ func (w *worker) register() {
 		panic(err)
 	}
 
-	ch, err := w.etcdLease.KeepAlive(ctx, leaseGrantResp.ID)
+	ch, err := wk.etcdLease.KeepAlive(ctx, leaseGrantResp.ID)
 	// 续约应答
 	go func() {
 		for {
@@ -423,15 +423,15 @@ func (w *worker) register() {
 	}()
 
 	// 生成注册Key和Value
-	regK := fmt.Sprintf("%s/%s/%s", WORKER_REGISTER_KEY_PREFFIX, w.opts.ServiceName, w.workerId)
+	regK := fmt.Sprintf("%s/%s/%s", WORKER_REGISTER_KEY_PREFFIX, wk.opts.ServiceName, wk.workerId)
 	regV, _ := json.Marshal(WorkerInfo{
-		Modular:   w.opts.ServiceName,
-		Address:   w.endpoint,
-		WorkerId:  w.workerId,
+		Modular:   wk.opts.ServiceName,
+		Address:   wk.endpoint,
+		WorkerId:  wk.workerId,
 		StartTime: time.Now().Format("2006-01-02 15:04:05"),
 	})
 
-	txn := clientv3.NewKV(w.etcdCli).Txn(ctx)
+	txn := clientv3.NewKV(wk.etcdCli).Txn(ctx)
 	// 注册到etcd
 	txn.If(clientv3.Compare(clientv3.CreateRevision(regK), "=", 0)).
 		Then(clientv3.OpPut(regK, string(regV), clientv3.WithLease(leaseGrantResp.ID))).
@@ -444,7 +444,7 @@ func (w *worker) register() {
 	}
 
 	if !txnResp.Succeeded {
-		if !w.opts.MultiInstance {
+		if !wk.opts.MultiInstance {
 			panic("another worker instance is already running, and worker not allowed create multi instance")
 		}
 		panic("another worker instance is already running using same worker id")
@@ -452,21 +452,21 @@ func (w *worker) register() {
 }
 
 // unregister
-func (w *worker) unregister() {
-	log.Info(fmt.Sprintf("Worker %s unregister called.", w.workerId))
-	defer log.Info(fmt.Sprintf("Worker %s unregister end.", w.workerId))
+func (wk *worker) unregister() {
+	log.Info(fmt.Sprintf("Worker %s unregister called.", wk.workerId))
+	defer log.Info(fmt.Sprintf("Worker %s unregister end.", wk.workerId))
 
-	if w.etcdLease != nil {
-		_ = w.etcdLease.Close()
+	if wk.etcdLease != nil {
+		_ = wk.etcdLease.Close()
 	}
 
-	k := fmt.Sprintf("/%s/%s/%s", WORKER_REGISTER_KEY_PREFFIX, w.opts.ServiceName, w.workerId)
-	_, err := w.etcdCli.Delete(context.Background(), k)
+	k := fmt.Sprintf("/%s/%s/%s", WORKER_REGISTER_KEY_PREFFIX, wk.opts.ServiceName, wk.workerId)
+	_, err := wk.etcdCli.Delete(context.Background(), k)
 	if err != nil {
 		log.ErrorWithFields(log.Fields{
 			"error": err,
 		}, "An error occurred while etcdCli.Delete, This error will be ignored.")
 	}
 
-	w.startTime = nil
+	wk.startTime = nil
 }

@@ -10,9 +10,9 @@ import (
 )
 
 // GetDepartmentById RPC服务::按Id查找部门
-func (as *AuthService) GetDepartmentById(ctx context.Context, req *auth.IdQuery, rsp *auth.Department) error {
-	log.Info("srv.GetDepartmentById called.")
-	defer log.Info("srv.GetDepartmentById end.")
+func (authSrv *AuthService) GetDepartmentById(ctx context.Context, req *auth.IdQuery, rsp *auth.Department) error {
+	log.Info("authSrv.GetDepartmentById called.")
+	defer log.Info("authSrv.GetDepartmentById end.")
 
 	log.Info("Finding department.")
 	dept, ok := dao.GetDepartment(dao.Query{"id=?": req.Id})
@@ -25,7 +25,7 @@ func (as *AuthService) GetDepartmentById(ctx context.Context, req *auth.IdQuery,
 	if dept == nil {
 		log.WarnWithFields(log.Fields{
 			"id": req.Id,
-		}, "Warring, AuthService.GetDepartmentById got a nil department.")
+		}, "Warring, authSrv.GetDepartmentById got a nil department.")
 		return nil
 	}
 
@@ -38,9 +38,9 @@ func (as *AuthService) GetDepartmentById(ctx context.Context, req *auth.IdQuery,
 }
 
 // ListDepartmentUsers RPC服务::列出指定部门下所有用户
-func (as *AuthService) ListDepartmentUsers(ctx context.Context, in *auth.IdQuery, out *auth.MemberUsers) error {
-	log.InfoWithFields(log.Fields{"department_id": in.Id}, "srv.ListDepartmentUsers called.")
-	defer log.Info("srv.ListDepartmentUsers end.")
+func (authSrv *AuthService) ListDepartmentUsers(ctx context.Context, in *auth.IdQuery, out *auth.MemberUsers) error {
+	log.InfoWithFields(log.Fields{"department_id": in.Id}, "authSrv.ListDepartmentUsers called.")
+	defer log.Info("authSrv.ListDepartmentUsers end.")
 
 	log.Info("Finding department users.")
 	us, ok := dao.ListDepartmentUsers(int(in.Id), dao.Query{})
@@ -66,9 +66,9 @@ func (as *AuthService) ListDepartmentUsers(ctx context.Context, in *auth.IdQuery
 }
 
 // ListParentDepartmentUsers RPC服务::列出指定部门的父级部门下所有用户
-func (as *AuthService) ListParentDepartmentUsers(ctx context.Context, in *auth.IdQuery, out *auth.MemberUsers) error {
-	log.InfoWithFields(log.Fields{"department_id": in.Id}, "srv.ListDepartmentUsers called.")
-	defer log.Info("srv.ListDepartmentUsers end.")
+func (authSrv *AuthService) ListParentDepartmentUsers(ctx context.Context, in *auth.IdQuery, out *auth.MemberUsers) error {
+	log.InfoWithFields(log.Fields{"department_id": in.Id}, "authSrv.ListDepartmentUsers called.")
+	defer log.Info("authSrv.ListDepartmentUsers end.")
 
 	out.Users = make([]*auth.MemberUsers_MemberUser, 0)
 

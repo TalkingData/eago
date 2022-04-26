@@ -6,7 +6,7 @@ import (
 	"eago/common/tracer"
 	"eago/task/conf"
 	"eago/task/worker"
-	worker_proto "eago/task/worker/proto"
+	workerProto "eago/task/worker/proto"
 	"encoding/json"
 	"github.com/coreos/etcd/clientv3"
 	"google.golang.org/grpc"
@@ -41,12 +41,12 @@ func InitWorkerCli() {
 }
 
 // List 列出所有活跃的Worker
-func (wc *workerClient) List(ctx context.Context) []*worker.WorkerInfo {
+func (wkCli *workerClient) List(ctx context.Context) []*worker.WorkerInfo {
 	sp, c := tracer.StartSpanFromContext(ctx)
 	defer sp.Finish()
 	workers := make([]*worker.WorkerInfo, 0)
 
-	resp, err := wc.etcdCli.Get(c, worker.WORKER_REGISTER_KEY_PREFFIX, clientv3.WithPrefix())
+	resp, err := wkCli.etcdCli.Get(c, worker.WORKER_REGISTER_KEY_PREFFIX, clientv3.WithPrefix())
 	if err != nil {
 		log.ErrorWithFields(log.Fields{
 			"error": err,
@@ -70,10 +70,10 @@ func (wc *workerClient) List(ctx context.Context) []*worker.WorkerInfo {
 }
 
 // ListByModular 按模块名列出所有活跃的Worker
-func (wc *workerClient) ListByModular(m string) []*worker.WorkerInfo {
+func (wkCli *workerClient) ListByModular(m string) []*worker.WorkerInfo {
 	workers := make([]*worker.WorkerInfo, 0)
 
-	for _, wk := range wc.List(context.Background()) {
+	for _, wk := range wkCli.List(context.Background()) {
 		if wk.Modular != m {
 			continue
 		}
@@ -84,8 +84,8 @@ func (wc *workerClient) ListByModular(m string) []*worker.WorkerInfo {
 }
 
 // GetWorkerById 获得指定Worker
-func (wc *workerClient) GetWorkerById(wkId string) *worker.WorkerInfo {
-	for _, wk := range wc.List(context.Background()) {
+func (wkCli *workerClient) GetWorkerById(wkId string) *worker.WorkerInfo {
+	for _, wk := range wkCli.List(context.Background()) {
 		if wk.WorkerId == wkId {
 			return wk
 		}
@@ -95,14 +95,14 @@ func (wc *workerClient) GetWorkerById(wkId string) *worker.WorkerInfo {
 }
 
 // CallTask 调用任务
-func (wc *workerClient) CallTask(wk *worker.WorkerInfo, codename, uniqueId, arguments, caller string, timeout int32, startTimestamp int64) error {
+func (wkCli *workerClient) CallTask(wk *worker.WorkerInfo, codename, uniqueId, arguments, caller string, timeout int32, startTimestamp int64) error {
 	// 连接Worker并获取worker grpc客户端
-	cli, err := wc.getWorkerCli(wk)
+	cli, err := wkCli.getWorkerCli(wk)
 	if err != nil {
 		return err
 	}
 
-	req := &worker_proto.CallTaskReq{
+	req := &workerProto.CallTaskReq{
 		TaskCodename: codename,
 		TaskUniqueId: uniqueId,
 		Arguments:    []byte(arguments),
@@ -119,14 +119,14 @@ func (wc *workerClient) CallTask(wk *worker.WorkerInfo, codename, uniqueId, argu
 }
 
 // KillTask 调用任务
-func (wc *workerClient) KillTask(wk *worker.WorkerInfo, taskUniqueId string) error {
+func (wkCli *workerClient) KillTask(wk *worker.WorkerInfo, taskUniqueId string) error {
 	// 连接Worker并获取worker grpc客户端
-	cli, err := wc.getWorkerCli(wk)
+	cli, err := wkCli.getWorkerCli(wk)
 	if err != nil {
 		return err
 	}
 
-	req := &worker_proto.KillTaskReq{
+	req := &workerProto.KillTaskReq{
 		TaskUniqueId: taskUniqueId,
 		Timestamp:    time.Now().Unix(),
 	}
@@ -139,7 +139,7 @@ func (wc *workerClient) KillTask(wk *worker.WorkerInfo, taskUniqueId string) err
 }
 
 // getWorkerCli 连接Worker并获取worker grpc客户端
-func (wc *workerClient) getWorkerCli(wk *worker.WorkerInfo) (worker_proto.TaskWorkerServiceClient, error) {
+func (wkCli *workerClient) getWorkerCli(wk *worker.WorkerInfo) (workerProto.TaskWorkerServiceClient, error) {
 	conn, err := grpc.Dial(wk.Address, grpc.WithInsecure())
 	if err != nil {
 		log.ErrorWithFields(log.Fields{
@@ -148,5 +148,5 @@ func (wc *workerClient) getWorkerCli(wk *worker.WorkerInfo) (worker_proto.TaskWo
 		return nil, err
 	}
 
-	return worker_proto.NewTaskWorkerServiceClient(conn), nil
+	return workerProto.NewTaskWorkerServiceClient(conn), nil
 }

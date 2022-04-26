@@ -10,9 +10,9 @@ import (
 )
 
 // GetGroupById RPC服务::按Id查找组
-func (as *AuthService) GetGroupById(ctx context.Context, req *auth.IdQuery, rsp *auth.Group) error {
-	log.Info("srv.GetGroupById called.")
-	defer log.Info("srv.GetGroupById end.")
+func (authSrv *AuthService) GetGroupById(ctx context.Context, req *auth.IdQuery, rsp *auth.Group) error {
+	log.Info("authSrv.GetGroupById called.")
+	defer log.Info("authSrv.GetGroupById end.")
 
 	log.Info("Finding user.")
 	g, ok := dao.GetGroup(dao.Query{"id=?": req.Id})
@@ -35,9 +35,9 @@ func (as *AuthService) GetGroupById(ctx context.Context, req *auth.IdQuery, rsp 
 }
 
 // PagedListGroups RPC服务::列出所有组-分页
-func (as *AuthService) PagedListGroups(ctx context.Context, req *auth.QueryWithPage, rsp *auth.PagedGroups) error {
-	log.Info("srv.PagedListGroups called.")
-	defer log.Info("srv.PagedListGroups end.")
+func (authSrv *AuthService) PagedListGroups(ctx context.Context, req *auth.QueryWithPage, rsp *auth.PagedGroups) error {
+	log.Info("authSrv.PagedListGroups called.")
+	defer log.Info("authSrv.PagedListGroups end.")
 
 	query := make(dao.Query)
 	for k, v := range req.Query {
@@ -70,9 +70,9 @@ func (as *AuthService) PagedListGroups(ctx context.Context, req *auth.QueryWithP
 }
 
 // ListGroupUsers RPC服务::列出组中所有用户
-func (as *AuthService) ListGroupUsers(ctx context.Context, in *auth.IdQuery, out *auth.MemberUsers) error {
-	log.InfoWithFields(log.Fields{"group_id": in.Id}, "srv.ListGroupUsers called.")
-	defer log.Info("srv.ListGroupUsers end.")
+func (authSrv *AuthService) ListGroupUsers(ctx context.Context, in *auth.IdQuery, out *auth.MemberUsers) error {
+	log.InfoWithFields(log.Fields{"group_id": in.Id}, "authSrv.ListGroupUsers called.")
+	defer log.Info("authSrv.ListGroupUsers end.")
 
 	log.Info("Finding group users.")
 	us, ok := dao.ListGroupUsers(int(in.Id), dao.Query{})

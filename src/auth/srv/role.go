@@ -9,9 +9,9 @@ import (
 )
 
 // ListRoleUsers RPC服务::列出角色中所有用户
-func (as *AuthService) ListRoleUsers(ctx context.Context, in *auth.NameQuery, out *auth.RoleMemberUsers) error {
-	log.Info("srv.ListRoleUsers called.")
-	defer log.Info("srv.ListRoleUsers end.")
+func (authSrv *AuthService) ListRoleUsers(ctx context.Context, in *auth.NameQuery, out *auth.RoleMemberUsers) error {
+	log.Info("authSrv.ListRoleUsers called.")
+	defer log.Info("authSrv.ListRoleUsers end.")
 
 	log.Info("Finding role.")
 	r, ok := dao.GetRole(dao.Query{"name=?": in.Name})

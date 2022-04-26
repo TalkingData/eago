@@ -11,9 +11,9 @@ import (
 )
 
 // GetUserById RPC服务::按Id查找用户
-func (as *AuthService) GetUserById(ctx context.Context, req *auth.IdQuery, rsp *auth.User) error {
-	log.Info("srv.GetUserById called.")
-	defer log.Info("srv.GetUserById end.")
+func (authSrv *AuthService) GetUserById(ctx context.Context, req *auth.IdQuery, rsp *auth.User) error {
+	log.Info("authSrv.GetUserById called.")
+	defer log.Info("authSrv.GetUserById end.")
 
 	log.Info("Finding user.")
 	user, ok := dao.GetUser(dao.Query{"id=?": req.Id})
@@ -39,9 +39,9 @@ func (as *AuthService) GetUserById(ctx context.Context, req *auth.IdQuery, rsp *
 }
 
 // PagedListUsers RPC服务::列出所有用户-分页
-func (as *AuthService) PagedListUsers(ctx context.Context, req *auth.QueryWithPage, rsp *auth.PagedUsers) error {
-	log.Info("srv.PagedListUsers called.")
-	defer log.Info("srv.PagedListUsers end.")
+func (authSrv *AuthService) PagedListUsers(ctx context.Context, req *auth.QueryWithPage, rsp *auth.PagedUsers) error {
+	log.Info("authSrv.PagedListUsers called.")
+	defer log.Info("authSrv.PagedListUsers end.")
 
 	query := make(dao.Query)
 	for k, v := range req.Query {
@@ -74,9 +74,9 @@ func (as *AuthService) PagedListUsers(ctx context.Context, req *auth.QueryWithPa
 }
 
 // GetUserDepartment RPC服务::获得用户所在部门
-func (as *AuthService) GetUserDepartment(ctx context.Context, in *auth.IdQuery, out *auth.UserDepartment) error {
-	log.Info("srv.GetUserDepartment called.")
-	defer log.Info("srv.GetUserDepartment end.")
+func (authSrv *AuthService) GetUserDepartment(ctx context.Context, in *auth.IdQuery, out *auth.UserDepartment) error {
+	log.Info("authSrv.GetUserDepartment called.")
+	defer log.Info("authSrv.GetUserDepartment end.")
 
 	dept, ok := dao.GetUserDepartment(int(in.Id))
 	if !ok {
@@ -100,9 +100,9 @@ func (as *AuthService) GetUserDepartment(ctx context.Context, in *auth.IdQuery, 
 }
 
 // ListUserDepartmentUsers RPC服务::列出用户所在部门用户
-func (as *AuthService) ListUserDepartmentUsers(ctx context.Context, in *auth.IdQuery, out *auth.MemberUsers) error {
-	log.Info("srv.ListUserDepartmentUsers called.")
-	defer log.Info("srv.ListUserDepartmentUsers end.")
+func (authSrv *AuthService) ListUserDepartmentUsers(ctx context.Context, in *auth.IdQuery, out *auth.MemberUsers) error {
+	log.Info("authSrv.ListUserDepartmentUsers called.")
+	defer log.Info("authSrv.ListUserDepartmentUsers end.")
 
 	out.Users = make([]*auth.MemberUsers_MemberUser, 0)
 
@@ -141,7 +141,7 @@ func (as *AuthService) ListUserDepartmentUsers(ctx context.Context, in *auth.IdQ
 }
 
 // MakeUserHandover 用户交接
-func (as *AuthService) MakeUserHandover(ctx context.Context, in *auth.HandoverRequest, out *auth.BoolMsg) error {
+func (authSrv *AuthService) MakeUserHandover(ctx context.Context, in *auth.HandoverRequest, out *auth.BoolMsg) error {
 	// 获得交接用户
 	user, ok := dao.GetUser(dao.Query{"id=?": in.UserId})
 	if !ok {

@@ -11,9 +11,9 @@ import (
 )
 
 // GetProductById RPC服务::按Id查找产品线
-func (as *AuthService) GetProductById(ctx context.Context, req *auth.IdQuery, rsp *auth.Product) error {
-	log.Info("srv.GetProductById called.")
-	defer log.Info("srv.GetProductById end.")
+func (authSrv *AuthService) GetProductById(ctx context.Context, req *auth.IdQuery, rsp *auth.Product) error {
+	log.Info("authSrv.GetProductById called.")
+	defer log.Info("authSrv.GetProductById end.")
 
 	log.Info("Finding product.")
 	prod, ok := dao.GetProduct(dao.Query{"id=?": req.Id})
@@ -38,9 +38,9 @@ func (as *AuthService) GetProductById(ctx context.Context, req *auth.IdQuery, rs
 }
 
 // PagedListProducts RPC服务::列出所有产品线-分页
-func (as *AuthService) PagedListProducts(ctx context.Context, req *auth.QueryWithPage, rsp *auth.PagedProducts) error {
-	log.Info("srv.PagedListProducts called.")
-	defer log.Info("srv.PagedListProducts end.")
+func (authSrv *AuthService) PagedListProducts(ctx context.Context, req *auth.QueryWithPage, rsp *auth.PagedProducts) error {
+	log.Info("authSrv.PagedListProducts called.")
+	defer log.Info("authSrv.PagedListProducts end.")
 
 	query := make(dao.Query)
 	for k, v := range req.Query {
@@ -75,9 +75,9 @@ func (as *AuthService) PagedListProducts(ctx context.Context, req *auth.QueryWit
 }
 
 // ListProductUsers RPC服务::列出产品线下所有用户
-func (as *AuthService) ListProductUsers(ctx context.Context, in *auth.IdQuery, out *auth.MemberUsers) error {
-	log.InfoWithFields(log.Fields{"product_id": in.Id}, "srv.ListProductUsers called.")
-	defer log.Info("srv.ListProductUsers end.")
+func (authSrv *AuthService) ListProductUsers(ctx context.Context, in *auth.IdQuery, out *auth.MemberUsers) error {
+	log.InfoWithFields(log.Fields{"product_id": in.Id}, "authSrv.ListProductUsers called.")
+	defer log.Info("authSrv.ListProductUsers end.")
 
 	log.Info("Finding product users.")
 	us, ok := dao.ListProductUsers(int(in.Id), dao.Query{})

@@ -9,21 +9,21 @@ import (
 )
 
 // VerifyToken RPC服务::验证Token是否有效
-func (as *AuthService) VerifyToken(ctx context.Context, req *auth.Token, res *auth.BoolMsg) error {
-	log.InfoWithFields(log.Fields{"token": req.Token}, "srv.VerifyToken called.")
-	defer log.Info("srv.VerifyToken end.")
+func (authSrv *AuthService) VerifyToken(ctx context.Context, req *auth.Token, res *auth.BoolMsg) error {
+	log.InfoWithFields(log.Fields{"token": req.Token}, "authSrv.VerifyToken called.")
+	defer log.Info("authSrv.VerifyToken end.")
 
 	res.Ok = builtin.VerifyToken(req.Token)
 	return nil
 }
 
 // GetTokenContent RPC服务::通过Token获得TokenContent
-func (as *AuthService) GetTokenContent(ctx context.Context, req *auth.Token, rsp *auth.TokenContent) error {
+func (authSrv *AuthService) GetTokenContent(ctx context.Context, req *auth.Token, rsp *auth.TokenContent) error {
 	log.InfoWithFields(
 		log.Fields{"token": req.Token},
-		"srv.GetTokenContent called.",
+		"authSrv.GetTokenContent called.",
 	)
-	defer log.Info("srv.GetTokenContent end.")
+	defer log.Info("authSrv.GetTokenContent end.")
 
 	tc, ok := builtin.GetTokenContent(req.Token)
 	if !ok || tc == nil {
