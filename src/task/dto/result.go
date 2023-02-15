@@ -1,29 +1,15 @@
 package dto
 
-import (
-	"database/sql"
-	"eago/task/dao"
-	"fmt"
+const (
+	TaskResultStatusPanicEnd                 = -255 // 任务异常
+	TaskResultStatusCallErrEnd               = -202 // 调用错误
+	TaskResultStatusNoWorkerErrEnd           = -201 // 找不到执行器
+	TaskResultStatusWorkerTaskNotFoundErrEnd = -200 // 找不到任务
+	TaskResultStatusFailedEnd                = -3   // 任务失败
+	TaskResultStatusTimeoutEnd               = -2   // 任务超时
+	TaskResultStatusManualEnd                = -1   // 手动结束
+	TaskResultStatusSuccessEnd               = 0    // 任务结束
+	TaskResultStatusInitialization           = 1    // 初始化
+	TaskResultStatusPending                  = 2    // 等待中
+	TaskResultStatusRunning                  = 3    // 运行中
 )
-
-// ListResultsQuery struct
-type ListResultsQuery struct {
-	Query  *string `form:"query"`
-	Status *int    `form:"status"`
-}
-
-func (q *ListResultsQuery) UpdateQuery(query dao.Query) error {
-	// 通用Query
-	if q.Query != nil && *q.Query != "" {
-		likeQuery := fmt.Sprintf("%%%s%%", *q.Query)
-		query["(task_codename LIKE @query OR "+
-			"caller LIKE @query OR "+
-			"id LIKE @query)"] = sql.Named("query", likeQuery)
-	}
-
-	if q.Status != nil {
-		query["status=?"] = *q.Status
-	}
-
-	return nil
-}

@@ -1,282 +1,300 @@
 package handler
 
 import (
+	"eago/auth/api/form"
 	"eago/auth/conf/msg"
-	"eago/auth/dao"
-	"eago/auth/dto"
-	w "eago/common/api-suite/writter"
-	"eago/common/log"
+	"eago/common/api/ext"
+	cMsg "eago/common/code_msg"
+	"eago/common/global"
+	"eago/common/logger"
+	"eago/common/tracer"
 	"github.com/gin-gonic/gin"
-	"strconv"
 )
 
 // NewProduct 新建产品线
-func NewProduct(c *gin.Context) {
-	var npFrm dto.NewProduct
+func (ah *AuthHandler) NewProduct(c *gin.Context) {
+	frm := form.NewProductForm{}
 	// 序列化request body
-	if err := c.ShouldBindJSON(&npFrm); err != nil {
-		m := msg.SerializeFailed.SetError(err)
-		log.WarnWithFields(m.LogFields())
-		m.WriteRest(c)
+	if err := c.ShouldBindJSON(&frm); err != nil {
+		m := cMsg.MsgSerializeFailed.SetError(err)
+		ah.logger.WarnWithFields(m.ToLoggerFields(), m.GetMsg())
+		m.Write2GinCtx(c)
 		return
 	}
+
+	ctx := tracer.ExtractTraceCtxFromGin(c)
+
 	// 验证数据
-	if m := npFrm.Validate(); m != nil {
+	if m := frm.Validate(ctx, ah.dao); m != nil {
 		// 数据验证未通过
-		log.WarnWithFields(m.LogFields())
-		m.WriteRest(c)
+		ah.logger.WarnWithFields(m.ToLoggerFields(), m.GetMsg())
+		m.Write2GinCtx(c)
 		return
 	}
 
-	p, err := dao.NewProduct(npFrm.Name, npFrm.Alias, *npFrm.Description, npFrm.Disabled)
-	if p == nil {
-		m := msg.UndefinedError.SetError(err)
-		log.WarnWithFields(m.LogFields())
-		m.WriteRest(c)
+	p, err := ah.dao.NewProduct(ctx, frm.Name, frm.Alias, *frm.Description, frm.Disabled)
+	if err != nil {
+		m := msg.MsgAuthDaoErr.SetError(err)
+		ah.logger.ErrorWithFields(m.ToLoggerFields(), m.GetMsg())
+		m.Write2GinCtx(c)
 		return
 	}
 
-	w.WriteSuccessPayload(c, "product", p)
+	ext.WriteSuccessPayload(c, "product", p)
 }
 
 // RemoveProduct 删除产品线
-func RemoveProduct(c *gin.Context) {
-	prdId, err := strconv.Atoi(c.Param("product_id"))
+func (ah *AuthHandler) RemoveProduct(c *gin.Context) {
+	prdId, err := ext.ParamUint32(c, "product_id")
 	if err != nil {
-		m := msg.InvalidUriFailed.SetError(err, "product_id")
-		log.WarnWithFields(m.LogFields())
-		m.WriteRest(c)
+		m := cMsg.MsgInvalidUriFailed.SetError(err, "product_id")
+		ah.logger.WarnWithFields(m.ToLoggerFields(), m.GetMsg())
+		m.Write2GinCtx(c)
 		return
 	}
 
-	var rProdFrm dto.RemoveProduct
+	ctx := tracer.ExtractTraceCtxFromGin(c)
+
+	frm := form.RemoveProductForm{}
 	// 验证数据
-	if m := rProdFrm.Validate(prdId); m != nil {
+	if m := frm.Validate(ctx, ah.dao, prdId); m != nil {
 		// 数据验证未通过
-		log.WarnWithFields(m.LogFields())
-		m.WriteRest(c)
+		ah.logger.WarnWithFields(m.ToLoggerFields(), m.GetMsg())
+		m.Write2GinCtx(c)
 		return
 	}
 
-	if err := dao.RemoveProduct(prdId); err != nil {
-		m := msg.UndefinedError.SetError(err)
-		log.WarnWithFields(m.LogFields())
-		m.WriteRest(c)
+	if err = ah.dao.RemoveProduct(ctx, prdId); err != nil {
+		m := msg.MsgAuthDaoErr.SetError(err)
+		ah.logger.ErrorWithFields(m.ToLoggerFields(), m.GetMsg())
+		m.Write2GinCtx(c)
 		return
 	}
 
-	w.WriteSuccess(c)
+	ext.WriteSuccess(c)
 }
 
 // SetProduct 更新产品线
-func SetProduct(c *gin.Context) {
-	prdId, err := strconv.Atoi(c.Param("product_id"))
+func (ah *AuthHandler) SetProduct(c *gin.Context) {
+	prdId, err := ext.ParamUint32(c, "product_id")
 	if err != nil {
-		m := msg.InvalidUriFailed.SetError(err, "product_id")
-		log.WarnWithFields(m.LogFields())
-		m.WriteRest(c)
+		m := cMsg.MsgInvalidUriFailed.SetError(err, "product_id")
+		ah.logger.WarnWithFields(m.ToLoggerFields(), m.GetMsg())
+		m.Write2GinCtx(c)
 		return
 	}
 
-	var spFrm dto.SetProduct
+	frm := form.SetProductForm{}
 	// 序列化request body
-	if err = c.ShouldBindJSON(&spFrm); err != nil {
-		m := msg.SerializeFailed.SetError(err)
-		log.WarnWithFields(m.LogFields())
-		m.WriteRest(c)
+	if err = c.ShouldBindJSON(&frm); err != nil {
+		m := cMsg.MsgSerializeFailed.SetError(err)
+		ah.logger.WarnWithFields(m.ToLoggerFields(), m.GetMsg())
+		m.Write2GinCtx(c)
 		return
 	}
+
+	ctx := tracer.ExtractTraceCtxFromGin(c)
+
 	// 验证数据
-	if m := spFrm.Validate(prdId); m != nil {
+	if m := frm.Validate(ctx, ah.dao, prdId); m != nil {
 		// 数据验证未通过
-		log.WarnWithFields(m.LogFields())
-		m.WriteRest(c)
+		ah.logger.WarnWithFields(m.ToLoggerFields(), m.GetMsg())
+		m.Write2GinCtx(c)
 		return
 	}
 
-	prod, err := dao.SetProduct(prdId, spFrm.Name, spFrm.Alias, *spFrm.Description, *spFrm.Disabled)
+	prod, err := ah.dao.SetProduct(ctx, prdId, frm.Name, frm.Alias, *frm.Description, *frm.Disabled)
 	if err != nil {
-		m := msg.UndefinedError.SetError(err)
-		log.WarnWithFields(m.LogFields())
-		m.WriteRest(c)
+		m := msg.MsgAuthDaoErr.SetError(err)
+		ah.logger.ErrorWithFields(m.ToLoggerFields(), m.GetMsg())
+		m.Write2GinCtx(c)
 		return
 	}
 
-	w.WriteSuccessPayload(c, "product", prod)
+	ext.WriteSuccessPayload(c, "product", prod)
 }
 
 // PagedListProducts 列出所有产品线-分页
-func PagedListProducts(c *gin.Context) {
-	query := dao.Query{}
+func (ah *AuthHandler) PagedListProducts(c *gin.Context) {
 	// 设置查询filter
-	lpq := dto.PagedListProductsQuery{}
-	if c.ShouldBindQuery(&lpq) == nil {
-		_ = lpq.UpdateQuery(query)
+	pFrm := form.PagedListProductsParamsForm{}
+	if err := c.ShouldBindQuery(&pFrm); err != nil {
+		ah.logger.WarnWithFields(logger.Fields{
+			"params": c.Params,
+			"error":  err,
+		}, "An error occurred while c.ShouldBindQuery in AuthHandler.PagedListProducts, skipped it.")
 	}
 
-	paged, ok := dao.PagedListProducts(
-		query,
-		c.GetInt("Page"),
-		c.GetInt("PageSize"),
-		c.GetStringSlice("OrderBy")...,
+	paged, err := ah.dao.PagedListProducts(
+		tracer.ExtractTraceCtxFromGin(c),
+		pFrm.GenQuery(),
+		c.GetInt(global.GinCtxPageKey),
+		c.GetInt(global.GinCtxPageSizeKey),
+		c.GetStringSlice(global.GinCtxOrderByKey)...,
 	)
-	if !ok {
-		m := msg.UndefinedError
-		log.WarnWithFields(m.LogFields())
-		m.WriteRest(c)
+	if err != nil {
+		m := msg.MsgAuthDaoErr.SetError(err)
+		ah.logger.ErrorWithFields(m.ToLoggerFields(), m.GetMsg())
+		m.Write2GinCtx(c)
 		return
 	}
 
-	w.WriteSuccessPayload(c, "products", paged)
+	ext.WriteSuccessPayload(c, "products", paged)
 }
 
 // AddUser2Product 添加用户至产品线
-func AddUser2Product(c *gin.Context) {
-	prdId, err := strconv.Atoi(c.Param("product_id"))
+func (ah *AuthHandler) AddUser2Product(c *gin.Context) {
+	prdId, err := ext.ParamUint32(c, "product_id")
 	if err != nil {
-		m := msg.InvalidUriFailed.SetError(err, "product_id")
-		log.WarnWithFields(m.LogFields())
-		m.WriteRest(c)
+		m := cMsg.MsgInvalidUriFailed.SetError(err, "product_id")
+		ah.logger.WarnWithFields(m.ToLoggerFields(), m.GetMsg())
+		m.Write2GinCtx(c)
 		return
 	}
 
-	var aumFrm dto.AddUser2Product
+	frm := form.AddUser2ProductForm{}
 	// 序列化request body
-	if err = c.ShouldBindJSON(&aumFrm); err != nil {
-		m := msg.SerializeFailed.SetError(err)
-		log.WarnWithFields(m.LogFields())
-		m.WriteRest(c)
+	if err = c.ShouldBindJSON(&frm); err != nil {
+		m := cMsg.MsgSerializeFailed.SetError(err)
+		ah.logger.WarnWithFields(m.ToLoggerFields(), m.GetMsg())
+		m.Write2GinCtx(c)
 		return
 	}
+
+	ctx := tracer.ExtractTraceCtxFromGin(c)
+
 	// 验证数据
-	if m := aumFrm.Validate(prdId); m != nil {
+	if m := frm.Validate(ctx, ah.dao, prdId); m != nil {
 		// 数据验证未通过
-		log.WarnWithFields(m.LogFields())
-		m.WriteRest(c)
+		ah.logger.WarnWithFields(m.ToLoggerFields(), m.GetMsg())
+		m.Write2GinCtx(c)
 		return
 	}
 
-	if !dao.AddProductUser(prdId, aumFrm.UserId, aumFrm.IsOwner) {
-		m := msg.UndefinedError
-		log.WarnWithFields(m.LogFields())
-		m.WriteRest(c)
+	if err = ah.dao.AddUser2Product(ctx, prdId, frm.UserId, frm.IsOwner); err != nil {
+		m := msg.MsgAuthDaoErr.SetError(err)
+		ah.logger.ErrorWithFields(m.ToLoggerFields(), m.GetMsg())
+		m.Write2GinCtx(c)
 		return
 	}
 
-	w.WriteSuccess(c)
+	ext.WriteSuccess(c)
 }
 
-// RemoveProductUser 移除产品线中用户
-func RemoveProductUser(c *gin.Context) {
-	prdId, err := strconv.Atoi(c.Param("product_id"))
+// RemoveProductsUser 移除产品线中用户
+func (ah *AuthHandler) RemoveProductsUser(c *gin.Context) {
+	prdId, err := ext.ParamUint32(c, "product_id")
 	if err != nil {
-		m := msg.InvalidUriFailed.SetError(err, "product_id")
-		log.WarnWithFields(m.LogFields())
-		m.WriteRest(c)
+		m := cMsg.MsgInvalidUriFailed.SetError(err, "product_id")
+		ah.logger.WarnWithFields(m.ToLoggerFields(), m.GetMsg())
+		m.Write2GinCtx(c)
 		return
 	}
 
-	userId, err := strconv.Atoi(c.Param("user_id"))
+	userId, err := ext.ParamUint32(c, "user_id")
 	if err != nil {
-		m := msg.InvalidUriFailed.SetError(err, "user_id")
-		log.WarnWithFields(m.LogFields())
-		m.WriteRest(c)
+		m := cMsg.MsgInvalidUriFailed.SetError(err, "role_id")
+		ah.logger.WarnWithFields(m.ToLoggerFields(), m.GetMsg())
+		m.Write2GinCtx(c)
 		return
 	}
 
-	var rpuFrm dto.RemoveProductUser
+	ctx := tracer.ExtractTraceCtxFromGin(c)
+
+	frm := form.RemoveProductsUserForm{}
 	// 验证数据
-	if m := rpuFrm.Validate(prdId, userId); m != nil {
+	if m := frm.Validate(ctx, ah.dao, prdId, userId); m != nil {
 		// 数据验证未通过
-		log.WarnWithFields(m.LogFields())
-		m.WriteRest(c)
+		ah.logger.WarnWithFields(m.ToLoggerFields(), m.GetMsg())
+		m.Write2GinCtx(c)
 		return
 	}
 
-	if !dao.RemoveProductUser(prdId, userId) {
-		m := msg.UndefinedError
-		log.WarnWithFields(m.LogFields())
-		m.WriteRest(c)
+	if err = ah.dao.RemoveProductsUser(ctx, prdId, userId); err != nil {
+		m := msg.MsgAuthDaoErr.SetError(err)
+		ah.logger.ErrorWithFields(m.ToLoggerFields(), m.GetMsg())
+		m.Write2GinCtx(c)
 		return
 	}
 
-	w.WriteSuccess(c)
+	ext.WriteSuccess(c)
 }
 
-// SetUserIsProductOwner 设置用户是否是产品线Owner
-func SetUserIsProductOwner(c *gin.Context) {
-	prdId, err := strconv.Atoi(c.Param("product_id"))
+// SetProductsOwner 设置产品线Owner
+func (ah *AuthHandler) SetProductsOwner(c *gin.Context) {
+	prdId, err := ext.ParamUint32(c, "product_id")
 	if err != nil {
-		m := msg.InvalidUriFailed.SetError(err, "product_id")
-		log.WarnWithFields(m.LogFields())
-		m.WriteRest(c)
+		m := cMsg.MsgInvalidUriFailed.SetError(err, "product_id")
+		ah.logger.WarnWithFields(m.ToLoggerFields(), m.GetMsg())
+		m.Write2GinCtx(c)
 		return
 	}
 
-	userId, err := strconv.Atoi(c.Param("user_id"))
+	userId, err := ext.ParamUint32(c, "user_id")
 	if err != nil {
-		m := msg.InvalidUriFailed.SetError(err, "user_id")
-		log.WarnWithFields(m.LogFields())
-		m.WriteRest(c)
+		m := cMsg.MsgInvalidUriFailed.SetError(err, "role_id")
+		ah.logger.WarnWithFields(m.ToLoggerFields(), m.GetMsg())
+		m.Write2GinCtx(c)
 		return
 	}
 
-	var suoFrm dto.SetUserIsProductOwner
+	frm := form.SetProductsOwnerForm{}
 	// 序列化request body
-	if err = c.ShouldBindJSON(&suoFrm); err != nil {
-		m := msg.SerializeFailed.SetError(err)
-		log.WarnWithFields(m.LogFields())
-		m.WriteRest(c)
+	if err = c.ShouldBindJSON(&frm); err != nil {
+		m := cMsg.MsgSerializeFailed.SetError(err)
+		ah.logger.WarnWithFields(m.ToLoggerFields(), m.GetMsg())
+		m.Write2GinCtx(c)
 		return
 	}
+
+	ctx := tracer.ExtractTraceCtxFromGin(c)
+
 	// 验证数据
-	if m := suoFrm.Validate(prdId, userId); m != nil {
+	if m := frm.Validate(ctx, ah.dao, prdId, userId); m != nil {
 		// 数据验证未通过
-		log.WarnWithFields(m.LogFields())
-		m.WriteRest(c)
+		ah.logger.WarnWithFields(m.ToLoggerFields(), m.GetMsg())
+		m.Write2GinCtx(c)
 		return
 	}
 
-	if !dao.SetProductUserIsOwner(prdId, userId, suoFrm.IsOwner) {
-		m := msg.UndefinedError
-		log.WarnWithFields(m.LogFields())
-		m.WriteRest(c)
+	if err = ah.dao.SetProductsOwner(ctx, prdId, userId, frm.IsOwner); err != nil {
+		m := msg.MsgAuthDaoErr.SetError(err)
+		ah.logger.ErrorWithFields(m.ToLoggerFields(), m.GetMsg())
+		m.Write2GinCtx(c)
 		return
 	}
 
-	w.WriteSuccess(c)
+	ext.WriteSuccess(c)
 }
 
-// ListProductUsers 列出产品线所有用户
-func ListProductUsers(c *gin.Context) {
-	prdId, err := strconv.Atoi(c.Param("product_id"))
+// ListProductsUsers 列出产品线所有用户
+func (ah *AuthHandler) ListProductsUsers(c *gin.Context) {
+	prdId, err := ext.ParamUint32(c, "product_id")
 	if err != nil {
-		m := msg.InvalidUriFailed.SetError(err, "product_id")
-		log.WarnWithFields(m.LogFields())
-		m.WriteRest(c)
+		m := cMsg.MsgInvalidUriFailed.SetError(err, "product_id")
+		ah.logger.WarnWithFields(m.ToLoggerFields(), m.GetMsg())
+		m.Write2GinCtx(c)
 		return
 	}
 
-	var lpuFrm dto.ListProductUsersQuery
+	pFrm := form.ListProductsUsersParamsForm{}
 	// 序列化request body
-	_ = c.ShouldBindQuery(&lpuFrm)
-	if m := lpuFrm.Validate(prdId); m != nil {
-		// 数据验证未通过
-		log.WarnWithFields(m.LogFields())
-		m.WriteRest(c)
-		return
+	if err = c.ShouldBindQuery(&pFrm); err != nil {
+		ah.logger.WarnWithFields(logger.Fields{
+			"params": c.Params,
+			"error":  err,
+		}, "An error occurred while c.ShouldBindQuery in AuthHandler.ListProductsUsers, skipped it.")
 	}
 
-	query := dao.Query{}
 	// 设置查询filter
-	_ = lpuFrm.UpdateQuery(query)
-	u, ok := dao.ListProductUsers(prdId, query)
-	if !ok {
-		m := msg.UndefinedError
-		log.WarnWithFields(m.LogFields())
-		m.WriteRest(c)
+	query := pFrm.GenQuery()
+	u, err := ah.dao.ListProductsUsers(tracer.ExtractTraceCtxFromGin(c), prdId, query)
+	if err != nil {
+		m := msg.MsgAuthDaoErr.SetError(err)
+		ah.logger.ErrorWithFields(m.ToLoggerFields(), m.GetMsg())
+		m.Write2GinCtx(c)
 		return
 	}
 
-	w.WriteSuccessPayload(c, "users", u)
+	ext.WriteSuccessPayload(c, "users", u)
 }

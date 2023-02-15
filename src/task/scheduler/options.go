@@ -1,5 +1,14 @@
 package main
 
+import (
+	"eago/common/logger"
+)
+
+const (
+	defaultSchedulerRegisterKey = "/td/eago/scheduler"
+	defaultClientMaxPageSize    = 500
+)
+
 // Options struct
 type Options struct {
 	EtcdAddresses []string
@@ -10,6 +19,8 @@ type Options struct {
 	TaskRpcRetries     int
 
 	RegisterTtl int64
+
+	Logger *logger.Logger
 }
 
 // newOptions
@@ -29,15 +40,22 @@ func newOptions(opts ...Option) Options {
 		o(&opt)
 	}
 
+	if opt.Logger == nil {
+		opt.Logger = logger.NewDefaultLogger()
+	}
+
 	return opt
 }
 
 type Option func(o *Options)
 
 // EtcdAddresses 设置注册中心地址
-func EtcdAddresses(addr []string) Option {
+func EtcdAddresses(in []string) Option {
 	return func(o *Options) {
-		o.EtcdAddresses = addr
+		o.EtcdAddresses = make([]string, len(in))
+		for idx, ele := range in {
+			o.EtcdAddresses[idx] = ele
+		}
 	}
 }
 
@@ -73,5 +91,12 @@ func TaskRpcRetries(retries int) Option {
 func RegisterTtl(ttl int64) Option {
 	return func(o *Options) {
 		o.RegisterTtl = ttl
+	}
+}
+
+// Logger 设置Logger
+func Logger(in *logger.Logger) Option {
+	return func(o *Options) {
+		o.Logger = in
 	}
 }

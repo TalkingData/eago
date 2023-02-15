@@ -2,8 +2,10 @@ package main
 
 import (
 	"context"
-	"eago/common/log"
-	proto "eago/task/srv/proto"
+	"eago/common/global"
+	"eago/common/logger"
+	commonpb "eago/common/proto"
+	taskpb "eago/task/proto"
 	"encoding/json"
 	"fmt"
 	"github.com/coreos/etcd/clientv3"
@@ -15,89 +17,86 @@ import (
 	"time"
 )
 
-const (
-	SCHEDULER_REGISTER_KEY = "/td/eago/scheduler"
-	CLIENT_MAX_PAGESIZE    = 500
-)
+type scheduler struct {
+	cron      *cron.Cron
+	etcdCli   *clientv3.Client
+	etcdLease clientv3.Lease
+	taskCli   taskpb.TaskService
 
-type Scheduler struct {
-	cron          *cron.Cron
-	etcdCli       *clientv3.Client
-	etcdLease     clientv3.Lease
-	taskSrvClient proto.TaskService
+	logger *logger.Logger
 
 	started bool
 	opts    Options
+
+	ctx        context.Context
+	cancelFunc context.CancelFunc
 }
 
-// NewScheduler 创建一个Scheduler
-func NewScheduler(opts ...Option) *Scheduler {
-	options := newOptions(opts...)
-	s := &Scheduler{
-		opts: options,
-	}
-	s.init()
-	return s
-}
+// NewScheduler 创建Scheduler
+func NewScheduler(ctx context.Context, options ...Option) *scheduler {
+	opts := newOptions(options...)
 
-// init 初始化
-func (s *Scheduler) init() {
+	schCtx, schCancel := context.WithCancel(ctx)
+
 	etcdReg := etcdv3.NewRegistry(
-		registry.Addrs(s.opts.EtcdAddresses...),
-		etcdv3.Auth(s.opts.EtcdUsername, s.opts.EtcdPassword),
+		registry.Addrs(opts.EtcdAddresses...),
+		etcdv3.Auth(opts.EtcdUsername, opts.EtcdPassword),
 	)
 	cli := micro.NewService(micro.Registry(etcdReg))
-	s.taskSrvClient = proto.NewTaskService(s.opts.TaskRpcRegisterKey, cli.Client())
-
 	etcdCli, err := clientv3.New(clientv3.Config{
-		Endpoints:   s.opts.EtcdAddresses,
+		Endpoints:   opts.EtcdAddresses,
 		DialTimeout: 5 * time.Second,
 	})
 	if err != nil {
-		log.ErrorWithFields(log.Fields{
-			"error": err,
-		}, "An error occurred while clientv3.New.")
 		panic(err)
 	}
-	s.etcdCli = etcdCli
 
-	s.cron = cron.New()
-	s.started = false
+	return &scheduler{
+		cron:    cron.New(),
+		etcdCli: etcdCli,
+		taskCli: taskpb.NewTaskService(opts.TaskRpcRegisterKey, cli.Client()),
+
+		logger: opts.Logger,
+
+		started: false,
+		opts:    opts,
+
+		ctx:        schCtx,
+		cancelFunc: schCancel,
+	}
 }
 
 // Start 启动计划任务
-func (s *Scheduler) Start() {
-	log.Info("Starting scheduler.")
+func (s *scheduler) Start() error {
+	s.logger.Info("Starting task scheduler...")
 	if s.started {
 		panic("current instance is already started")
 	}
-	defer log.Info("Scheduler started.")
 
 	// 循环创建计划任务
-	for _, tmp := range s.getScheduleTask() {
-		var sch = tmp
+	for _, sch := range s.listScheduleTasks() {
 		// 创建计划任务
 		err := s.cron.AddFunc(sch.Expression, func() {
 			ctx := context.Background()
-			req := &proto.CallTaskReq{
+			req := &taskpb.CallTaskReq{
 				TaskCodename: sch.TaskCodename,
 				Timeout:      sch.Timeout,
 				Arguments:    []byte(sch.Arguments),
 				Caller:       "task.scheduler",
 			}
 			// 调用任务
-			rsp, err := s.taskSrvClient.CallTask(ctx, req)
+			rsp, err := s.taskCli.CallTask(ctx, req)
 			if err != nil {
-				log.ErrorWithFields(log.Fields{
+				s.logger.ErrorWithFields(logger.Fields{
 					"task_codename": sch.TaskCodename,
 					"expression":    sch.Expression,
 					"timeout":       sch.Timeout,
 					"arguments":     sch.Arguments,
 					"error":         err,
-				}, "An error occurred while Scheduler when call taskSrvClient.CallTask.")
+				}, "An error occurred while taskCli.CallTask in given task.")
 				return
 			}
-			log.InfoWithFields(log.Fields{
+			s.logger.InfoWithFields(logger.Fields{
 				"task_codename":  sch.TaskCodename,
 				"expression":     sch.Expression,
 				"timeout":        sch.Timeout,
@@ -107,30 +106,45 @@ func (s *Scheduler) Start() {
 		})
 		// 创建计划任务失败
 		if err != nil {
-			log.ErrorWithFields(log.Fields{
+			s.logger.ErrorWithFields(logger.Fields{
 				"task_codename": sch.TaskCodename,
 				"expression":    sch.Expression,
 				"arguments":     sch.Arguments,
 				"error":         err,
-			}, "An error occurred while Scheduler when call cron.AddFunc.")
-			panic(fmt.Errorf("failed to add func, error: %s", err.Error()))
+			}, "An error occurred while cron.AddFunc in scheduler.Start.")
+			panic(fmt.Errorf("failed to add func, error: %w", err))
 		}
-		log.InfoWithFields(log.Fields{
+		s.logger.InfoWithFields(logger.Fields{
 			"task_codename": sch.TaskCodename,
 			"expression":    sch.Expression,
 			"timeout":       sch.Timeout,
 			"arguments":     sch.Arguments,
-		}, "Scheduler task added.")
+		}, "scheduler task added.")
 	}
 
 	s.started = true
 	s.register()
 	s.cron.Start()
+
+	for {
+		select {
+		case <-s.ctx.Done():
+			s.logger.InfoWithFields(logger.Fields{
+				"context_error": s.ctx.Err(),
+			}, "Scheduler stopped by context done.")
+			return s.ctx.Err()
+		}
+	}
+
 }
 
 // Stop 停止计划任务
-func (s *Scheduler) Stop() {
-	s.started = false
+func (s *scheduler) Stop() {
+	defer func() {
+		s.ctx.Done()
+		s.started = false
+	}()
+
 	if s.cron != nil {
 		s.cron.Stop()
 	}
@@ -138,45 +152,44 @@ func (s *Scheduler) Stop() {
 	_ = s.etcdCli.Close()
 }
 
-// getScheduleTask 获得已配置的计划任务
-func (s *Scheduler) getScheduleTask() []*Schedule {
-	log.Info("Scheduler getScheduleTask called.")
-	defer log.Info("Scheduler getScheduleTask end.")
+// listScheduleTasks 获得已配置的计划任务
+func (s *scheduler) listScheduleTasks() []*taskpb.Schedule {
+	s.logger.Info("scheduler.listScheduleTasks called.")
+	defer s.logger.Info("scheduler.listScheduleTasks end.")
 
-	var (
-		maxPg uint32 = 2
-		ctx          = context.Background()
-	)
+	var maxPg uint32 = 2
 
-	res := make([]*Schedule, 0)
+	res := make([]*taskpb.Schedule, 0)
 	for pg := uint32(1); pg < maxPg; pg++ {
-		req := &proto.QueryWithPage{
+		req := &commonpb.QueryWithPage{
 			Page:     pg,
-			PageSize: CLIENT_MAX_PAGESIZE,
+			PageSize: defaultClientMaxPageSize,
 		}
-		rsp, err := s.taskSrvClient.PagedListSchedules(ctx, req)
+		rsp, err := s.taskCli.PagedListSchedules(s.ctx, req)
 		if err != nil {
-			log.ErrorWithFields(log.Fields{
+			s.logger.ErrorWithFields(logger.Fields{
 				"page":  pg,
 				"error": err,
-			}, "An error occurred while taskSrvClient.PagedListSchedules.")
+			}, "An error occurred while taskCli.PagedListSchedules in scheduler.listScheduleTasks.")
 			panic(fmt.Errorf("failed to list schedule tasks, error: %s", err.Error()))
 		}
 		maxPg = rsp.Pages
 		for _, r := range rsp.Schedules {
-			log.DebugWithFields(log.Fields{
+			s.logger.DebugWithFields(logger.Fields{
 				"task_codename": r.TaskCodename,
 				"expression":    r.Expression,
 				"timeout":       r.Timeout,
 				"arguments":     r.Arguments,
 				"disabled":      r.Disabled,
 			}, "Got a schedule.")
+
 			// 跳过禁用的计划任务
 			if r.Disabled {
-				log.Debug("Skip disabled schedule.")
+				s.logger.Debug("Skip disabled schedule.")
 				continue
 			}
-			res = append(res, &Schedule{
+
+			res = append(res, &taskpb.Schedule{
 				TaskCodename: r.TaskCodename,
 				Expression:   r.Expression,
 				Timeout:      r.Timeout,
@@ -187,30 +200,27 @@ func (s *Scheduler) getScheduleTask() []*Schedule {
 	return res
 }
 
-// register
-func (s *Scheduler) register() {
-	log.Info("Scheduler register called.")
-	defer log.Info("Scheduler register end.")
-
-	ctx := context.TODO()
+func (s *scheduler) register() {
+	s.logger.Info("scheduler.register called.")
+	defer s.logger.Info("scheduler.register end.")
 
 	// 建立etcd租约
 	s.etcdLease = clientv3.NewLease(s.etcdCli)
-	leaseGrantResp, err := s.etcdLease.Grant(ctx, s.opts.RegisterTtl)
+	leaseGrantResp, err := s.etcdLease.Grant(s.ctx, s.opts.RegisterTtl)
 	if err != nil {
-		log.ErrorWithFields(log.Fields{
+		s.logger.ErrorWithFields(logger.Fields{
 			"error": err,
-		}, "An error occurred while lease.Grant.")
+		}, "An error occurred while lease.Grant in scheduler.register.")
 		panic(err)
 	}
 
-	ch, err := s.etcdLease.KeepAlive(ctx, leaseGrantResp.ID)
+	ch, err := s.etcdLease.KeepAlive(s.ctx, leaseGrantResp.ID)
 	// 续约应答
 	go func() {
 		for {
 			_, ok := <-ch
 			if !ok {
-				log.Info("Scheduler regCh may closed.")
+				s.logger.Info("scheduler regCh may closed.")
 				break
 			}
 		}
@@ -219,14 +229,14 @@ func (s *Scheduler) register() {
 	// 生成注册Value
 	regV, _ := json.Marshal(ScheduleInfo{
 		IpAddress: ipv4.LocalIP(),
-		StartTime: time.Now().Format("2006-01-02 15:04:05"),
+		StartTime: time.Now().Format(global.TimestampFormat),
 	})
 
-	txn := clientv3.NewKV(s.etcdCli).Txn(ctx)
+	txn := clientv3.NewKV(s.etcdCli).Txn(s.ctx)
 	// 注册到etcd
-	txn.If(clientv3.Compare(clientv3.CreateRevision(SCHEDULER_REGISTER_KEY), "=", 0)).
-		Then(clientv3.OpPut(SCHEDULER_REGISTER_KEY, string(regV), clientv3.WithLease(leaseGrantResp.ID))).
-		Else(clientv3.OpGet(SCHEDULER_REGISTER_KEY))
+	txn.If(clientv3.Compare(clientv3.CreateRevision(defaultSchedulerRegisterKey), "=", 0)).
+		Then(clientv3.OpPut(defaultSchedulerRegisterKey, string(regV), clientv3.WithLease(leaseGrantResp.ID))).
+		Else(clientv3.OpGet(defaultSchedulerRegisterKey))
 
 	// 提交事务
 	txnResp, err := txn.Commit()
@@ -239,19 +249,18 @@ func (s *Scheduler) register() {
 	}
 }
 
-// unregister
-func (s *Scheduler) unregister() {
-	log.Info("Scheduler unregister called.")
-	defer log.Info("Scheduler unregister end.")
+func (s *scheduler) unregister() {
+	s.logger.Info("scheduler.unregister called.")
+	defer s.logger.Info("scheduler.unregister end.")
 
 	if s.etcdLease != nil {
 		_ = s.etcdLease.Close()
 	}
 
-	_, err := s.etcdCli.Delete(context.Background(), SCHEDULER_REGISTER_KEY)
+	_, err := s.etcdCli.Delete(s.ctx, defaultSchedulerRegisterKey)
 	if err != nil {
-		log.ErrorWithFields(log.Fields{
+		s.logger.ErrorWithFields(logger.Fields{
 			"error": err,
-		}, "An error occurred while etcdCli.Delete.")
+		}, "An error occurred while etcdCli.Delete in scheduler.unregister.")
 	}
 }

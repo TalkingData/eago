@@ -4,18 +4,23 @@ import (
 	"eago/common/utils"
 )
 
+// Group 组-数据库模型
 type Group struct {
-	Id          int              `json:"id"`
-	Name        string           `json:"name" valid:"Required;MinSize(3);MaxSize(100);Match(/^[a-zA-Z][a-zA-Z0-9_-]{1,}$/)"`
-	Description *string          `json:"description" valid:"MinSize(0)"`
-	CreatedAt   *utils.LocalTime `json:"created_at"`
-	UpdatedAt   *utils.LocalTime `json:"updated_at"`
+	Id uint32 `json:"id"`
+
+	Name        string  `json:"name"`
+	Description *string `json:"description"`
+
+	CreatedAt *utils.CustomTime `json:"created_at"`
+	UpdatedAt *utils.CustomTime `json:"updated_at"`
 }
 
+// UserGroup 用户组关联-数据库模型
 type UserGroup struct {
-	Id       int              `json:"id"`
-	UserId   int              `json:"user_id" valid:"Required"`
-	GroupId  int              `json:"group_id"`
-	IsOwner  *bool            `json:"is_owner" valid:"Required"`
-	JoinedAt *utils.LocalTime `json:"joined_at" gorm:"type:datetime;not null;autoCreateTime"`
+	Id uint32 `json:"id"`
+
+	UserId   uint32            `json:"user_id"`
+	GroupId  uint32            `json:"group_id"`
+	IsOwner  *bool             `json:"is_owner"`
+	JoinedAt *utils.CustomTime `json:"joined_at" gorm:"type:datetime;not null;autoCreateTime"`
 }

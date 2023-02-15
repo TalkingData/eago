@@ -1,13 +1,5 @@
 package main
 
-// Schedule struct
-type Schedule struct {
-	TaskCodename string
-	Expression   string
-	Timeout      int32
-	Arguments    string
-}
-
 // ScheduleInfo struct
 type ScheduleInfo struct {
 	IpAddress string `json:"ip_address"`

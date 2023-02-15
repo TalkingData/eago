@@ -1,187 +1,160 @@
 package handler
 
 import (
-	"bytes"
-	"eago/auth/conf"
+	"eago/auth/api/form"
 	"eago/auth/conf/msg"
-	"eago/auth/dao"
 	"eago/auth/model"
-	"eago/auth/srv/builtin"
-	"eago/auth/util/sso"
-	w "eago/common/api-suite/writter"
-	"eago/common/log"
+	"eago/common/api/ext"
+	cMsg "eago/common/code_msg"
+	"eago/common/logger"
+	"eago/common/orm"
+	"eago/common/tracer"
 	"eago/common/utils"
-	"fmt"
 	"github.com/gin-gonic/gin"
-	"net/http"
 	"strings"
 )
 
 // Logout 登出
-func Logout(c *gin.Context) {
-	builtin.RemoveToken(c.GetHeader("Token"))
-	w.WriteSuccess(c)
+func (ah *AuthHandler) Logout(c *gin.Context) {
+	ah.biz.RemoveToken(tracer.ExtractTraceCtxFromGin(c), c.GetHeader("Token"))
+	ext.WriteSuccess(c)
 }
 
 // Heartbeat 心跳
-func Heartbeat(c *gin.Context) {
-	builtin.RenewalToken(c.GetHeader("Token"))
-	w.WriteSuccess(c)
-}
-
-// GetTokenContent 获得TokenContent
-func GetTokenContent(c *gin.Context) {
-	tk := c.GetHeader("Token")
-	tc, ok := builtin.GetTokenContent(tk)
-	if !ok {
-		m := "Invalid token or Not login yet."
-		log.WarnWithFields(log.Fields{"token": tk}, m)
-		w.WriteAnyAndAbort(c, http.StatusForbidden, m)
-		return
-	}
-
-	w.WriteSuccessPayload(c, "content", tc)
-}
-
-// IamLogin 从IAM登录处理
-func IamLogin(c *gin.Context) {
-	log.Info("IamLogin called.")
-	defer log.Info("IamLogin end.")
-
-	loginUser := c.GetStringMapString("LoginUser")
-
-	log.InfoWithFields(log.Fields{
-		"username": loginUser["username"],
-	}, "CrowdLoginHandler called and got a user.")
-
-	data := []byte(fmt.Sprintf(`{"username":"%s","password":"%s"}`, loginUser["username"], loginUser["password"]))
-
-	iamResp, err := http.Post(conf.Conf.IamAddress, "application/json", bytes.NewReader(data))
-	if err == nil {
-		defer func() {
-			_ = iamResp.Body.Close()
-		}()
-
-		log.DebugWithFields(log.Fields{
-			"response_status_code": iamResp.StatusCode,
-			"response_body":        iamResp.Body,
-		}, "Got iam response.")
-
-		if iamResp.StatusCode == 200 {
-			log.Debug("Iam login success.")
-			updateOrCreateUserLastLogin(c, loginUser["username"])
-			return
-		}
-	} else {
-		log.ErrorWithFields(log.Fields{
-			"error": err,
-		}, "Iam login failed.")
-		c.Next()
-		return
-	}
-
-	log.Error("Iam login failed.")
-	c.Next()
+func (ah *AuthHandler) Heartbeat(c *gin.Context) {
+	ah.biz.RenewalToken(tracer.ExtractTraceCtxFromGin(c), c.GetHeader("Token"))
+	ext.WriteSuccess(c)
 }
 
 // CrowdLogin 从Crowd登录处理
-func CrowdLogin(c *gin.Context) {
-	log.Info("CrowdLogin called.")
-	defer log.Info("CrowdLogin end.")
+func (ah *AuthHandler) CrowdLogin(c *gin.Context) {
+	ah.logger.Info("authHandler.CrowdLogin called.")
+	defer ah.logger.Info("authHandler.CrowdLogin end.")
 
 	loginUser := c.GetStringMapString("LoginUser")
 
-	log.InfoWithFields(log.Fields{
+	ah.logger.DebugWithFields(logger.Fields{
 		"username": loginUser["username"],
-	}, "CrowdLoginHandler called and got a user.")
+	}, "CrowdLogin called and got a user.")
 
 	// 通过crowd认证
-	crowdUser, err := sso.Crowd.Authenticate(
-		strings.TrimSpace(loginUser["username"]),
-		strings.TrimSpace(loginUser["password"]),
-	)
+	crowdUser, err := ah.crowdCli.Authenticate(loginUser["username"], loginUser["password"])
 	// 通过crowd认证成功
 	if err == nil {
-		log.Debug("Crowd login success.")
 		// 阻止登录，非启用的用户
 		if !crowdUser.Active {
-			m := msg.LoginInactiveCrowdUserFailed
-			log.WarnWithFields(log.Fields{
+			m := msg.MsgLoginInactiveCrowdUserFailed
+			ah.logger.WarnWithFields(logger.Fields{
 				"username": loginUser["username"],
-			}, m.String())
-			w.WriteAnyAndAbort(c, m.Code(), m.String())
+			}, m.GetMsg())
+			ext.WriteAnyAndAbort(c, m.GetCode(), m.GetMsg())
 			return
 		}
 
-		updateOrCreateUserLastLogin(c, crowdUser.Email)
+		ah.logger.DebugWithFields(logger.Fields{
+			"username": loginUser["username"],
+		}, "Crowd login success.")
+		ah.updateOrCreateUserLastLogin(c, crowdUser.Email)
 		return
 	}
 
-	log.ErrorWithFields(log.Fields{
-		"error": err,
+	// TODO: 下方switch代码为临时解决方案，后续维护crowd模块解决
+	// crowd错误类型完整介绍见：https://developer.atlassian.com/server/crowd/using-the-crowd-rest-apis/
+	// 对于Crowd client返回的错误类型，做出相应处理
+	switch err.Error() {
+	case "INVALID_USER_AUTHENTICATION":
+		// 认证失败：返回密码错误
+		m := msg.MsgLoginAuthenticationFailed
+		ah.logger.WarnWithFields(logger.Fields{
+			"username": loginUser["username"],
+			"error":    err,
+		}, m.GetMsg())
+		ext.WriteAnyAndAbort(c, m.GetCode(), m.GetMsg())
+		return
+
+	case "INACTIVE_ACCOUNT":
+		// 用户处于被禁用状态：返回当前用户在Crowd中是禁用状态
+		m := msg.MsgLoginInactiveCrowdUserFailed
+		ah.logger.WarnWithFields(logger.Fields{
+			"username": loginUser["username"],
+			"error":    err,
+		}, m.GetMsg())
+		ext.WriteAnyAndAbort(c, m.GetCode(), m.GetMsg())
+		return
+	}
+
+	ah.logger.WarnWithFields(logger.Fields{
+		"username": loginUser["username"],
+		"error":    err,
 	}, "Crowd login failed.")
 	c.Next()
 }
 
 // DatabaseLogin 从数据库登录处理
-func DatabaseLogin(c *gin.Context) {
-	log.Info("DatabaseLogin called.")
-	defer log.Info("DatabaseLogin end.")
+func (ah *AuthHandler) DatabaseLogin(c *gin.Context) {
+	ah.logger.Info("authHandler.DatabaseLogin called.")
+	defer ah.logger.Info("authHandler.DatabaseLogin end.")
 
 	loginUser := c.GetStringMapString("LoginUser")
 
-	log.InfoWithFields(log.Fields{
+	ah.logger.InfoWithFields(logger.Fields{
 		"username": loginUser["username"],
 	}, "DatabaseLoginHandler called and got a user.")
 
+	ctx := tracer.ExtractTraceCtxFromGin(c)
+
 	// 查询该用户在本地数据库中的数据
-	user, ok := dao.GetUser(dao.Query{"username=?": loginUser["username"]})
-	if !ok {
+	user, err := ah.dao.GetUser(ctx, orm.Query{"username=?": loginUser["username"]})
+	if err != nil {
 		// 调用数据库出错
-		m := "An error occurred while GetUser, Please contact admin."
-		log.ErrorWithFields(log.Fields{
-			"username": loginUser["username"],
-		}, m)
-		w.WriteAnyAndAbort(c, http.StatusInternalServerError, m)
+		m := msg.MsgAuthDaoErr.SetError(err)
+		logF := m.ToLoggerFields()
+		logF["username"] = loginUser["username"]
+		ah.logger.ErrorWithFields(logF, "An error occurred while dao.GetUser in authHandler.DatabaseLogin.")
+		ext.WriteAnyAndAbort(c, m.GetCode(), m.GetMsg())
 		return
 	}
-
 	// 判断用户是否在DB中存在
 	if user == nil {
-		m := msg.LoginAuthenticationFailed
-		log.WarnWithFields(log.Fields{
-			"username": loginUser["username"],
-		}, m.String())
-		w.WriteAnyAndAbort(c, m.Code(), m.String())
+		m := msg.MsgLoginAuthenticationFailed
+		logF := m.ToLoggerFields()
+		logF["username"] = loginUser["username"]
+		ah.logger.WarnWithFields(logF, "Got an nil user from dao.GetUser in authHandler.DatabaseLogin.")
+		ext.WriteAnyAndAbort(c, m.GetCode(), m.GetMsg())
 		return
 	}
 
 	// 判断是否是被禁用的用户
 	if user.Disabled {
-		m := msg.LoginDisabledUserFailed
-		log.WarnWithFields(log.Fields{
-			"username": loginUser["username"],
-		}, m.String())
-		w.WriteAnyAndAbort(c, m.Code(), m.String())
+		m := msg.MsgLoginDisabledUserFailed
+		logF := m.ToLoggerFields()
+		logF["username"] = loginUser["username"]
+		ah.logger.WarnWithFields(logF, "User is disabled.")
+		ext.WriteAnyAndAbort(c, m.GetCode(), m.GetMsg())
 		return
 	}
 
 	// 判断是否是密码为空的用户
-	if user.Password == "" {
-		m := msg.LoginNoPasswordUserFailed
-		log.WarnWithFields(log.Fields{
-			"username": loginUser["username"],
-		}, m.String())
-		w.WriteAnyAndAbort(c, m.Code(), m.String())
+	if len(user.Password) < 1 {
+		m := msg.MsgLoginNoPasswordUserFailed
+		logF := m.ToLoggerFields()
+		logF["username"] = loginUser["username"]
+		ah.logger.WarnWithFields(logF, "No password user.")
+		ext.WriteAnyAndAbort(c, m.GetCode(), m.GetMsg())
 		return
 	}
 
 	// 判断账号密码是否匹配
-	saltedPasswd := utils.GenSha256HashCode(loginUser["password"] + conf.Conf.SecretKey)
+	saltedPasswd := utils.GenSha256HashCode(loginUser["password"] + ah.conf.SecretKey)
 	if loginUser["username"] == user.Username && saltedPasswd == user.Password {
-		dao.SetUserLastLogin(user.Id)
+		if err = ah.dao.SetUserLastLogin(ctx, user.Id); err != nil {
+			ah.logger.WarnWithFields(logger.Fields{
+				"username": loginUser["username"],
+				"error":    err,
+			}, "An error occurred while dao.SetUserLastLogin in authHandler.DatabaseLogin. but skipped.")
+		}
 		// 登录成功并返回token
-		newTokenResponse(c, user)
+		ah.newTokenResponse(c, user)
 		return
 	}
 
@@ -189,30 +162,31 @@ func DatabaseLogin(c *gin.Context) {
 }
 
 // LoginFailed 返回登录失败
-func LoginFailed(c *gin.Context) {
-	m := msg.LoginAuthenticationFailed
-	log.Warn(m.String())
-	w.WriteAnyAndAbort(c, m.Code(), m.String())
+func (ah *AuthHandler) LoginFailed(c *gin.Context) {
+	m := msg.MsgLoginAuthenticationFailed
+	ah.logger.Warn(m.GetMsg())
+	ext.WriteAnyAndAbort(c, m.GetCode(), m.GetMsg())
 	return
 }
 
 // updateOrCreateUserLastLogin 更新用户最近登录时间或创建用户并填入response
-func updateOrCreateUserLastLogin(c *gin.Context, username string) {
-	log.InfoWithFields(log.Fields{
+func (ah *AuthHandler) updateOrCreateUserLastLogin(c *gin.Context, username string) {
+	ah.logger.InfoWithFields(logger.Fields{
 		"username": username,
-	}, "updateOrCreateUserLastLogin called.")
-	defer log.InfoWithFields(log.Fields{
+	}, "authHandler.updateOrCreateUserLastLogin called.")
+	defer ah.logger.InfoWithFields(logger.Fields{
 		"username": username,
-	}, "updateOrCreateUserLastLogin end.")
+	}, "authHandler.updateOrCreateUserLastLogin end.")
 
+	ctx := tracer.ExtractTraceCtxFromGin(c)
 	// 查询该用户在本地数据库中的数据
-	user, ok := dao.GetUser(dao.Query{"username=?": username})
-	if !ok {
-		m := msg.LoginUnknownFailed
-		log.ErrorWithFields(log.Fields{
+	user, err := ah.dao.GetUser(ctx, orm.Query{"username=?": username})
+	if err != nil {
+		m := msg.MsgAuthDaoErr.SetError(err)
+		ah.logger.ErrorWithFields(logger.Fields{
 			"username": username,
-		}, m.String())
-		w.WriteAnyAndAbort(c, m.Code(), m.String())
+		}, m.GetMsg())
+		ext.WriteAnyAndAbort(c, m.GetCode(), m.GetMsg())
 		return
 	}
 
@@ -220,66 +194,92 @@ func updateOrCreateUserLastLogin(c *gin.Context, username string) {
 	if user != nil {
 		// 判断是否为禁用的账号
 		if user.Disabled {
-			m := msg.LoginDisabledUserFailed
-			log.WarnWithFields(log.Fields{
+			m := msg.MsgLoginDisabledUserFailed
+			ah.logger.WarnWithFields(logger.Fields{
 				"username": username,
-			}, m.String())
-			w.WriteAnyAndAbort(c, m.Code(), m.String())
+			}, m.GetMsg())
+			ext.WriteAnyAndAbort(c, m.GetCode(), m.GetMsg())
 			return
 		}
 
 		// 如果查找到用户则更新其登录时间
-		dao.SetUserLastLogin(user.Id)
+		if err = ah.dao.SetUserLastLogin(ctx, user.Id); err != nil {
+			ah.logger.WarnWithFields(logger.Fields{
+				"username": username,
+			}, "An error occurred while dao.SetUserLastLogin in authHandler.updateOrCreateUserLastLogin. but skipped.")
+		}
 
 		// 登录成功并返回token
-		newTokenResponse(c, user)
+		ah.newTokenResponse(c, user)
 		return
 	}
 
 	// 在本地数据库中没查找到用户则创建一个用户
-	user = dao.NewUser(username, username, true)
+	user, err = ah.dao.NewUser(ctx, username, username, true)
 	if user != nil {
 		// 登录成功并返回token
-		newTokenResponse(c, user)
+		ah.newTokenResponse(c, user)
 		return
 	}
 
-	m := msg.LoginUnknownFailed
-	log.ErrorWithFields(log.Fields{
+	m := msg.MsgLoginUnknownFailed
+	ah.logger.ErrorWithFields(logger.Fields{
 		"username": username,
-	}, m.String())
-	w.WriteAnyAndAbort(c, m.Code(), m.String())
+	}, m.GetMsg())
+	ext.WriteAnyAndAbort(c, m.GetCode(), m.GetMsg())
 }
 
 // newTokenResponse 生成Token并填入response
-func newTokenResponse(c *gin.Context, userObj *model.User) {
-	log.InfoWithFields(log.Fields{
+func (ah *AuthHandler) newTokenResponse(c *gin.Context, userObj *model.User) {
+	ah.logger.InfoWithFields(logger.Fields{
 		"user_id":  userObj.Id,
 		"username": userObj.Username,
-	}, "newTokenResponse called.")
-	defer log.InfoWithFields(log.Fields{
+	}, "authHandler.newTokenResponse called.")
+	defer ah.logger.InfoWithFields(logger.Fields{
 		"user_id":  userObj.Id,
 		"username": userObj.Username,
-	}, "newTokenResponse end.")
+	}, "authHandler.newTokenResponse end.")
 
 	// 登录成功并返回token
-	tk := builtin.NewToken(userObj)
+	tk := ah.biz.NewToken(tracer.ExtractTraceCtxFromGin(c), userObj)
 	if tk == "" {
-		m := msg.LoginNewTokenFailed
-		log.ErrorWithFields(log.Fields{
-			"user_id":  userObj.Id,
-			"username": userObj.Username,
-		}, m.String())
-		w.WriteAnyAndAbort(c, m.Code(), m.String())
+		m := msg.MsgLoginNewTokenFailed
+		logF := m.ToLoggerFields()
+		ah.logger.ErrorWithFields(logF, "An error occurred while biz.NewToken in authHandler.newTokenResponse.")
+		ext.WriteAnyAndAbort(c, m.GetCode(), m.GetMsg())
 		return
 	}
 
-	log.DebugWithFields(log.Fields{
+	ah.logger.DebugWithFields(logger.Fields{
 		"user_id":  userObj.Id,
 		"username": userObj.Username,
 		"token":    tk,
 	}, "New token success.")
-	w.WriteSuccessPayload(c, "token", tk)
+	ext.WriteSuccessPayload(c, "token", tk)
 	c.Abort()
 	return
+}
+
+func (ah *AuthHandler) ReadLoginForm(c *gin.Context) {
+	frm := new(form.LoginForm)
+	// 序列化request body获取用户名密码
+	if err := c.ShouldBindJSON(&frm); err != nil {
+		m := cMsg.MsgSerializeFailed.SetError(err)
+		ah.logger.WarnWithFields(m.ToLoggerFields())
+		ext.WriteAnyAndAbort(c, m.GetCode(), m.GetMsg())
+		return
+	}
+	// 验证数据
+	if err := frm.Validate(); err != nil {
+		// 数据验证未通过
+		m := cMsg.MsgValidateFailed.SetError(err)
+		ah.logger.WarnWithFields(m.ToLoggerFields())
+		ext.WriteAnyAndAbort(c, m.GetCode(), m.GetMsg())
+		return
+	}
+
+	c.Set("LoginUser", map[string]string{
+		"username": strings.ToLower(strings.TrimSpace(frm.Username)),
+		"password": strings.TrimSpace(frm.Password),
+	})
 }

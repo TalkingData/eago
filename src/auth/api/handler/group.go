@@ -1,284 +1,307 @@
 package handler
 
 import (
+	"eago/auth/api/form"
 	"eago/auth/conf/msg"
-	"eago/auth/dao"
-	"eago/auth/dto"
-	w "eago/common/api-suite/writter"
-	"eago/common/log"
+	"eago/common/api/ext"
+	cMsg "eago/common/code_msg"
+	"eago/common/global"
+	"eago/common/logger"
+	"eago/common/tracer"
 	"github.com/gin-gonic/gin"
-	"strconv"
 )
 
 // NewGroup 新建组
-func NewGroup(c *gin.Context) {
-	var ngFrm dto.NewGroup
-
+func (ah *AuthHandler) NewGroup(c *gin.Context) {
+	frm := form.NewGroupForm{}
 	// 序列化request body
-	if err := c.ShouldBindJSON(&ngFrm); err != nil {
-		m := msg.SerializeFailed.SetError(err)
-		log.WarnWithFields(m.LogFields())
-		m.WriteRest(c)
+	if err := c.ShouldBindJSON(&frm); err != nil {
+		m := cMsg.MsgSerializeFailed.SetError(err)
+		ah.logger.WarnWithFields(m.ToLoggerFields(), m.GetMsg())
+		m.Write2GinCtx(c)
 		return
 	}
+
+	ctx := tracer.ExtractTraceCtxFromGin(c)
+
 	// 验证数据
-	if m := ngFrm.Validate(); m != nil {
+	if m := frm.Validate(ctx, ah.dao); m != nil {
 		// 数据验证未通过
-		log.WarnWithFields(m.LogFields())
-		m.WriteRest(c)
+		ah.logger.WarnWithFields(m.ToLoggerFields(), m.GetMsg())
+		m.Write2GinCtx(c)
 		return
 	}
 
-	group, err := dao.NewGroup(ngFrm.Name, *ngFrm.Description)
+	group, err := ah.dao.NewGroup(ctx, frm.Name, *frm.Description)
 	if err != nil {
-		m := msg.UndefinedError
-		log.WarnWithFields(m.LogFields())
-		m.WriteRest(c)
+		m := msg.MsgAuthDaoErr.SetError(err)
+		ah.logger.ErrorWithFields(m.ToLoggerFields(), m.GetMsg())
+		m.Write2GinCtx(c)
 		return
 	}
 
-	w.WriteSuccessPayload(c, "group", group)
+	ext.WriteSuccessPayload(c, "group", group)
 }
 
 // RemoveGroup 删除组
-func RemoveGroup(c *gin.Context) {
-	gId, err := strconv.Atoi(c.Param("group_id"))
+func (ah *AuthHandler) RemoveGroup(c *gin.Context) {
+	gId, err := ext.ParamUint32(c, "group_id")
 	if err != nil {
-		m := msg.InvalidUriFailed.SetError(err, "group_id")
-		log.WarnWithFields(m.LogFields())
-		m.WriteRest(c)
+		m := cMsg.MsgInvalidUriFailed.SetError(err, "group_id")
+		ah.logger.WarnWithFields(m.ToLoggerFields(), m.GetMsg())
+		m.Write2GinCtx(c)
 		return
 	}
 
-	var rGpFrm dto.RemoveGroup
+	ctx := tracer.ExtractTraceCtxFromGin(c)
+
+	frm := form.RemoveGroupForm{}
 	// 验证数据
-	if m := rGpFrm.Validate(gId); m != nil {
+	if m := frm.Validate(ctx, ah.dao, gId); m != nil {
 		// 数据验证未通过
-		log.WarnWithFields(m.LogFields())
-		m.WriteRest(c)
+		ah.logger.WarnWithFields(m.ToLoggerFields(), m.GetMsg())
+		m.Write2GinCtx(c)
 		return
 	}
 
-	if !dao.RemoveGroup(gId) {
-		m := msg.UndefinedError
-		log.WarnWithFields(m.LogFields())
-		m.WriteRest(c)
+	if err = ah.dao.RemoveGroup(ctx, gId); err != nil {
+		m := msg.MsgAuthDaoErr.SetError(err)
+		ah.logger.ErrorWithFields(m.ToLoggerFields(), m.GetMsg())
+		m.Write2GinCtx(c)
 		return
 	}
 
-	w.WriteSuccess(c)
+	ext.WriteSuccess(c)
 }
 
 // SetGroup 更新组
-func SetGroup(c *gin.Context) {
-	gId, err := strconv.Atoi(c.Param("group_id"))
+func (ah *AuthHandler) SetGroup(c *gin.Context) {
+	gId, err := ext.ParamUint32(c, "group_id")
 	if err != nil {
-		m := msg.InvalidUriFailed.SetError(err, "group_id")
-		log.WarnWithFields(m.LogFields())
-		m.WriteRest(c)
+		m := cMsg.MsgInvalidUriFailed.SetError(err, "group_id")
+		ah.logger.WarnWithFields(m.ToLoggerFields(), m.GetMsg())
+		m.Write2GinCtx(c)
 		return
 	}
 
-	var sgFrm dto.SetGroup
+	frm := form.SetGroupForm{}
 	// 序列化request body
-	if err = c.ShouldBindJSON(&sgFrm); err != nil {
-		m := msg.SerializeFailed.SetError(err)
-		log.WarnWithFields(m.LogFields())
-		m.WriteRest(c)
+	if err = c.ShouldBindJSON(&frm); err != nil {
+		m := cMsg.MsgSerializeFailed.SetError(err)
+		ah.logger.WarnWithFields(m.ToLoggerFields(), m.GetMsg())
+		m.Write2GinCtx(c)
 		return
 	}
+
+	ctx := tracer.ExtractTraceCtxFromGin(c)
+
 	// 验证数据
-	if m := sgFrm.Validate(gId); m != nil {
+	if m := frm.Validate(ctx, ah.dao, gId); m != nil {
 		// 数据验证未通过
-		log.WarnWithFields(m.LogFields())
-		m.WriteRest(c)
+		ah.logger.WarnWithFields(m.ToLoggerFields(), m.GetMsg())
+		m.Write2GinCtx(c)
 		return
 	}
 
-	group, err := dao.SetGroup(gId, sgFrm.Name, *sgFrm.Description)
+	group, err := ah.dao.SetGroup(ctx, gId, frm.Name, *frm.Description)
 	if err != nil {
-		m := msg.UndefinedError.SetError(err)
-		log.WarnWithFields(m.LogFields())
-		m.WriteRest(c)
+		m := msg.MsgAuthDaoErr.SetError(err)
+		ah.logger.ErrorWithFields(m.ToLoggerFields(), m.GetMsg())
+		m.Write2GinCtx(c)
 		return
 	}
 
-	w.WriteSuccessPayload(c, "group", group)
+	ext.WriteSuccessPayload(c, "group", group)
 }
 
 // PagedListGroups 列出所有组-分页
-func PagedListGroups(c *gin.Context) {
-	query := dao.Query{}
+func (ah *AuthHandler) PagedListGroups(c *gin.Context) {
 	// 设置查询filter
-	lgq := dto.PagedListGroupsQuery{}
-	if c.ShouldBindQuery(&lgq) == nil {
-		_ = lgq.UpdateQuery(query)
+	pFrm := form.PagedListGroupsParamsForm{}
+	if err := c.ShouldBindQuery(&pFrm); err != nil {
+		ah.logger.WarnWithFields(logger.Fields{
+			"params": c.Params,
+			"error":  err,
+		}, "An error occurred while c.ShouldBindQuery in AuthHandler.PagedListGroups, skipped it.")
 	}
 
-	paged, ok := dao.PagedListGroups(
-		query,
-		c.GetInt("Page"),
-		c.GetInt("PageSize"),
-		c.GetStringSlice("OrderBy")...,
+	paged, err := ah.dao.PagedListGroups(
+		tracer.ExtractTraceCtxFromGin(c),
+		pFrm.GenQuery(),
+		c.GetInt(global.GinCtxPageKey),
+		c.GetInt(global.GinCtxPageSizeKey),
+		c.GetStringSlice(global.GinCtxOrderByKey)...,
 	)
-	if !ok {
-		m := msg.UndefinedError
-		log.WarnWithFields(m.LogFields())
-		m.WriteRest(c)
+	if err != nil {
+		m := msg.MsgAuthDaoErr.SetError(err)
+		ah.logger.ErrorWithFields(m.ToLoggerFields(), m.GetMsg())
+		m.Write2GinCtx(c)
 		return
 	}
 
-	w.WriteSuccessPayload(c, "groups", paged)
+	ext.WriteSuccessPayload(c, "groups", paged)
 }
 
 // AddUser2Group 添加用户至组
-func AddUser2Group(c *gin.Context) {
-	gId, err := strconv.Atoi(c.Param("group_id"))
+func (ah *AuthHandler) AddUser2Group(c *gin.Context) {
+	gId, err := ext.ParamUint32(c, "group_id")
 	if err != nil {
-		m := msg.InvalidUriFailed.SetError(err, "group_id")
-		log.WarnWithFields(m.LogFields())
-		m.WriteRest(c)
+		m := cMsg.MsgInvalidUriFailed.SetError(err, "group_id")
+		ah.logger.WarnWithFields(m.ToLoggerFields(), m.GetMsg())
+		m.Write2GinCtx(c)
 		return
 	}
 
-	var augFrm dto.AddUser2Group
+	frm := form.AddUser2GroupForm{}
 	// 序列化request body
-	if err = c.ShouldBindJSON(&augFrm); err != nil {
-		m := msg.SerializeFailed.SetError(err)
-		log.WarnWithFields(m.LogFields())
-		m.WriteRest(c)
+	if err = c.ShouldBindJSON(&frm); err != nil {
+		m := cMsg.MsgSerializeFailed.SetError(err)
+		ah.logger.WarnWithFields(m.ToLoggerFields(), m.GetMsg())
+		m.Write2GinCtx(c)
 		return
 	}
+
+	ctx := tracer.ExtractTraceCtxFromGin(c)
+
 	// 验证数据
-	if m := augFrm.Validate(gId); m != nil {
+	if m := frm.Validate(ctx, ah.dao, gId); m != nil {
 		// 数据验证未通过
-		log.WarnWithFields(m.LogFields())
-		m.WriteRest(c)
+		ah.logger.WarnWithFields(m.ToLoggerFields(), m.GetMsg())
+		m.Write2GinCtx(c)
 		return
 	}
 
-	if !dao.AddGroupUser(gId, augFrm.UserId, augFrm.IsOwner) {
-		m := msg.UndefinedError
-		log.WarnWithFields(m.LogFields())
-		m.WriteRest(c)
+	if err = ah.dao.AddUser2Group(ctx, gId, frm.UserId, frm.IsOwner); err != nil {
+		m := msg.MsgAuthDaoErr.SetError(err)
+		ah.logger.ErrorWithFields(m.ToLoggerFields(), m.GetMsg())
+		m.Write2GinCtx(c)
 		return
 	}
 
-	w.WriteSuccess(c)
+	ext.WriteSuccess(c)
 }
 
-// RemoveGroupUser 移除组中用户
-func RemoveGroupUser(c *gin.Context) {
-	gId, err := strconv.Atoi(c.Param("group_id"))
+// RemoveGroupsUser 移除组中用户
+func (ah *AuthHandler) RemoveGroupsUser(c *gin.Context) {
+	gId, err := ext.ParamUint32(c, "group_id")
 	if err != nil {
-		m := msg.InvalidUriFailed.SetError(err, "group_id")
-		log.WarnWithFields(m.LogFields())
-		m.WriteRest(c)
+		m := cMsg.MsgInvalidUriFailed.SetError(err, "role_id")
+		ah.logger.WarnWithFields(m.ToLoggerFields(), m.GetMsg())
+		m.Write2GinCtx(c)
 		return
 	}
 
-	userId, err := strconv.Atoi(c.Param("user_id"))
+	userId, err := ext.ParamUint32(c, "user_id")
 	if err != nil {
-		m := msg.InvalidUriFailed.SetError(err, "user_id")
-		log.WarnWithFields(m.LogFields())
-		m.WriteRest(c)
+		m := cMsg.MsgInvalidUriFailed.SetError(err, "user_id")
+		ah.logger.WarnWithFields(m.ToLoggerFields(), m.GetMsg())
+		m.Write2GinCtx(c)
 		return
 	}
 
-	var rpuFrm dto.RemoveGroupUser
+	ctx := tracer.ExtractTraceCtxFromGin(c)
+
+	frm := form.RemoveGroupsUserForm{}
 	// 验证数据
-	if m := rpuFrm.Validate(gId, userId); m != nil {
+	if m := frm.Validate(ctx, ah.dao, gId, userId); m != nil {
 		// 数据验证未通过
-		log.WarnWithFields(m.LogFields())
-		m.WriteRest(c)
+		ah.logger.WarnWithFields(m.ToLoggerFields(), m.GetMsg())
+		m.Write2GinCtx(c)
 		return
 	}
 
-	if !dao.RemoveGroupUser(gId, userId) {
-		m := msg.UndefinedError
-		log.WarnWithFields(m.LogFields())
-		m.WriteRest(c)
+	if err = ah.dao.RemoveGroupsUser(ctx, gId, userId); err != nil {
+		m := msg.MsgAuthDaoErr.SetError(err)
+		ah.logger.ErrorWithFields(m.ToLoggerFields(), m.GetMsg())
+		m.Write2GinCtx(c)
 		return
 	}
 
-	w.WriteSuccess(c)
+	ext.WriteSuccess(c)
 }
 
-// SetUserIsGroupOwner 设置用户是否是组Owner
-func SetUserIsGroupOwner(c *gin.Context) {
-	gId, err := strconv.Atoi(c.Param("group_id"))
+// SetGroupsOwner 设置用户是否是组Owner
+func (ah *AuthHandler) SetGroupsOwner(c *gin.Context) {
+	gId, err := ext.ParamUint32(c, "group_id")
 	if err != nil {
-		m := msg.InvalidUriFailed.SetError(err, "group_id")
-		log.WarnWithFields(m.LogFields())
-		m.WriteRest(c)
+		m := cMsg.MsgInvalidUriFailed.SetError(err, "role_id")
+		ah.logger.WarnWithFields(m.ToLoggerFields(), m.GetMsg())
+		m.Write2GinCtx(c)
 		return
 	}
 
-	userId, err := strconv.Atoi(c.Param("user_id"))
+	userId, err := ext.ParamUint32(c, "user_id")
 	if err != nil {
-		m := msg.InvalidUriFailed.SetError(err, "user_id")
-		log.WarnWithFields(m.LogFields())
-		m.WriteRest(c)
+		m := cMsg.MsgInvalidUriFailed.SetError(err, "user_id")
+		ah.logger.WarnWithFields(m.ToLoggerFields(), m.GetMsg())
+		m.Write2GinCtx(c)
 		return
 	}
 
-	var suoFrm dto.SetUserIsGroupOwner
+	frm := form.SetGroupsOwnerForm{}
 	// 序列化request body
-	if err = c.ShouldBindJSON(&suoFrm); err != nil {
-		m := msg.SerializeFailed.SetError(err)
-		log.WarnWithFields(m.LogFields())
-		m.WriteRest(c)
+	if err = c.ShouldBindJSON(&frm); err != nil {
+		m := cMsg.MsgSerializeFailed.SetError(err)
+		ah.logger.WarnWithFields(m.ToLoggerFields(), m.GetMsg())
+		m.Write2GinCtx(c)
 		return
 	}
+
+	ctx := tracer.ExtractTraceCtxFromGin(c)
+
 	// 验证数据
-	if m := suoFrm.Validate(gId, userId); m != nil {
+	if m := frm.Validate(ctx, ah.dao, gId, userId); m != nil {
 		// 数据验证未通过
-		log.WarnWithFields(m.LogFields())
-		m.WriteRest(c)
+		ah.logger.WarnWithFields(m.ToLoggerFields(), m.GetMsg())
+		m.Write2GinCtx(c)
 		return
 	}
 
-	if !dao.SetGroupUserIsOwner(gId, userId, suoFrm.IsOwner) {
-		m := msg.UndefinedError
-		log.WarnWithFields(m.LogFields())
-		m.WriteRest(c)
+	if err = ah.dao.SetGroupsOwner(ctx, gId, userId, frm.IsOwner); err != nil {
+		m := msg.MsgAuthDaoErr.SetError(err)
+		ah.logger.ErrorWithFields(m.ToLoggerFields(), m.GetMsg())
+		m.Write2GinCtx(c)
 		return
 	}
 
-	w.WriteSuccess(c)
+	ext.WriteSuccess(c)
 }
 
-// ListGroupUsers 列出角色所有用户
-func ListGroupUsers(c *gin.Context) {
-	gId, err := strconv.Atoi(c.Param("group_id"))
+// ListGroupsUsers 列出角色所有用户
+func (ah *AuthHandler) ListGroupsUsers(c *gin.Context) {
+	gId, err := ext.ParamUint32(c, "group_id")
 	if err != nil {
-		m := msg.InvalidUriFailed.SetError(err, "group_id")
-		log.WarnWithFields(m.LogFields())
-		m.WriteRest(c)
+		m := cMsg.MsgInvalidUriFailed.SetError(err, "role_id")
+		ah.logger.WarnWithFields(m.ToLoggerFields(), m.GetMsg())
+		m.Write2GinCtx(c)
 		return
 	}
 
-	var lguFrm dto.ListGroupUsersQuery
+	ctx := tracer.ExtractTraceCtxFromGin(c)
+
+	pFrm := form.ListGroupsUsersParamsForm{}
 	// 序列化request body
-	_ = c.ShouldBindQuery(&lguFrm)
-	if m := lguFrm.Validate(gId); m != nil {
+	if err = c.ShouldBindQuery(&pFrm); err != nil {
+		ah.logger.WarnWithFields(logger.Fields{
+			"params": c.Params,
+			"error":  err,
+		}, "An error occurred while c.ShouldBindQuery in AuthHandler.ListGroupsUsers, skipped it.")
+	}
+
+	if m := pFrm.Validate(ctx, ah.dao, gId); m != nil {
 		// 数据验证未通过
-		log.WarnWithFields(m.LogFields())
-		m.WriteRest(c)
+		ah.logger.WarnWithFields(m.ToLoggerFields(), m.GetMsg())
+		m.Write2GinCtx(c)
 		return
 	}
 
-	query := dao.Query{}
-	// 设置查询filter
-	_ = lguFrm.UpdateQuery(query)
-
-	u, ok := dao.ListGroupUsers(gId, query)
-	if !ok {
-		m := msg.UndefinedError
-		log.WarnWithFields(m.LogFields())
-		m.WriteRest(c)
+	u, err := ah.dao.ListGroupsUsers(ctx, gId, pFrm.GenQuery())
+	if err != nil {
+		m := msg.MsgAuthDaoErr.SetError(err)
+		ah.logger.ErrorWithFields(m.ToLoggerFields(), m.GetMsg())
+		m.Write2GinCtx(c)
 		return
 	}
 
-	w.WriteSuccessPayload(c, "users", u)
+	ext.WriteSuccessPayload(c, "users", u)
 }

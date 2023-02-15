@@ -2,26 +2,30 @@ package worker
 
 import (
 	"context"
-	"eago/common/log"
-	worker_proto "eago/task/worker/proto"
+	"eago/common/logger"
+	workerpb "eago/task/worker/proto"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
-// TaskWorkerService struct
-type TaskWorkerService struct {
+// taskWorkerService struct
+type taskWorkerService struct {
 	wk *worker
+
+	logger *logger.Logger
 }
 
 // NewTaskWorkerService 创建Worker服务
-func NewTaskWorkerService(wk *worker) *TaskWorkerService {
-	return &TaskWorkerService{
+func NewTaskWorkerService(wk *worker, logger *logger.Logger) *taskWorkerService {
+	return &taskWorkerService{
 		wk: wk,
+
+		logger: logger,
 	}
 }
 
 // CallTask 调用任务
-func (tws *TaskWorkerService) CallTask(_ context.Context, req *worker_proto.CallTaskReq) (*emptypb.Empty, error) {
-	log.InfoWithFields(log.Fields{
+func (tws *taskWorkerService) CallTask(_ context.Context, req *workerpb.CallTaskReq) (*emptypb.Empty, error) {
+	tws.logger.InfoWithFields(logger.Fields{
 		"worker_id":      tws.wk.workerId,
 		"task_codename":  req.TaskCodename,
 		"task_unique_id": req.TaskUniqueId,
@@ -36,16 +40,16 @@ func (tws *TaskWorkerService) CallTask(_ context.Context, req *worker_proto.Call
 		req.Timestamp,
 	)
 
-	return new(emptypb.Empty), nil
+	return &emptypb.Empty{}, nil
 }
 
 // KillTask 结束任务
-func (tws *TaskWorkerService) KillTask(ctx context.Context, req *worker_proto.KillTaskReq) (*emptypb.Empty, error) {
-	log.InfoWithFields(log.Fields{
+func (tws *taskWorkerService) KillTask(_ context.Context, req *workerpb.KillTaskReq) (*emptypb.Empty, error) {
+	tws.logger.InfoWithFields(logger.Fields{
 		"worker_id":      tws.wk.workerId,
 		"task_unique_id": req.TaskUniqueId,
 	}, "Got a kill task request.")
 	tws.wk.killTask(req.TaskUniqueId)
 
-	return new(emptypb.Empty), nil
+	return &emptypb.Empty{}, nil
 }

@@ -1,16 +1,38 @@
 package dao
 
 import (
+	"context"
+	"eago/common/logger"
 	"gorm.io/gorm"
 )
 
-var db *gorm.DB
+type Dao struct {
+	db *gorm.DB
+	lg *logger.Logger
+}
 
-type Query map[string]interface{}
-
-func Init(d *gorm.DB) {
-	if d == nil {
-		panic("Got a nil gorm db object.")
+func NewDao(d *gorm.DB, lg *logger.Logger) *Dao {
+	return &Dao{
+		db: d,
+		lg: lg,
 	}
-	db = d
+}
+
+func (d *Dao) Close() {
+	if d == nil {
+		return
+	}
+
+	db, _ := d.db.DB()
+	if db != nil {
+		_ = db.Close()
+	}
+}
+
+func (d *Dao) getDb() *gorm.DB {
+	return d.db
+}
+
+func (d *Dao) getDbWithCtx(ctx context.Context) *gorm.DB {
+	return d.db.WithContext(ctx)
 }

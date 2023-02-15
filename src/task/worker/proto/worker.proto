@@ -2,7 +2,7 @@ syntax = "proto3";
 
 import "google/protobuf/empty.proto";
 
-package worker_proto;
+package workerpb;
 
 service TaskWorkerService {
   // CallTask 调用任务
@@ -16,7 +16,7 @@ message CallTaskReq {
 
   string task_unique_id = 2;
   bytes arguments = 3;
-  int32 timeout = 4;
+  int64 timeout = 4;
   string caller = 5;
 
   int64 timestamp = 6;

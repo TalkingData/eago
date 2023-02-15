@@ -1,0 +1,144 @@
+syntax = "proto3";
+
+import "google/protobuf/empty.proto";
+import "common/proto/common.proto";
+
+package eago.auth;
+option go_package = "authpb";
+
+service AuthService {
+  // VerifyToken 验证Token
+  rpc VerifyToken(Token) returns (google.protobuf.Empty) {}
+  // GetTokenContent 获取Token内容
+  rpc GetTokenContent(Token) returns (TokenContent) {}
+
+  // GetDepartmentById 根据ID查询单个部门
+  rpc GetDepartmentById(eago.common.IdQuery) returns (Department) {}
+  // ListDepartmentsUsers 列出指定部门中用户
+  rpc ListDepartmentsUsers(eago.common.IdQuery) returns (MemberUsers) {}
+  // ListParentDepartmentUsers 列出指定部门的父部门中用户
+  rpc ListParentDepartmentUsers(eago.common.IdQuery) returns (MemberUsers) {}
+
+  // GetGroupById 根据ID查询单个组
+  rpc GetGroupById(eago.common.IdQuery) returns (Group) {}
+  // PagedListGroups 分页查询组
+  rpc PagedListGroups(eago.common.QueryWithPage) returns (PagedGroups) {}
+  // ListGroupsUsers 列出指定组中用户
+  rpc ListGroupsUsers(eago.common.IdQuery) returns (MemberUsers) {}
+
+  // GetProductById 根据ID查询单个产品线
+  rpc GetProductById(eago.common.IdQuery) returns (Product) {}
+  // PagedListProducts 分页查询产品线
+  rpc PagedListProducts(eago.common.QueryWithPage) returns (PagedProducts) {}
+  // ListProductsUsers 列出指定产品线中用户
+  rpc ListProductsUsers(eago.common.IdQuery) returns (MemberUsers) {}
+
+  // ListRolesUsers 列出指定角色中用户
+  rpc ListRolesUsers(eago.common.NameQuery) returns (RolesMemberUsers) {}
+
+  // GetUserById 根据ID查询单个用户
+  rpc GetUserById(eago.common.IdQuery) returns (User) {}
+  // PagedListUsers 分页查询用户
+  rpc PagedListUsers(eago.common.QueryWithPage) returns (PagedUsers) {}
+  // GetUsersDepartment 获得指定用户的部门
+  rpc GetUsersDepartment(eago.common.IdQuery) returns (UsersDepartment) {}
+  // ListUsersSameDepartmentUsers 列出与指定用户相同部门的所有用户
+  rpc ListUsersSameDepartmentUsers(eago.common.IdQuery) returns (MemberUsers) {}
+}
+
+message Token {
+  string value = 1;
+}
+
+message TokenContent {
+  uint32 user_id = 1;
+  string username = 2;
+  string phone = 3;
+
+  bool is_superuser = 4;
+
+  repeated string department = 5;
+  repeated string roles = 6;
+  repeated Product products = 7;
+  repeated Product own_products = 8;
+  repeated Group groups = 9;
+  repeated Group own_groups = 10;
+}
+
+// UsersDepartment 用户所在部门的信息
+message UsersDepartment {
+  uint32 id = 1;
+  string name = 2;
+  uint32 parent_id = 3;
+  bool is_owner = 4;
+  string joined_at = 5;
+}
+
+message PagedUsers {
+  repeated User users = 1;
+  uint32 page = 2;
+  uint32 pages = 3;
+  uint32 page_size = 4;
+  uint32 total = 5;
+}
+
+message PagedProducts {
+  repeated Product products = 1;
+  uint32 page = 2;
+  uint32 pages = 3;
+  uint32 page_size = 4;
+  uint32 total = 5;
+}
+
+message PagedGroups {
+  repeated Group groups = 1;
+  uint32 page = 2;
+  uint32 pages = 3;
+  uint32 page_size = 4;
+  uint32 total = 5;
+}
+
+// MemberUsers 成员用户-通用
+message MemberUsers {
+  message MemberUser {
+    uint32 id = 1;
+    string username = 2;
+    bool is_owner = 3;
+    string joined_at = 4;
+  }
+  repeated MemberUser users = 5;
+}
+
+// RolesMemberUsers 角色成员用户
+message RolesMemberUsers {
+  message MemberUser {
+    uint32 id = 1;
+    string username = 2;
+  }
+  repeated MemberUser users = 1;
+}
+
+message User {
+  uint32 id = 1;
+  string username = 2;
+  string email = 3;
+  string phone = 4;
+}
+
+message Product {
+  uint32 id = 1;
+  string name = 2;
+  string alias = 3;
+  bool disabled = 4;
+}
+
+message Group {
+  uint32 id = 1;
+  string name = 2;
+}
+
+message Department {
+  uint32 id = 1;
+  string name = 2;
+  uint32 parent_id = 3;
+}

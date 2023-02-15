@@ -1,139 +1,61 @@
 package dao
 
 import (
-	"eago/common/log"
+	"context"
+	"eago/common/orm"
 	"eago/flow/model"
-	"errors"
-	"fmt"
-	"gorm.io/gorm"
 )
 
 // NewCategory 创建类别
-func NewCategory(name, createdBy string) *model.Categories {
-	c := model.Categories{
+func (d *Dao) NewCategory(ctx context.Context, name, createdBy string) (*model.Categories, error) {
+	cat := &model.Categories{
 		Name:      name,
 		CreatedBy: createdBy,
 	}
 
-	if res := db.Create(&c); res.Error != nil {
-		log.ErrorWithFields(log.Fields{
-			"name":  name,
-			"error": res.Error,
-		}, "An error occurred while db.Create.")
-		return nil
-	}
-
-	return &c
+	res := d.getDbWithCtx(ctx).Create(&cat)
+	return cat, res.Error
 }
 
 // RemoveCategory 删除类别
-func RemoveCategory(tId int) bool {
-	res := db.Delete(model.Categories{}, "id=?", tId)
-	if res.Error != nil {
-		log.ErrorWithFields(log.Fields{
-			"id":    tId,
-			"error": res.Error,
-		}, "An error occurred while db.Delete.")
-		return false
-	}
-
-	return true
+func (d *Dao) RemoveCategory(ctx context.Context, catId uint32) error {
+	res := d.getDbWithCtx(ctx).Delete(model.Categories{}, "id=?", catId)
+	return res.Error
 }
 
 // SetCategory 更新类别
-func SetCategory(id int, name, updatedBy string) (*model.Categories, bool) {
-	var t = model.Categories{}
-
-	res := db.Model(&model.Categories{}).
+func (d *Dao) SetCategory(ctx context.Context, id uint32, name, updatedBy string) (cat *model.Categories, err error) {
+	res := d.getDbWithCtx(ctx).Model(&model.Categories{}).
 		Where("id=?", id).
 		Updates(map[string]interface{}{
 			"name":       name,
 			"updated_by": updatedBy,
 		}).
-		First(&t)
-	if res.Error != nil {
-		log.ErrorWithFields(log.Fields{
-			"id":         id,
-			"name":       name,
-			"updated_by": updatedBy,
-			"error":      res.Error,
-		}, "An error occurred while db.Model.Where.Updates.First.")
-		return nil, false
-	}
+		Limit(1).Find(&cat)
 
-	return &t, true
+	return cat, res.Error
 }
 
 // GetCategory 查询单个类别
-func GetCategory(query Query) (*model.Categories, bool) {
-	var (
-		d = db
-		t = model.Categories{}
-	)
-
-	for k, v := range query {
-		d = d.Where(k, v)
-	}
-	if res := d.First(&t); res.Error != nil {
-		if errors.Is(res.Error, gorm.ErrRecordNotFound) {
-			log.WarnWithFields(log.Fields{
-				"query": fmt.Sprintf("%v", query),
-				"error": res.Error,
-			}, "Record not found in db.First.")
-			return nil, true
-		}
-		log.ErrorWithFields(log.Fields{
-			"query": fmt.Sprintf("%v", query),
-			"error": res.Error,
-		}, "An error occurred while db.First.")
-		return nil, false
-	}
-
-	return &t, true
+func (d *Dao) GetCategory(ctx context.Context, q orm.Query) (cat *model.Categories, err error) {
+	res := q.Where(d.getDbWithCtx(ctx)).Limit(1).Find(&cat)
+	return cat, res.Error
 }
 
 // GetCategoriesCount 查询类别数量
-func GetCategoriesCount(query Query) (count int64, ok bool) {
-	d := db.Model(&model.Categories{})
+func (d *Dao) GetCategoriesCount(ctx context.Context, q orm.Query) (count int64, err error) {
+	res := q.Where(d.getDbWithCtx(ctx).Model(&model.Categories{})).Count(&count)
+	return count, res.Error
+}
 
-	for k, v := range query {
-		d = d.Where(k, v)
-	}
-	if res := d.Count(&count); res.Error != nil {
-		if errors.Is(res.Error, gorm.ErrRecordNotFound) {
-			return count, true
-		}
-		log.ErrorWithFields(log.Fields{
-			"query": fmt.Sprintf("%v", query),
-			"error": res.Error,
-		}, "An error occurred while db.Where.Count.")
-		return count, false
-	}
-	return count, true
+// IsCategoryExist 查询类别是否存在
+func (d *Dao) IsCategoryExist(ctx context.Context, q orm.Query) (bool, error) {
+	count, err := d.GetCategoriesCount(ctx, q)
+	return count > 0, err
 }
 
 // ListCategories 查询类别
-func ListCategories(query Query) ([]model.Categories, bool) {
-	var d = db
-	cs := make([]model.Categories, 0)
-
-	for k, v := range query {
-		d = d.Where(k, v)
-	}
-	if res := d.Find(&cs); res.Error != nil {
-		if errors.Is(res.Error, gorm.ErrRecordNotFound) {
-			log.WarnWithFields(log.Fields{
-				"query": fmt.Sprintf("%v", query),
-				"error": res.Error,
-			}, "Record not found in db.Where.Find.")
-			return cs, true
-		}
-		log.ErrorWithFields(log.Fields{
-			"query": fmt.Sprintf("%v", query),
-			"error": res.Error,
-		}, "An error occurred while db.Where.Find.")
-		return nil, false
-	}
-
-	return cs, true
+func (d *Dao) ListCategories(ctx context.Context, q orm.Query) (cats []*model.Categories, err error) {
+	res := q.Where(d.getDbWithCtx(ctx)).Find(&cats)
+	return cats, res.Error
 }

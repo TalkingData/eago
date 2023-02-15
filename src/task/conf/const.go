@@ -1,31 +1,42 @@
 package conf
 
-const (
-	SERVICE_NAME     = "eago-task"
-	RPC_REGISTER_KEY = "eago.srv.task"
-	API_REGISTER_KEY = "eago.api.task"
-
-	AUTH_RPC_REGISTER_KEY = "eago.srv.auth"
-
-	ADMIN_ROLE_NAME = "task_admin"
-
-	TIMESTAMP_FORMAT = "2006-01-02 15:04:05"
-
-	CONFIG_FILE_PATHNAME = "../conf/eago_task.conf"
-
-	TASK_UNIQUE_ID_SEPARATOR        = "::"
-	TASK_PARTITION_TIMESTAMP_FORMAT = "2006"
-
-	_DEFAULT_CONFIG_SEPARATOR = ","
+import (
+	"eago/common/global"
+	"time"
 )
 
-// 任务类别
-const (
-	BUTILIN_TASK_CATEGORY = 1   // 内置任务
-	BASH_TASK_CATEGORY    = 100 // Bash任务
-	PYTHON_TASK_CATEGORY  = 101 // Python任务
-)
+type constConf struct {
+	ServiceName    string
+	RpcRegisterKey string
+	ApiRegisterKey string
 
-const (
-	TASK_LOG_REFRESH_INTERVAL_MS = 3000
-)
+	AdminRole string
+
+	TaskCategoryBuiltin int
+	TaskCategoryBash    int
+	TaskCategoryPython  int
+
+	TaskResultPartitionTsFormat string
+	TaskUniqueIdSeparator       string
+
+	TaskLogRefreshIntervalMs time.Duration
+}
+
+func newConstConf() *constConf {
+	return &constConf{
+		ServiceName:    global.TaskServiceName,
+		RpcRegisterKey: global.TaskRpcRegisterKey,
+		ApiRegisterKey: global.TaskApiRegisterKey,
+
+		AdminRole: "task_admin",
+
+		TaskCategoryBuiltin: 1,
+		TaskCategoryBash:    100,
+		TaskCategoryPython:  101,
+
+		TaskResultPartitionTsFormat: "2006",
+		TaskUniqueIdSeparator:       "::",
+
+		TaskLogRefreshIntervalMs: 3000,
+	}
+}

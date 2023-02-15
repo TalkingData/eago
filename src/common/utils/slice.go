@@ -5,6 +5,13 @@ import (
 	"reflect"
 )
 
+// ReversSlice 反转切片
+func ReversSlice(s *[]string) {
+	for i, j := 0, len(*s)-1; i < j; i, j = i+1, j-1 {
+		(*s)[i], (*s)[j] = (*s)[j], (*s)[i]
+	}
+}
+
 // IsInSlice 判断needle是否是haystack中的一项
 func IsInSlice(haystack, needle interface{}) (bool, error) {
 	sVal := reflect.ValueOf(haystack)

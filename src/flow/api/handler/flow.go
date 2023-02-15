@@ -1,220 +1,231 @@
 package handler
 
 import (
-	w "eago/common/api-suite/writter"
-	"eago/common/log"
-	"eago/flow/conf"
+	"eago/common/api/ext"
+	perm "eago/common/api/permission"
+	cMsg "eago/common/code_msg"
+	"eago/common/global"
+	"eago/common/tracer"
+	"eago/flow/api/form"
 	"eago/flow/conf/msg"
-	"eago/flow/dao"
 	"eago/flow/dto"
-	"eago/flow/srv/builtin"
 	"encoding/json"
 	"github.com/gin-gonic/gin"
-	"strconv"
 )
 
 // InstantiateFlow 发起流程
-func InstantiateFlow(c *gin.Context) {
-	fId, err := strconv.Atoi(c.Param("flow_id"))
+func (h *FlowHandler) InstantiateFlow(c *gin.Context) {
+	flowId, err := ext.ParamUint32(c, "flow_id")
 	if err != nil {
-		m := msg.InvalidUriFailed.SetError(err, "flow_id")
-		log.WarnWithFields(m.LogFields())
-		m.WriteRest(c)
+		m := cMsg.MsgInvalidUriFailed.SetError(err, "flow_id")
+		h.logger.WarnWithFields(m.ToLoggerFields(), m.GetMsg())
+		m.Write2GinCtx(c)
 		return
 	}
 
-	var insFrm dto.InstantiateFlow
+	frm := form.InstantiateFlowForm{}
 	// 序列化request body
-	if err = c.ShouldBindJSON(&insFrm); err != nil {
-		m := msg.SerializeFailed.SetError(err)
-		log.WarnWithFields(m.LogFields())
-		m.WriteRest(c)
+	if err = c.ShouldBindJSON(&frm); err != nil {
+		m := cMsg.MsgSerializeFailed.SetError(err)
+		h.logger.WarnWithFields(m.ToLoggerFields(), m.GetMsg())
+		m.Write2GinCtx(c)
 		return
 	}
+
+	ctx := tracer.ExtractTraceCtxFromGin(c)
+
 	// 验证数据
-	if m := insFrm.Validate(fId); m != nil {
+	if m := frm.Validate(ctx, h.dao, flowId); m != nil {
 		// 数据验证未通过
-		log.WarnWithFields(m.LogFields())
-		m.WriteRest(c)
+		h.logger.WarnWithFields(m.ToLoggerFields(), m.GetMsg())
+		m.Write2GinCtx(c)
 		return
 	}
 
 	// 反序列化FormData
 	fData := make(map[string]interface{})
-	if err = json.Unmarshal([]byte(*insFrm.FormData), &fData); err != nil {
-		m := msg.SerializeFailed.SetError(err, "无法反序列化表单数据内容")
-		log.WarnWithFields(m.LogFields())
-		m.WriteRest(c)
+	if err = json.Unmarshal([]byte(*frm.FormData), &fData); err != nil {
+		m := cMsg.MsgSerializeFailed.SetError(err, "无法反序列化表单数据内容")
+		h.logger.WarnWithFields(m.ToLoggerFields(), m.GetMsg())
+		m.Write2GinCtx(c)
 		return
 	}
 
-	tc := c.GetStringMap("TokenContent")
+	tc := perm.MustGetTokenContent(c)
 	// 将创建人信息存入FormData
-	fData[conf.INITIATOR_USER_ID_KEY] = tc["UserId"].(int32)
-	fData[conf.INITIATOR_USERNAME_KEY] = tc["Username"].(string)
-	fData[conf.INITIATOR_PHONE_KEY] = tc["Phone"].(string)
+	fData[dto.InitiatorKeyUserId] = tc.UserId
+	fData[dto.InitiatorKeyUsernameKey] = tc.Username
+	fData[dto.InitiatorKeyPhone] = tc.Phone
 
 	// 序列化FormData
 	fDataStr, err := json.Marshal(fData)
 	if err != nil {
-		m := msg.SerializeFailed.SetError(err, "无法序列化表单数据内容")
-		log.WarnWithFields(m.LogFields())
-		m.WriteRest(c)
+		m := cMsg.MsgSerializeFailed.SetError(err, "无法序列化表单数据内容")
+		h.logger.WarnWithFields(m.ToLoggerFields(), m.GetMsg())
+		m.Write2GinCtx(c)
 		return
 	}
 
 	// 调用流程服务，发起流程，返回流程实例ID
-	insId, err := builtin.InstantiateFlow(insFrm.FormId, string(fDataStr), tc["Username"].(string))
+	insId, err := h.biz.InstantiateFlow(ctx, frm.FormId, string(fDataStr), perm.MustGetTokenContent(c).Username)
 	if err != nil {
-		m := msg.UndefinedError
-		log.WarnWithFields(m.LogFields())
-		m.WriteRest(c)
+		m := msg.MsgFlowDaoErr.SetError(err)
+		h.logger.ErrorWithFields(m.ToLoggerFields(), m.GetMsg())
+		m.Write2GinCtx(c)
 		return
 	}
 
-	w.WriteSuccessPayload(c, "instance_id", insId)
+	ext.WriteSuccessPayload(c, "instance_id", insId)
 }
 
 // NewFlow 新建流程
-func NewFlow(c *gin.Context) {
-	var flFrm dto.NewFlow
-
+func (h *FlowHandler) NewFlow(c *gin.Context) {
+	frm := form.NewFlowForm{}
 	// 序列化request body
-	if err := c.ShouldBindJSON(&flFrm); err != nil {
-		m := msg.SerializeFailed.SetError(err)
-		log.WarnWithFields(m.LogFields())
-		m.WriteRest(c)
+	if err := c.ShouldBindJSON(&frm); err != nil {
+		m := cMsg.MsgSerializeFailed.SetError(err)
+		h.logger.WarnWithFields(m.ToLoggerFields(), m.GetMsg())
+		m.Write2GinCtx(c)
 		return
 	}
+
+	ctx := tracer.ExtractTraceCtxFromGin(c)
+
 	// 验证数据
-	if m := flFrm.Validate(); m != nil {
+	if m := frm.Validate(ctx, h.dao); m != nil {
 		// 数据验证未通过
-		log.WarnWithFields(m.LogFields())
-		m.WriteRest(c)
+		h.logger.WarnWithFields(m.ToLoggerFields(), m.GetMsg())
+		m.Write2GinCtx(c)
 		return
 	}
 
 	// 新建
-	tc := c.GetStringMap("TokenContent")
-	fl := dao.NewFlow(
-		flFrm.Name,
-		flFrm.InstanceTitle,
-		flFrm.CategoriesId,
-		*flFrm.Description,
-		*flFrm.Disabled,
-		flFrm.FormId,
-		flFrm.FirstNodeId,
-		tc["Username"].(string),
+	flow, err := h.dao.NewFlow(
+		ctx,
+		frm.Name,
+		frm.InstanceTitle,
+		frm.CategoriesId,
+		*frm.Description,
+		*frm.Disabled,
+		frm.FormId,
+		frm.FirstNodeId,
+		perm.MustGetTokenContent(c).Username,
 	)
 	// 新建失败
-	if fl == nil {
-		m := msg.UndefinedError
-		log.WarnWithFields(m.LogFields())
-		m.WriteRest(c)
+	if err != nil {
+		m := msg.MsgFlowDaoErr.SetError(err)
+		h.logger.ErrorWithFields(m.ToLoggerFields(), m.GetMsg())
+		m.Write2GinCtx(c)
 		return
 	}
 
-	w.WriteSuccessPayload(c, "flow", fl)
+	ext.WriteSuccessPayload(c, "flow", flow)
 }
 
 // RemoveFlow 删除流程
-func RemoveFlow(c *gin.Context) {
-	fId, err := strconv.Atoi(c.Param("flow_id"))
+func (h *FlowHandler) RemoveFlow(c *gin.Context) {
+	flowId, err := ext.ParamUint32(c, "flow_id")
 	if err != nil {
-		m := msg.InvalidUriFailed.SetError(err, "flow_id")
-		log.WarnWithFields(m.LogFields())
-		m.WriteRest(c)
+		m := cMsg.MsgInvalidUriFailed.SetError(err, "flow_id")
+		h.logger.WarnWithFields(m.ToLoggerFields(), m.GetMsg())
+		m.Write2GinCtx(c)
 		return
 	}
 
-	var rfFrm dto.RemoveFlow
+	ctx := tracer.ExtractTraceCtxFromGin(c)
+
+	frm := form.RemoveFlowForm{}
 	// 验证数据
-	if m := rfFrm.Validate(fId); m != nil {
+	if m := frm.Validate(ctx, h.dao, flowId); m != nil {
 		// 数据验证未通过
-		log.WarnWithFields(m.LogFields())
-		m.WriteRest(c)
+		h.logger.WarnWithFields(m.ToLoggerFields(), m.GetMsg())
+		m.Write2GinCtx(c)
 		return
 	}
 
-	if !dao.RemoveFlow(fId) {
-		m := msg.UndefinedError
-		log.WarnWithFields(m.LogFields())
-		m.WriteRest(c)
+	if err = h.dao.RemoveFlow(ctx, flowId); err != nil {
+		m := msg.MsgFlowDaoErr.SetError(err)
+		h.logger.ErrorWithFields(m.ToLoggerFields(), m.GetMsg())
+		m.Write2GinCtx(c)
 		return
 	}
 
-	w.WriteSuccess(c)
+	ext.WriteSuccess(c)
 }
 
 // SetFlow 更新流程
-func SetFlow(c *gin.Context) {
-	fId, err := strconv.Atoi(c.Param("flow_id"))
+func (h *FlowHandler) SetFlow(c *gin.Context) {
+	flowId, err := ext.ParamUint32(c, "flow_id")
 	if err != nil {
-		m := msg.InvalidUriFailed.SetError(err, "flow_id")
-		log.WarnWithFields(m.LogFields())
-		m.WriteRest(c)
+		m := cMsg.MsgInvalidUriFailed.SetError(err, "flow_id")
+		h.logger.WarnWithFields(m.ToLoggerFields(), m.GetMsg())
+		m.Write2GinCtx(c)
 		return
 	}
 
-	var flFrm dto.SetFlow
+	ctx := tracer.ExtractTraceCtxFromGin(c)
+
+	frm := form.SetFlowForm{}
 	// 序列化request body
-	if err = c.ShouldBindJSON(&flFrm); err != nil {
-		m := msg.SerializeFailed.SetError(err)
-		log.WarnWithFields(m.LogFields())
-		m.WriteRest(c)
+	if err = c.ShouldBindJSON(&frm); err != nil {
+		m := cMsg.MsgSerializeFailed.SetError(err)
+		h.logger.WarnWithFields(m.ToLoggerFields(), m.GetMsg())
+		m.Write2GinCtx(c)
 		return
 	}
 	// 验证数据
-	if m := flFrm.Validate(fId); m != nil {
+	if m := frm.Validate(ctx, h.dao, flowId); m != nil {
 		// 数据验证未通过
-		log.WarnWithFields(m.LogFields())
-		m.WriteRest(c)
+		h.logger.WarnWithFields(m.ToLoggerFields(), m.GetMsg())
+		m.Write2GinCtx(c)
 		return
 	}
 
-	tc := c.GetStringMap("TokenContent")
-	f, ok := dao.SetFlow(
-		fId,
-		flFrm.Name,
-		flFrm.InstanceTitle,
-		flFrm.CategoriesId,
-		*flFrm.Description,
-		*flFrm.Disabled,
-		flFrm.FormId,
-		flFrm.FirstNodeId,
-		tc["Username"].(string),
+	flow, err := h.dao.SetFlow(
+		ctx,
+		flowId,
+		frm.Name,
+		frm.InstanceTitle,
+		frm.CategoriesId,
+		*frm.Description,
+		*frm.Disabled,
+		frm.FormId,
+		frm.FirstNodeId,
+		perm.MustGetTokenContent(c).Username,
 	)
-	if !ok {
-		m := msg.UndefinedError
-		log.WarnWithFields(m.LogFields())
-		m.WriteRest(c)
+	if err != nil {
+		m := msg.MsgFlowDaoErr.SetError(err)
+		h.logger.ErrorWithFields(m.ToLoggerFields(), m.GetMsg())
+		m.Write2GinCtx(c)
 		return
 	}
 
-	w.WriteSuccessPayload(c, "flow", f)
+	ext.WriteSuccessPayload(c, "flow", flow)
 }
 
 // PagedListFlows 列出所有流程-分页
-func PagedListFlows(c *gin.Context) {
-	query := dao.Query{}
-	// 设置查询filter
-	lfq := dto.PagedListFlowsQuery{}
-	if c.ShouldBindQuery(&lfq) == nil {
-		_ = lfq.UpdateQuery(query)
-	}
-
-	paged, ok := dao.PagedListFlows(
-		query,
-		c.GetInt("Page"),
-		c.GetInt("PageSize"),
-		c.GetStringSlice("OrderBy")...,
-	)
-	if !ok {
-		m := msg.UndefinedError.SetDetail("An error occurred while model.PagedListFlows.")
-		log.WarnWithFields(m.LogFields())
-		m.WriteRest(c)
+func (h *FlowHandler) PagedListFlows(c *gin.Context) {
+	pFrm := form.PagedListFlowsParamsForm{}
+	if err := c.ShouldBindQuery(&pFrm); err != nil {
+		m := cMsg.MsgSerializeFailed.SetError(err)
+		h.logger.WarnWithFields(m.ToLoggerFields(), m.GetMsg())
+		m.Write2GinCtx(c)
 		return
 	}
 
-	w.WriteSuccessPayload(c, "flows", paged)
+	paged, err := h.dao.PagedListFlows(
+		tracer.ExtractTraceCtxFromGin(c),
+		pFrm.GenQuery(),
+		c.GetInt(global.GinCtxPageKey),
+		c.GetInt(global.GinCtxPageSizeKey),
+		c.GetStringSlice(global.GinCtxOrderByKey)...,
+	)
+	if err != nil {
+		m := msg.MsgFlowDaoErr.SetError(err)
+		h.logger.ErrorWithFields(m.ToLoggerFields(), m.GetMsg())
+		m.Write2GinCtx(c)
+		return
+	}
+
+	ext.WriteSuccessPayload(c, "flows", paged)
 }

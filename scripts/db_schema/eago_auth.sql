@@ -23,15 +23,14 @@
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `departments`
 (
-    `id`         int(11) NOT NULL AUTO_INCREMENT,
+    `id`         int(11) unsigned NOT NULL AUTO_INCREMENT,
     `name`       varchar(100) NOT NULL,
-    `parent_id`  int(11) DEFAULT NULL,
+    `parent_id`  int(11) unsigned DEFAULT NULL,
     `created_at` datetime     NOT NULL,
     `updated_at` datetime DEFAULT NULL,
     PRIMARY KEY (`id`),
     UNIQUE KEY `departments_id_uindex` (`id`),
-    UNIQUE KEY `departments_name_uindex` (`name`),
-    KEY          `departments_departments_id_fk` (`parent_id`)
+    UNIQUE KEY `departments_name_uindex` (`name`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -39,12 +38,11 @@ CREATE TABLE `departments`
 -- Table structure for table `groups`
 --
 
-DROP TABLE IF EXISTS `groups`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `groups`
 (
-    `id`          int(11) NOT NULL AUTO_INCREMENT,
+    `id`          int(11) unsigned NOT NULL AUTO_INCREMENT,
     `name`        varchar(100) NOT NULL,
     `description` varchar(500) NOT NULL DEFAULT '',
     `created_at`  datetime     NOT NULL,
@@ -63,7 +61,7 @@ CREATE TABLE `groups`
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `products`
 (
-    `id`          int(11) NOT NULL AUTO_INCREMENT,
+    `id`          int(11) unsigned NOT NULL AUTO_INCREMENT,
     `name`        varchar(200) NOT NULL,
     `alias`       varchar(200) NOT NULL,
     `disabled`    tinyint(1) NOT NULL DEFAULT '0',
@@ -85,7 +83,7 @@ CREATE TABLE `products`
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `roles`
 (
-    `id`          int(11) NOT NULL AUTO_INCREMENT,
+    `id`          int(11) unsigned NOT NULL AUTO_INCREMENT,
     `name`        varchar(100) NOT NULL,
     `description` varchar(500) NOT NULL DEFAULT '',
     PRIMARY KEY (`id`),
@@ -102,9 +100,9 @@ CREATE TABLE `roles`
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `user_departments`
 (
-    `id`            int(11) NOT NULL AUTO_INCREMENT,
-    `user_id`       int(11) NOT NULL,
-    `department_id` int(11) NOT NULL,
+    `id`            int(11) unsigned NOT NULL AUTO_INCREMENT,
+    `user_id`       int(11) unsigned NOT NULL,
+    `department_id` int(11) unsigned NOT NULL,
     `is_owner`      tinyint(1) NOT NULL DEFAULT '0',
     `joined_at`     datetime NOT NULL,
     PRIMARY KEY (`id`),
@@ -124,9 +122,9 @@ CREATE TABLE `user_departments`
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `user_groups`
 (
-    `id`        int(11) NOT NULL AUTO_INCREMENT,
-    `user_id`   int(11) NOT NULL,
-    `group_id`  int(11) NOT NULL,
+    `id`        int(11) unsigned NOT NULL AUTO_INCREMENT,
+    `user_id`   int(11) unsigned NOT NULL,
+    `group_id`  int(11) unsigned NOT NULL,
     `is_owner`  tinyint(1) NOT NULL DEFAULT '0',
     `joined_at` datetime NOT NULL,
     PRIMARY KEY (`id`),
@@ -147,9 +145,9 @@ CREATE TABLE `user_groups`
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `user_products`
 (
-    `id`         int(11) NOT NULL AUTO_INCREMENT,
-    `user_id`    int(11) NOT NULL,
-    `product_id` int(11) NOT NULL,
+    `id`         int(11) unsigned NOT NULL AUTO_INCREMENT,
+    `user_id`    int(11) unsigned NOT NULL,
+    `product_id` int(11) unsigned NOT NULL,
     `is_owner`   tinyint(1) NOT NULL DEFAULT '0',
     `joined_at`  datetime NOT NULL,
     PRIMARY KEY (`id`),
@@ -170,9 +168,9 @@ CREATE TABLE `user_products`
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `user_roles`
 (
-    `id`        int(11) NOT NULL AUTO_INCREMENT,
-    `user_id`   int(11) NOT NULL,
-    `role_id`   int(11) NOT NULL,
+    `id`        int(11) unsigned NOT NULL AUTO_INCREMENT,
+    `user_id`   int(11) unsigned NOT NULL,
+    `role_id`   int(11) unsigned NOT NULL,
     `joined_at` datetime NOT NULL,
     PRIMARY KEY (`id`),
     UNIQUE KEY `user_roles_id_uindex` (`id`),
@@ -191,7 +189,7 @@ CREATE TABLE `user_roles`
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `users`
 (
-    `id`           int(11) NOT NULL AUTO_INCREMENT,
+    `id`           int(11) unsigned NOT NULL AUTO_INCREMENT,
     `username`     varchar(100) NOT NULL,
     `password`     varchar(200) NOT NULL DEFAULT '',
     `email`        varchar(100) NOT NULL DEFAULT '',

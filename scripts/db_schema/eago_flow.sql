@@ -23,7 +23,7 @@
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `categories`
 (
-    `id`         int(11) NOT NULL AUTO_INCREMENT,
+    `id`         int(11) unsigned NOT NULL AUTO_INCREMENT,
     `name`       varchar(100) NOT NULL DEFAULT '',
     `created_at` datetime     NOT NULL,
     `created_by` varchar(100) NOT NULL,
@@ -41,23 +41,24 @@ CREATE TABLE `categories`
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `flows`
 (
-    `id`            int(11) NOT NULL AUTO_INCREMENT,
-    `categories_id` int(11) DEFAULT NULL,
-    `name`          varchar(100) NOT NULL,
-    `disabled`      tinyint(1) NOT NULL DEFAULT '0',
-    `description`   varchar(100) NOT NULL DEFAULT '',
-    `form_id`       int(11) DEFAULT NULL,
-    `first_node_id` int(11) DEFAULT NULL,
-    `created_at`    datetime     NOT NULL,
-    `created_by`    varchar(100) NOT NULL,
-    `updated_at`    datetime              DEFAULT NULL,
-    `updated_by`    varchar(100) NOT NULL DEFAULT '',
+    `id`             int(11) unsigned NOT NULL AUTO_INCREMENT,
+    `categories_id`  int(11) unsigned DEFAULT NULL,
+    `name`           varchar(100) NOT NULL,
+    `instance_title` varchar(200) NOT NULL,
+    `disabled`       tinyint(1) NOT NULL DEFAULT '0',
+    `description`    varchar(100) NOT NULL DEFAULT '',
+    `form_id`        int(11) unsigned DEFAULT NULL,
+    `first_node_id`  int(11) unsigned DEFAULT NULL,
+    `created_at`     datetime     NOT NULL,
+    `created_by`     varchar(100) NOT NULL,
+    `updated_at`     datetime              DEFAULT NULL,
+    `updated_by`     varchar(100) NOT NULL DEFAULT '',
     PRIMARY KEY (`id`),
     UNIQUE KEY `flows_id_uindex` (`id`),
     UNIQUE KEY `flows_name_uindex` (`name`),
-    KEY             `flows_form_id_fk` (`form_id`),
-    KEY             `flows_first_node_id_fk` (`first_node_id`),
-    KEY             `flows_categories_id_fk` (`categories_id`),
+    KEY              `flows_form_id_fk` (`form_id`),
+    KEY              `flows_first_node_id_fk` (`first_node_id`),
+    KEY              `flows_categories_id_fk` (`categories_id`),
     CONSTRAINT `flows_categories_id_fk` FOREIGN KEY (`categories_id`) REFERENCES `categories` (`id`),
     CONSTRAINT `flows_first_node_id_fk` FOREIGN KEY (`first_node_id`) REFERENCES `nodes` (`id`),
     CONSTRAINT `flows_form_id_fk` FOREIGN KEY (`form_id`) REFERENCES `forms` (`id`)
@@ -72,7 +73,7 @@ CREATE TABLE `flows`
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `forms`
 (
-    `id`          int(11) NOT NULL AUTO_INCREMENT,
+    `id`          int(11) unsigned NOT NULL AUTO_INCREMENT,
     `name`        varchar(100) NOT NULL,
     `disabled`    tinyint(1) NOT NULL DEFAULT '0',
     `description` varchar(500) NOT NULL DEFAULT '',
@@ -95,10 +96,10 @@ CREATE TABLE `forms`
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `instances`
 (
-    `id`                 int(11) NOT NULL AUTO_INCREMENT,
-    `name`               varchar(100)  NOT NULL,
+    `id`                 int(11) unsigned NOT NULL AUTO_INCREMENT,
+    `name`               varchar(200)  NOT NULL,
     `status`             int(11) NOT NULL DEFAULT '1',
-    `form_id`            int(11) NOT NULL,
+    `form_id`            int(11) unsigned NOT NULL,
     `form_data`          json          NOT NULL,
     `flow_chain`         json          NOT NULL,
     `current_step`       int(11) NOT NULL DEFAULT '1',
@@ -122,8 +123,8 @@ CREATE TABLE `instances`
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `logs`
 (
-    `id`          int(11) NOT NULL AUTO_INCREMENT,
-    `instance_id` int(11) NOT NULL,
+    `id`          bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+    `instance_id` int(11) unsigned NOT NULL,
     `result`      tinyint(1) NOT NULL,
     `content`     varchar(500) NOT NULL DEFAULT '',
     `created_at`  datetime     NOT NULL,
@@ -142,9 +143,9 @@ CREATE TABLE `logs`
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `node_triggers`
 (
-    `id`         int(11) NOT NULL AUTO_INCREMENT,
-    `node_id`    int(11) NOT NULL,
-    `trigger_id` int(11) NOT NULL,
+    `id`         int(11) unsigned NOT NULL AUTO_INCREMENT,
+    `node_id`    int(11) unsigned NOT NULL,
+    `trigger_id` int(11) unsigned NOT NULL,
     `created_at` datetime     NOT NULL,
     `created_by` varchar(100) NOT NULL,
     PRIMARY KEY (`id`),
@@ -165,8 +166,8 @@ CREATE TABLE `node_triggers`
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `nodes`
 (
-    `id`                 int(11) NOT NULL AUTO_INCREMENT,
-    `parent_id`          int(11) DEFAULT NULL,
+    `id`                 int(11) unsigned NOT NULL AUTO_INCREMENT,
+    `parent_id`          int(11) unsigned DEFAULT NULL,
     `name`               varchar(100)  NOT NULL DEFAULT '',
     `category`           int(11) NOT NULL DEFAULT '0',
     `entry_condition`    varchar(2000) NOT NULL DEFAULT '{}',
@@ -192,7 +193,7 @@ CREATE TABLE `nodes`
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `triggers`
 (
-    `id`            int(11) NOT NULL AUTO_INCREMENT,
+    `id`            int(11) unsigned NOT NULL AUTO_INCREMENT,
     `name`          varchar(100) NOT NULL DEFAULT '',
     `description`   varchar(500) NOT NULL DEFAULT '',
     `task_codename` varchar(100) NOT NULL DEFAULT '',

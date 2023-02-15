@@ -5,6 +5,7 @@ gin_mode = release
 micro_register_ttl = 10
 micro_register_interval = 3
 scheduler_register_ttl = 10
+srv_token_ttl_secs = 10
 
 [log]
 level = debug
@@ -20,8 +21,8 @@ address = 127.0.0.1:3306
 db_name = eago_task
 user = root
 password = root
-max_open_connections = 5
-max_idle_connections = 20
+max_idle_conns = 5
+max_open_conns = 20
 
 [redis]
 address = 127.0.0.1:6379

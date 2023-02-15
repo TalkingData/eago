@@ -1,66 +1,33 @@
 package main
 
 import (
-	"context"
-	perm "eago/common/api-suite/permission"
-	"eago/common/log"
+	"eago/common/logger"
 	"eago/common/orm"
-	"eago/common/tracer"
-	"eago/flow/cli"
+	"eago/common/service"
 	"eago/flow/conf"
 	"eago/flow/dao"
 	"fmt"
-	"github.com/micro/go-micro/v2/registry"
-	"github.com/micro/go-micro/v2/web"
-	"github.com/micro/go-plugins/registry/etcdv3/v2"
-	"github.com/opentracing/opentracing-go"
 	"os"
 	"os/signal"
 	"runtime"
 	"syscall"
 )
 
+var (
+	flow service.EagoSrv
+
+	flowDao *dao.Dao
+
+	flowConf *conf.Conf
+	flowLg   *logger.Logger
+)
+
 func main() {
-	// 初始化DAO
-	dao.Init(orm.InitMysql(
-		conf.Conf.MysqlAddress,
-		conf.Conf.MysqlUser,
-		conf.Conf.MysqlPassword,
-		conf.Conf.MysqlDbName,
-	))
-
-	// 初始化Tracer
-	t, c := tracer.NewTracer(conf.API_REGISTER_KEY, conf.Conf.JaegerAddress)
-	defer func() {
-		_ = c.Close()
-	}()
-
-	opentracing.SetGlobalTracer(t)
-
-	cli.InitAuthCli()
-	cli.InitTaskCli()
-
-	perm.SetAuthClient(cli.AuthClient)
-
-	ctx, cancel := context.WithCancel(context.Background())
-	etcdReg := etcdv3.NewRegistry(
-		registry.Addrs(conf.Conf.EtcdAddresses...),
-		etcdv3.Auth(conf.Conf.EtcdUsername, conf.Conf.EtcdPassword),
-	)
-	apiV1 := web.NewService(
-		web.Name(conf.API_REGISTER_KEY),
-		web.Address(conf.Conf.ApiListen),
-		web.Version("v1"),
-		web.Handler(NewGinEngine()),
-		web.Registry(etcdReg),
-		web.RegisterTTL(conf.Conf.MicroRegisterTtl),
-		web.RegisterInterval(conf.Conf.MicroRegisterInterval),
-		web.Context(ctx),
-	)
+	flow = NewFlowApi(flowDao, flowConf, flowLg)
 
 	e := make(chan error)
 	go func() {
-		e <- apiV1.Run()
+		e <- flow.Start()
 	}()
 
 	// 等待退出信号
@@ -71,38 +38,57 @@ func main() {
 		select {
 		case err := <-e:
 			if err != nil {
-				log.ErrorWithFields(log.Fields{
+				flowLg.ErrorWithFields(logger.Fields{
 					"error": err,
-				}, "An error occurred while srv.Run.")
+				}, "An error occurred while Start.")
 			}
 			closeAll()
 			return
 		case sig := <-quit:
-			log.InfoWithFields(log.Fields{
+			flowLg.InfoWithFields(logger.Fields{
 				"signal": sig.String(),
 			}, "Got quit signal.")
-			cancel()
+			closeAll()
+			return
 		}
 	}
 }
 
-// closeAll 关闭全部
+// closeAll
 func closeAll() {
-	orm.Close()
-	log.Close()
+	if flow != nil {
+		flow.Stop()
+	}
+	if flowLg != nil {
+		flowLg.Close()
+	}
 }
 
 func init() {
 	runtime.GOMAXPROCS(runtime.NumCPU())
 
-	// 加载日志设置
-	err := log.InitLog(
-		conf.Conf.LogPath,
-		conf.SERVICE_NAME,
-		conf.Conf.LogLevel,
+	// 初始化配置
+	flowConf = conf.NewConfig()
+
+	// 生成Logger
+	lg, err := logger.NewLogger(
+		logger.LogLevel(flowConf.LogLevel),
+		logger.LogPath(flowConf.LogPath),
+		logger.Filename(flowConf.Const.ServiceName, "api"),
 	)
 	if err != nil {
-		fmt.Println("Failed to init logging, error:", err.Error())
+		fmt.Println("An error occurred while logger.NewLogger, error:", err.Error())
 		panic(err)
 	}
+	flowLg = lg
+
+	flowDao = dao.NewDao(orm.NewMysqlGorm(
+		flowConf.MysqlAddress,
+		flowConf.MysqlUser,
+		flowConf.MysqlPassword,
+		flowConf.MysqlDbName,
+		orm.MysqlMaxIdleConns(flowConf.MysqlMaxIdleConns),
+		orm.MysqlMaxOpenConns(flowConf.MysqlMaxOpenConns),
+		orm.UsingOpentracingPlugin(),
+	), flowConf, flowLg)
 }

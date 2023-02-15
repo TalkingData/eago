@@ -1,20 +1,19 @@
 package dao
 
 import (
-	"eago/common/api-suite/pagination"
-	"eago/common/log"
+	"context"
+	"eago/common/orm"
 	"eago/flow/model"
-	"errors"
-	"fmt"
-	"gorm.io/gorm"
 )
 
 // NewNode 新增节点
-func NewNode(name string, parentId *int, category int, entryCondition, assigneeCondition *string, vFields, eFields, createdBy string) *model.Node {
-	log.Info("dao.NewNode called.")
-	defer log.Info("dao.NewNode end.")
-
-	var n = model.Node{
+func (d *Dao) NewNode(
+	ctx context.Context,
+	name string, parentId *uint32, category int32,
+	entryCondition, assigneeCondition *string,
+	vFields, eFields, createdBy string,
+) (*model.Node, error) {
+	node := &model.Node{
 		Name:              name,
 		ParentId:          parentId,
 		Category:          category,
@@ -25,46 +24,25 @@ func NewNode(name string, parentId *int, category int, entryCondition, assigneeC
 		CreatedBy:         createdBy,
 	}
 
-	if res := db.Create(&n); res.Error != nil {
-		log.ErrorWithFields(log.Fields{
-			"name":               name,
-			"parent_id":          parentId,
-			"category":           category,
-			"entry_condition":    entryCondition,
-			"assignee_condition": assigneeCondition,
-			"visible_fields":     vFields,
-			"editable_fields":    eFields,
-			"created_by":         createdBy,
-			"error":              res.Error,
-		}, "An error occurred while db.Create.")
-		return nil
-	}
-
-	return &n
+	res := d.getDbWithCtx(ctx).Create(&node)
+	return node, res.Error
 }
 
 // RemoveNode 删除节点
-func RemoveNode(nId int) bool {
-	res := db.Delete(model.Node{}, "id=?", nId)
-	if res.Error != nil {
-		log.ErrorWithFields(log.Fields{
-			"id":    nId,
-			"error": res.Error,
-		}, "An error occurred while db.Delete.")
-		return false
-	}
-
-	return true
+func (d *Dao) RemoveNode(ctx context.Context, nodeId uint32) error {
+	res := d.getDbWithCtx(ctx).Delete(model.Node{}, "id=?", nodeId)
+	return res.Error
 }
 
 // SetNode 更新节点
-func SetNode(id int, name string, parentId *int, category int, entryCondition, assigneeCondition *string, vFields, eFields, updatedBy string) (*model.Node, bool) {
-	log.Info("dao.SetNode called.")
-	defer log.Info("dao.SetNode end.")
-
-	n := model.Node{}
-
-	res := db.Model(&model.Node{}).
+func (d *Dao) SetNode(
+	ctx context.Context,
+	id uint32,
+	name string, parentId *uint32, category int32,
+	entryCondition, assigneeCondition *string,
+	vFields, eFields, updatedBy string,
+) (node *model.Node, err error) {
+	res := d.getDbWithCtx(ctx).Model(&model.Node{}).
 		Where("id=?", id).
 		Updates(map[string]interface{}{
 			"name":               name,
@@ -76,109 +54,41 @@ func SetNode(id int, name string, parentId *int, category int, entryCondition, a
 			"editable_fields":    eFields,
 			"updated_by":         updatedBy,
 		}).
-		First(&n)
-	if res.Error != nil {
-		log.ErrorWithFields(log.Fields{
-			"name":               name,
-			"parent_id":          parentId,
-			"category":           category,
-			"entry_condition":    entryCondition,
-			"assignee_condition": assigneeCondition,
-			"visible_fields":     vFields,
-			"editable_fields":    eFields,
-			"updated_by":         updatedBy,
-			"error":              res.Error,
-		}, "An error occurred while db.Model.Where.Updates.First.")
-		return nil, false
-	}
+		First(&node)
 
-	return &n, true
+	return node, res.Error
 }
 
 // GetNode 查询单个节点
-func GetNode(query Query) (*model.Node, bool) {
-	log.Info("dao.GetNode called.")
-	defer log.Info("dao.GetNode end.")
-
-	var (
-		n = model.Node{}
-		d = db
-	)
-
-	for k, v := range query {
-		d = d.Where(k, v)
-	}
-	if res := d.First(&n); res.Error != nil {
-		if errors.Is(res.Error, gorm.ErrRecordNotFound) {
-			log.WarnWithFields(log.Fields{
-				"query": fmt.Sprintf("%v", query),
-				"error": res.Error,
-			}, "Record not found")
-			return nil, true
-		}
-		log.ErrorWithFields(log.Fields{
-			"query": fmt.Sprintf("%v", query),
-			"error": res.Error,
-		}, "An error occurred while db.Where.First.")
-		return nil, false
-	}
-
-	return &n, true
+func (d *Dao) GetNode(ctx context.Context, q orm.Query) (node *model.Node, err error) {
+	res := q.Where(d.getDbWithCtx(ctx)).Limit(1).Find(&node)
+	return node, res.Error
 }
 
 // GetNodeCount 查询节点数量
-func GetNodeCount(query Query) (count int64, ok bool) {
-	d := db.Model(&model.Node{})
+func (d *Dao) GetNodeCount(ctx context.Context, q orm.Query) (count int64, err error) {
+	res := q.Where(d.getDbWithCtx(ctx).Model(&model.Node{})).Count(&count)
+	return count, res.Error
+}
 
-	for k, v := range query {
-		d = d.Where(k, v)
-	}
-	if res := d.Count(&count); res.Error != nil {
-		if errors.Is(res.Error, gorm.ErrRecordNotFound) {
-			return count, true
-		}
-		log.ErrorWithFields(log.Fields{
-			"query": fmt.Sprintf("%v", query),
-			"error": res.Error,
-		}, "An error occurred while db.Where.Count.")
-		return count, false
-	}
-	return count, true
+// IsNodeExist 查询节点是否存在
+func (d *Dao) IsNodeExist(ctx context.Context, q orm.Query) (bool, error) {
+	count, err := d.GetNodeCount(ctx, q)
+	return count > 0, err
 }
 
 // ListNodes 查询节点
-func ListNodes(query Query) ([]model.Node, bool) {
-	var d = db
-	ns := make([]model.Node, 0)
-
-	for k, v := range query {
-		d = d.Where(k, v)
-	}
-	if res := d.Find(&ns); res.Error != nil {
-		if errors.Is(res.Error, gorm.ErrRecordNotFound) {
-			log.WarnWithFields(log.Fields{
-				"query": fmt.Sprintf("%v", query),
-				"error": res.Error,
-			}, "Record not found")
-			return ns, true
-		}
-		log.ErrorWithFields(log.Fields{
-			"query": fmt.Sprintf("%v", query),
-			"error": res.Error,
-		}, "An error occurred while db.Where.Find.")
-		return nil, false
-	}
-
-	return ns, true
+func (d *Dao) ListNodes(ctx context.Context, q orm.Query) (nodes []*model.Node, err error) {
+	res := q.Where(d.getDbWithCtx(ctx)).Find(&nodes)
+	return nodes, res.Error
 }
 
 // PagedListNodes 查询节点-分页
-func PagedListNodes(query Query, page, pageSize int, orderBy ...string) (*pagination.Paginator, bool) {
-	log.Info("dao.PagedListNodes called.")
-	defer log.Info("dao.PagedListNodes end.")
-
-	var d = db.Model(&model.Node{}).Select(
-		"nodes.id, " +
+func (d *Dao) PagedListNodes(
+	ctx context.Context, q orm.Query, page, pageSize int, orderBy ...string,
+) (*orm.Paginator, error) {
+	db := q.Where(d.getDbWithCtx(ctx)).Model(&model.Node{}).
+		Select("nodes.id, " +
 			"nodes.name, " +
 			"nodes.parent_id, " +
 			"p.name AS parent_name, " +
@@ -190,36 +100,37 @@ func PagedListNodes(query Query, page, pageSize int, orderBy ...string) (*pagina
 			"nodes.created_at, " +
 			"nodes.created_by, " +
 			"nodes.updated_at, " +
-			"nodes.updated_by",
-	).Joins("LEFT JOIN nodes AS p ON p.id = nodes.parent_id")
-	ns := make([]model.ListNodes, pageSize)
+			"nodes.updated_by").
+		Joins("LEFT JOIN nodes AS p ON p.id = nodes.parent_id")
 
-	for k, v := range query {
-		d = d.Where(k, v)
-	}
-	pg, err := pagination.GormPaging(&pagination.GormParams{
-		Db:       d,
-		Page:     page,
-		PageSize: pageSize,
-		OrderBy:  orderBy,
-	}, &ns)
+	nodes := make([]*model.ListNodes, pageSize)
+
+	return orm.PagingQuery(db, page, pageSize, &nodes, orderBy...)
+}
+
+// GetNodeChain 递推列出节点链
+func (d *Dao) GetNodeChain(ctx context.Context, parentNode *model.NodeChain) error {
+	node, err := d.GetNode(ctx, orm.Query{"parent_id": parentNode.Id})
 	if err != nil {
-		log.ErrorWithFields(log.Fields{
-			"query": fmt.Sprintf("%v", query),
-			"error": err,
-		}, "An error occurred while pagination.GormPaging.")
-		return nil, false
+		return err
 	}
 
-	return pg, true
+	if node == nil || node.Id < 1 {
+		return nil
+	}
+
+	subNode := d.Node2Chain(ctx, node)
+	parentNode.SubNode = subNode
+	return d.GetNodeChain(ctx, subNode)
 }
 
 // Node2Chain 将节点转化为链结构
-func Node2Chain(n *model.Node) *model.NodeChain {
-	ts, ok := ListNodeTriggers(n.Id)
-	triggers := make([]model.NodesTrigger, 0)
-	if ok && len(ts) > 0 {
-		triggers = append(triggers, ts...)
+func (d *Dao) Node2Chain(ctx context.Context, n *model.Node) *model.NodeChain {
+	ts, err := d.ListNodesTriggers(ctx, n.Id)
+
+	nodeTris := make([]*model.NodeTriggers, 0)
+	if err == nil && len(ts) > 0 {
+		nodeTris = append(nodeTris, ts...)
 	}
 
 	return &model.NodeChain{
@@ -229,122 +140,53 @@ func Node2Chain(n *model.Node) *model.NodeChain {
 		EntryCondition:    *n.EntryCondition,
 		AssigneeCondition: *n.AssigneeCondition,
 		Assignees:         nil,
-		Triggers:          triggers,
+		Triggers:          nodeTris,
 		VisibleFields:     n.VisibleFields,
 		EditableFields:    n.EditableFields,
 		SubNode:           nil,
 	}
 }
 
-// GetNodeChain 递推列出节点链
-func GetNodeChain(parentNode *model.NodeChain) bool {
-	node, ok := GetNode(Query{"parent_id": parentNode.Id})
-	if !ok {
-		return false
-	}
-	if node == nil {
-		return true
-	}
-	subNode := Node2Chain(node)
-	parentNode.SubNode = subNode
-	return GetNodeChain(subNode)
-}
-
-// AddNodeTrigger 关联表操作::添加触发器至节点
-func AddNodeTrigger(nodeId, triggerId int, createdBy string) bool {
-	log.Info("dao.AddNodeTrigger called.")
-	defer log.Info("dao.AddNodeTrigger end.")
-
-	var nt = model.NodeTrigger{
+// AddNodesTrigger 关联表操作::添加触发器至节点
+func (d *Dao) AddNodesTrigger(ctx context.Context, nodeId, triggerId uint32, createdBy string) error {
+	res := d.getDbWithCtx(ctx).Create(&model.NodeTrigger{
 		NodeId:    nodeId,
 		TriggerId: triggerId,
 		CreatedBy: createdBy,
-	}
+	})
 
-	if res := db.Create(&nt); res.Error != nil {
-		log.ErrorWithFields(log.Fields{
-			"node_id":    nodeId,
-			"trigger_id": triggerId,
-			"created_at": nt.CreatedAt,
-			"created_by": createdBy,
-			"error":      res.Error,
-		}, "An error occurred while db.Create.")
-		return false
-	}
-
-	return true
+	return res.Error
 }
 
-// RemoveNodeTrigger 关联表操作::移除节点中触发器
-func RemoveNodeTrigger(nodeId, triggerId int) bool {
-	log.Info("dao.RemoveNodeTrigger called.")
-	defer log.Info("dao.RemoveNodeTrigger end.")
-
-	res := db.Delete(model.NodeTrigger{}, "node_id=? AND trigger_id=?", nodeId, triggerId)
-	if res.Error != nil {
-		log.ErrorWithFields(log.Fields{
-			"node_id":    nodeId,
-			"trigger_id": triggerId,
-			"error":      res.Error,
-		}, "An error occurred while db.Delete.")
-		return false
-	}
-
-	return true
+// RemoveNodesTrigger 关联表操作::移除指定节点中指定触发器
+func (d *Dao) RemoveNodesTrigger(ctx context.Context, nodeId, triggerId uint32) error {
+	res := d.getDbWithCtx(ctx).Delete(model.NodeTriggers{}, "node_id=? AND trigger_id=?", nodeId, triggerId)
+	return res.Error
 }
 
-// GetNodeTriggerCount 关联表操作::获得节点中所有触发器数量
-func GetNodeTriggerCount(query Query) (count int64, ok bool) {
-	d := db.Model(&model.Trigger{}).
+// GetNodesTriggerCount 关联表操作::获得节点中所有触发器数量
+func (d *Dao) GetNodesTriggerCount(ctx context.Context, q orm.Query) (count int64, err error) {
+	_db := d.getDbWithCtx(ctx).Model(&model.Trigger{}).
 		Select("triggers.id AS id, " +
 			"triggers.name AS name, " +
 			"triggers.description AS description, " +
 			"triggers.arguments AS arguments").
 		Joins("LEFT JOIN node_triggers AS nt ON triggers.id = nt.trigger_id")
 
-	for k, v := range query {
-		d = d.Where(k, v)
-	}
-
-	if res := d.Count(&count); res.Error != nil {
-		if errors.Is(res.Error, gorm.ErrRecordNotFound) {
-			return count, true
-		}
-		log.ErrorWithFields(log.Fields{
-			"error": res.Error,
-		}, "An error occurred while db.Select.Joins.Where.Count.")
-		return count, false
-	}
-	return count, true
+	res := q.Where(_db).Count(&count)
+	return count, res.Error
 }
 
-// ListNodeTriggers 关联表操作::列出节点中所有触发器
-func ListNodeTriggers(nodeId int) ([]model.NodesTrigger, bool) {
-	log.Info("dao.ListNodeTriggers called.")
-	defer log.Info("dao.ListNodeTriggers end.")
-
-	var d = db.Model(&model.Trigger{})
-	nts := make([]model.NodesTrigger, 0)
-
-	res := d.Select("triggers.id AS id, "+
-		"triggers.name AS name, "+
-		"triggers.description AS description, "+
-		"triggers.arguments AS arguments").
+// ListNodesTriggers 关联表操作::列出节点中所有触发器
+func (d *Dao) ListNodesTriggers(ctx context.Context, nodeId uint32) (nodeTris []*model.NodeTriggers, err error) {
+	res := d.getDbWithCtx(ctx).Model(&model.Trigger{}).
+		Select("triggers.id AS id, "+
+			"triggers.name AS name, "+
+			"triggers.description AS description, "+
+			"triggers.arguments AS arguments").
 		Joins("LEFT JOIN node_triggers AS nt ON triggers.id = nt.trigger_id").
 		Where("nt.node_id=?", nodeId).
-		Find(&nts)
-	if res.Error != nil {
-		if errors.Is(res.Error, gorm.ErrRecordNotFound) {
-			log.WarnWithFields(log.Fields{
-				"error": res.Error,
-			}, "Record not found")
-			return nts, true
-		}
-		log.ErrorWithFields(log.Fields{
-			"error": res.Error,
-		}, "An error occurred while db.Where.Find.")
-		return nil, false
-	}
+		Find(&nodeTris)
 
-	return nts, true
+	return nodeTris, res.Error
 }

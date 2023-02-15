@@ -17,11 +17,8 @@ addresses = 127.0.0.1:2379,127.0.0.1:2379,127.0.0.1:2379
 username =
 password =
 
-[iam]
-iam_url = https://127.0.0.1/auth
-
 [crowd]
-crowd_url = http://127.0.0.1/crowd
+crowd_url = https://127.0.0.1/crowd
 app_name = eago
 app_pass = eago
 
@@ -30,8 +27,8 @@ address = 127.0.0.1:3306
 db_name = eago_auth
 user = root
 password = root
-max_open_connections = 5
-max_idle_connections = 20
+max_idle_conns = 5
+max_open_conns = 20
 
 [redis]
 address = 127.0.0.1:6379

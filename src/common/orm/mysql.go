@@ -4,11 +4,10 @@ import (
 	"fmt"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
-	"gorm.io/gorm/logger"
 )
 
-// InitMysql 初始化Mysql
-func InitMysql(address, user, password, dbName string, opts ...DbOption) (d *gorm.DB) {
+// NewMysqlGorm 新建MysqlGorm
+func NewMysqlGorm(address, user, password, dbName string, opts ...Option) *gorm.DB {
 	dsn := fmt.Sprintf(
 		"%s:%s@tcp(%s)/%s?charset=utf8mb4&parseTime=True&loc=Local",
 		user,
@@ -23,7 +22,9 @@ func InitMysql(address, user, password, dbName string, opts ...DbOption) (d *gor
 		DisableDatetimePrecision: true,
 	})
 
-	d, err := gorm.Open(m, &gorm.Config{})
+	d, err := gorm.Open(m, &gorm.Config{
+		CreateBatchSize: 2048,
+	})
 	if err != nil {
 		panic(err.Error())
 		return nil
@@ -33,38 +34,5 @@ func InitMysql(address, user, password, dbName string, opts ...DbOption) (d *gor
 		o(d)
 	}
 
-	db = d
-	return db
-}
-
-// MysqlDefaultLogMode 设置Mysql默认LogMode
-func MysqlDefaultLogMode(level logger.LogLevel) DbOption {
-	return func(d *gorm.DB) {
-		if d == nil {
-			return
-		}
-		d.Logger = logger.Default.LogMode(level)
-	}
-}
-
-// MysqlMaxIdleConns 设置Mysql最大空闲连接数量
-func MysqlMaxIdleConns(count int) DbOption {
-	return func(d *gorm.DB) {
-		if d == nil {
-			return
-		}
-		sqlDB, _ := d.DB()
-		sqlDB.SetMaxIdleConns(count)
-	}
-}
-
-// MysqlMaxOpenConns 设置Mysql最大打开连接数量
-func MysqlMaxOpenConns(count int) DbOption {
-	return func(d *gorm.DB) {
-		if d == nil {
-			return
-		}
-		sqlDB, _ := d.DB()
-		sqlDB.SetMaxOpenConns(count)
-	}
+	return d
 }

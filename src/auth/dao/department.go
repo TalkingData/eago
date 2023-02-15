@@ -1,236 +1,126 @@
 package dao
 
 import (
+	"context"
+	"eago/auth/dto"
 	"eago/auth/model"
-	"eago/common/api-suite/pagination"
-	"eago/common/log"
-	"errors"
-	"fmt"
+	"eago/common/logger"
+	"eago/common/orm"
 	"gorm.io/gorm"
 )
 
 // NewDepartment 新建部门
-func NewDepartment(name string, parentId *int) (*model.Department, error) {
-	d := model.Department{
+func (d *Dao) NewDepartment(ctx context.Context, name string, parentId *uint32) (*model.Department, error) {
+	dept := &model.Department{
 		Name:     name,
 		ParentId: parentId,
 	}
-
-	if res := db.Create(&d); res.Error != nil {
-		log.ErrorWithFields(log.Fields{
-			"name":      name,
-			"parent_id": parentId,
-			"error":     res.Error,
-		}, "An error occurred while db.Create.")
-		return nil, res.Error
-	}
-
-	return &d, nil
+	res := d.getDbWithCtx(ctx).Create(&dept)
+	return dept, res.Error
 }
 
 // RemoveDepartment 删除部门
-func RemoveDepartment(deptId int) bool {
-	res := db.Delete(model.Department{}, "id=?", deptId)
-	if res.Error != nil {
-		log.ErrorWithFields(log.Fields{
-			"id":    deptId,
-			"error": res.Error,
-		}, "An error occurred while db.Delete.")
-		return false
-	}
-
-	return true
+func (d *Dao) RemoveDepartment(ctx context.Context, deptId uint32) error {
+	res := d.getDbWithCtx(ctx).Delete(model.Department{}, "id=?", deptId)
+	return res.Error
 }
 
 // EmptyDepartment 清空部门
-func EmptyDepartment() bool {
-	res := db.Session(&gorm.Session{AllowGlobalUpdate: true}).Delete(&model.UserDepartment{})
+func (d *Dao) EmptyDepartment(ctx context.Context) error {
+	res := d.getDbWithCtx(ctx).Session(&gorm.Session{AllowGlobalUpdate: true}).Delete(model.UserDepartment{})
 	if res.Error != nil {
-		log.ErrorWithFields(log.Fields{
+		d.lg.WarnWithFields(logger.Fields{
 			"error": res.Error,
-		}, "An error occurred while db.Session.Delete.")
-		return false
+		}, "An error occurred while db.Delete(model.UserDepartment{}) in dao.EmptyDepartment.")
+		return res.Error
 	}
-	res = db.Model(&model.UserDepartment{}).Exec("ALTER TABLE user_departments AUTO_INCREMENT=1")
+	res = d.getDbWithCtx(ctx).Model(&model.UserDepartment{}).Exec("ALTER TABLE user_departments AUTO_INCREMENT=1")
 	if res.Error != nil {
-		log.ErrorWithFields(log.Fields{
+		d.lg.WarnWithFields(logger.Fields{
 			"error": res.Error,
-		}, "An error occurred while db.Raw.")
-		return false
+		}, "An error occurred while 'ALTER TABLE user_departments AUTO_INCREMENT=1' in dao.EmptyDepartment.")
+		return res.Error
 	}
 
-	res = db.Session(&gorm.Session{AllowGlobalUpdate: true}).Delete(&model.Department{})
+	res = d.getDbWithCtx(ctx).Session(&gorm.Session{AllowGlobalUpdate: true}).Delete(model.Department{})
 	if res.Error != nil {
-		log.ErrorWithFields(log.Fields{
+		d.lg.WarnWithFields(logger.Fields{
 			"error": res.Error,
-		}, "An error occurred while db.Session.Delete.")
-		return false
+		}, "An error occurred while db.Delete(model.Department{}) in dao.EmptyDepartment.")
+		return res.Error
 	}
-	res = db.Model(&model.Department{}).Exec("ALTER TABLE departments AUTO_INCREMENT=1")
+	res = d.getDbWithCtx(ctx).Model(&model.Department{}).Exec("ALTER TABLE departments AUTO_INCREMENT=1")
 	if res.Error != nil {
-		log.ErrorWithFields(log.Fields{
+		d.lg.WarnWithFields(logger.Fields{
 			"error": res.Error,
-		}, "An error occurred while db.Raw.")
-		return false
+		}, "An error occurred while 'ALTER TABLE departments AUTO_INCREMENT=1' in dao.EmptyDepartment.")
+		return res.Error
 	}
-	return true
+	return nil
 }
 
 // SetDepartment 更新部门
-func SetDepartment(id int, name string, parentId *int) (*model.Department, error) {
-	d := model.Department{}
-
-	ud := map[string]interface{}{"name": name}
+func (d *Dao) SetDepartment(ctx context.Context, id uint32, name string, parentId *uint32) (dept *model.Department, err error) {
+	updatesMap := map[string]interface{}{"name": name}
 	if parentId != nil {
-		ud["parent_id"] = *parentId
+		updatesMap["parent_id"] = *parentId
 	}
-
-	res := db.Model(&model.Department{}).
+	res := d.getDbWithCtx(ctx).Model(&model.Department{}).
 		Where("id=?", id).
-		Updates(ud).
-		First(&d)
-
-	if res.Error != nil {
-		log.ErrorWithFields(log.Fields{
-			"id":        id,
-			"name":      name,
-			"parent_id": parentId,
-			"error":     res.Error,
-		}, "An error occurred while db.SetDepartment.")
-		return nil, res.Error
-	}
-
-	return &d, nil
+		Updates(updatesMap).
+		Find(&dept)
+	return dept, res.Error
 }
 
 // GetDepartment 查询单个部门
-func GetDepartment(query Query) (*model.Department, bool) {
-	var (
-		dept = model.Department{}
-		d    = db
-	)
-
-	for k, v := range query {
-		d = d.Where(k, v)
-	}
-	if res := d.First(&dept); res.Error != nil {
-		if errors.Is(res.Error, gorm.ErrRecordNotFound) {
-			log.WarnWithFields(log.Fields{
-				"query": fmt.Sprintf("%v", query),
-				"error": res.Error,
-			}, "Record not found.")
-			return nil, true
-		}
-		log.ErrorWithFields(log.Fields{
-			"query": fmt.Sprintf("%v", query),
-			"error": res.Error,
-		}, "An error occurred while db.Where.First.")
-		return nil, false
-	}
-
-	return &dept, true
+func (d *Dao) GetDepartment(ctx context.Context, q orm.Query) (dept *model.Department, err error) {
+	res := q.Where(d.getDbWithCtx(ctx)).Limit(1).Find(&dept)
+	return dept, res.Error
 }
 
 // GetDepartmentCount 查询部门数量
-func GetDepartmentCount(query Query) (count int64, ok bool) {
-	d := db.Model(&model.Department{})
+func (d *Dao) GetDepartmentCount(ctx context.Context, q orm.Query) (count int64, err error) {
+	res := q.Where(d.getDbWithCtx(ctx).Model(&model.Department{})).Count(&count)
+	return count, res.Error
+}
 
-	for k, v := range query {
-		d = d.Where(k, v)
-	}
-
-	if res := d.Count(&count); res.Error != nil {
-		if errors.Is(res.Error, gorm.ErrRecordNotFound) {
-			return count, true
-		}
-		log.ErrorWithFields(log.Fields{
-			"query": fmt.Sprintf("%v", query),
-			"error": res.Error,
-		}, "An error occurred while db.Where.Count.")
-		return count, false
-	}
-	return count, true
+// IsDepartmentExist 查询部门是否存在
+func (d *Dao) IsDepartmentExist(ctx context.Context, q orm.Query) (bool, error) {
+	count, err := d.GetDepartmentCount(ctx, q)
+	return count > 0, err
 }
 
 // ListDepartments 查询部门
-func ListDepartments(query Query) (*[]model.Department, bool) {
-	var d = db
-	ds := make([]model.Department, 0)
-
-	for k, v := range query {
-		d = d.Where(k, v)
-	}
-	if res := d.Find(&ds); res.Error != nil {
-		if errors.Is(res.Error, gorm.ErrRecordNotFound) {
-			log.WarnWithFields(log.Fields{
-				"query": fmt.Sprintf("%v", query),
-				"error": res.Error,
-			}, "Record not found.")
-			return &ds, true
-		}
-		log.ErrorWithFields(log.Fields{
-			"query": fmt.Sprintf("%v", query),
-			"error": res.Error,
-		}, "An error occurred while db.Where.Find.")
-		return nil, false
-	}
-
-	return &ds, true
+func (d *Dao) ListDepartments(ctx context.Context, q orm.Query) (depts []*model.Department, err error) {
+	res := q.Where(d.getDbWithCtx(ctx)).Find(&depts)
+	return depts, res.Error
 }
 
-// PagedListDepartments 查询部门-分页
-func PagedListDepartments(query Query, page, pageSize int, orderBy ...string) (*pagination.Paginator, bool) {
-	var d = db.Model(&model.Department{})
-	ds := make([]model.Department, pageSize)
-
-	for k, v := range query {
-		d = d.Where(k, v)
-	}
-	pg, err := pagination.GormPaging(&pagination.GormParams{
-		Db:       d,
-		Page:     page,
-		PageSize: pageSize,
-		OrderBy:  orderBy,
-	}, &ds)
-	if err != nil {
-		log.ErrorWithFields(log.Fields{
-			"query": fmt.Sprintf("%v", query),
-			"error": err,
-		}, "An error occurred while pagination.GormPaging.")
-		return nil, false
-	}
-
-	return pg, true
+// PagedListDepartments 分页查询部门
+func (d *Dao) PagedListDepartments(
+	ctx context.Context, q orm.Query, page, pageSize int, orderBy ...string,
+) (*orm.Paginator, error) {
+	depts := make([]*model.Department, pageSize)
+	db := q.Where(d.getDbWithCtx(ctx).Model(&model.Department{}))
+	return orm.PagingQuery(db, page, pageSize, &depts, orderBy...)
 }
 
-// Department2Tree 将部门转化为树结构的一个节点
-func Department2Tree(dept *model.Department) *model.DepartmentTree {
-	return &model.DepartmentTree{
-		Id:            dept.Id,
-		Name:          dept.Name,
-		CreatedAt:     dept.CreatedAt,
-		UpdatedAt:     dept.UpdatedAt,
-		SubDepartment: make([]*model.DepartmentTree, 0),
-	}
-}
-
-// ListDepartment2Tree 将部门列表转化为部门树
-func ListDepartment2Tree(pNode *model.DepartmentTree, deptList *[]model.Department) {
+// ListDepartmentTree 以树形式列出所有部门
+func (d *Dao) ListDepartmentTree(pNode *dto.DepartmentTree, deptList []*model.Department) {
 	// 部门列表为空时直接返回
 	if deptList == nil {
 		return
 	}
 
-	for _, dept := range *deptList {
-
+	for _, dept := range deptList {
 		// 跳过root节点
 		if dept.ParentId == nil {
 			continue
 		}
 		deptParentId := *dept.ParentId
 		if deptParentId == pNode.Id {
-			dt := Department2Tree(&dept)
-			ListDepartment2Tree(dt, deptList)
+			dt := dto.TransDepartment2Tree(dept)
+			d.ListDepartmentTree(dt, deptList)
 			pNode.SubDepartment = append(pNode.SubDepartment, dt)
 		}
 	}
@@ -238,128 +128,66 @@ func ListDepartment2Tree(pNode *model.DepartmentTree, deptList *[]model.Departme
 	return
 }
 
-// AddDepartmentUser 关联表操作::添加用户至部门
-func AddDepartmentUser(userId, deptId int, isOwner bool) bool {
-	var dp = model.UserDepartment{
+// AddUser2Department 关联表操作::添加指定用户至指定部门
+func (d *Dao) AddUser2Department(ctx context.Context, userId, deptId uint32, isOwner bool) error {
+	res := d.getDbWithCtx(ctx).Create(&model.UserDepartment{
 		UserId:       userId,
 		DepartmentId: deptId,
 		IsOwner:      &isOwner,
-	}
-
-	if res := db.Create(&dp); res.Error != nil {
-		log.ErrorWithFields(log.Fields{
-			"user_id":       userId,
-			"department_id": deptId,
-			"is_owner":      isOwner,
-			"joined_at":     dp.JoinedAt,
-			"error":         res.Error,
-		}, "An error occurred while db.Create.")
-		return false
-	}
-
-	return true
+	})
+	return res.Error
 }
 
-// RemoveDepartmentUser 关联表操作::移除部门中用户
-func RemoveDepartmentUser(userId, deptId int) bool {
-	res := db.Delete(model.UserDepartment{}, "user_id=? AND department_id=?", userId, deptId)
-	if res.Error != nil {
-		log.ErrorWithFields(log.Fields{
-			"user_id":       userId,
-			"department_id": deptId,
-			"error":         res.Error,
-		}, "An error occurred while db.Delete.")
-		return false
-	}
-
-	return true
+// RemoveDepartmentsUser 关联表操作::移除指定部门中用户
+func (d *Dao) RemoveDepartmentsUser(ctx context.Context, deptId, userId uint32) error {
+	res := d.getDbWithCtx(ctx).Delete(model.UserDepartment{}, "department_id=? AND user_id=?", deptId, userId)
+	return res.Error
 }
 
-// RemoveUserDepartments 关联表操作::移除用户所有部门
-func RemoveUserDepartments(userId int) bool {
-	res := db.Delete(model.UserDepartment{}, "user_id=?", userId)
-	if res.Error != nil {
-		log.ErrorWithFields(log.Fields{
-			"user_id": userId,
-			"error":   res.Error,
-		}, "An error occurred while db.Delete.")
-		return false
-	}
-
-	return true
+// RemoveUsersDepartments 关联表操作::移除指定用户所有部门
+func (d *Dao) RemoveUsersDepartments(ctx context.Context, userId uint32) error {
+	res := d.getDbWithCtx(ctx).Delete(model.UserDepartment{}, "user_id=?", userId)
+	return res.Error
 }
 
-// SetDepartmentUserIsOwner 关联表操作::设置用户是否是部门Owner
-func SetDepartmentUserIsOwner(deptId, userId int, isOwner bool) bool {
-	res := db.Model(&model.UserDepartment{}).
+// SetDepartmentsOwner 关联表操作::设置用户是否是部门Owner
+func (d *Dao) SetDepartmentsOwner(ctx context.Context, deptId, userId uint32, isOwner bool) error {
+	res := d.getDbWithCtx(ctx).Model(&model.UserDepartment{}).
 		Where("department_id=? AND user_id=?", deptId, userId).
 		Update("is_owner", isOwner)
-	if res.Error != nil {
-		log.WarnWithFields(log.Fields{
-			"department_id": deptId,
-			"user_id":       userId,
-			"is_owner":      isOwner,
-			"error":         res.Error,
-		}, "An error occurred while db.Model.Where.Update.")
-		return false
-	}
-
-	return true
+	return res.Error
 }
 
 // GetDepartmentUserCount 关联表操作::列出部门中所有用户数量
-func GetDepartmentUserCount(query Query) (count int64, ok bool) {
-	d := db.Model(&model.User{}).
+func (d *Dao) GetDepartmentUserCount(ctx context.Context, q orm.Query) (count int64, err error) {
+	_db := d.getDbWithCtx(ctx).Model(&model.User{}).
 		Select("users.id AS id, " +
 			"users.username AS username, " +
 			"ud.is_owner AS is_owner, " +
 			"ud.joined_at AS joined_at").
 		Joins("LEFT JOIN user_departments AS ud ON users.id = ud.user_id")
 
-	for k, v := range query {
-		d = d.Where(k, v)
-	}
-
-	if res := d.Count(&count); res.Error != nil {
-		if errors.Is(res.Error, gorm.ErrRecordNotFound) {
-			return count, true
-		}
-		log.ErrorWithFields(log.Fields{
-			"error": res.Error,
-		}, "An error occurred while db.Select.Joins.Where.Count.")
-		return count, false
-	}
-
-	return count, true
+	res := q.Where(_db).Count(&count)
+	return count, res.Error
 }
 
-// ListDepartmentUsers 关联表操作::列出部门中所有用户
-func ListDepartmentUsers(deptId int, query Query) (*[]model.MemberUser, bool) {
-	var d = db.Model(&model.User{})
-	mus := make([]model.MemberUser, 0)
+// IsEmptyDepartment 关联表操作::查询指定部门是否为空，不包含用户则为空
+func (d *Dao) IsEmptyDepartment(ctx context.Context, deptId uint32) (bool, error) {
+	count, err := d.GetDepartmentUserCount(ctx, orm.Query{"department_id=?": deptId})
+	return count == 0, err
+}
 
-	for k, v := range query {
-		d = d.Where(k, v)
-	}
-	res := d.Select("users.id AS id, "+
-		"users.username AS username, "+
-		"ud.is_owner AS is_owner, "+
-		"ud.joined_at AS joined_at").
+// ListDepartmentsUsers 关联表操作::列出部门中所有用户
+func (d *Dao) ListDepartmentsUsers(
+	ctx context.Context, deptId uint32, q orm.Query,
+) (mbrUser []*model.MemberUser, err error) {
+	res := q.Where(d.getDbWithCtx(ctx).Model(&model.User{})).
+		Select("users.id AS id, "+
+			"users.username AS username, "+
+			"ud.is_owner AS is_owner, "+
+			"ud.joined_at AS joined_at").
 		Joins("LEFT JOIN user_departments AS ud ON users.id = ud.user_id").
 		Where("department_id=?", deptId).
-		Find(&mus)
-	if res.Error != nil {
-		if errors.Is(res.Error, gorm.ErrRecordNotFound) {
-			log.WarnWithFields(log.Fields{
-				"error": res.Error,
-			}, "Record not found.")
-			return &mus, true
-		}
-		log.ErrorWithFields(log.Fields{
-			"error": res.Error,
-		}, "An error occurred while db.Select.Joins.Where.Find.")
-		return nil, false
-	}
-
-	return &mus, true
+		Find(&mbrUser)
+	return mbrUser, res.Error
 }

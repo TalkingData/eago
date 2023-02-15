@@ -1,81 +1,86 @@
 package handler
 
 import (
-	w "eago/common/api-suite/writter"
-	"eago/common/log"
+	"eago/common/api/ext"
+	perm "eago/common/api/permission"
+	cMsg "eago/common/code_msg"
+	"eago/common/orm"
+	"eago/common/tracer"
+	"eago/flow/api/form"
 	"eago/flow/conf/msg"
-	"eago/flow/dao"
-	"eago/flow/dto"
 	"github.com/gin-gonic/gin"
-	"strconv"
 )
 
 // NewLog 新建指定流程实例的审批日志
-func NewLog(c *gin.Context) {
+func (h *FlowHandler) NewLog(c *gin.Context) {
 	// 获得流程实例ID
-	insId, err := strconv.Atoi(c.Param("instance_id"))
+	instId, err := ext.ParamUint32(c, "instance_id")
 	if err != nil {
-		m := msg.InvalidUriFailed.SetError(err, "instance_id")
-		log.WarnWithFields(m.LogFields())
-		m.WriteRest(c)
+		m := cMsg.MsgInvalidUriFailed.SetError(err, "instance_id")
+		h.logger.WarnWithFields(m.ToLoggerFields(), m.GetMsg())
+		m.Write2GinCtx(c)
 		return
 	}
 
-	var lgFrm dto.NewLog
+	frm := form.NewLogForm{}
 	// 序列化request body
-	if err = c.ShouldBindJSON(&lgFrm); err != nil {
-		m := msg.SerializeFailed.SetError(err)
-		log.WarnWithFields(m.LogFields())
-		m.WriteRest(c)
+	if err = c.ShouldBindJSON(&frm); err != nil {
+		m := cMsg.MsgSerializeFailed.SetError(err)
+		h.logger.WarnWithFields(m.ToLoggerFields(), m.GetMsg())
+		m.Write2GinCtx(c)
 		return
 	}
+
+	ctx := tracer.ExtractTraceCtxFromGin(c)
+
 	// 验证数据
-	if m := lgFrm.Validate(insId); m != nil {
+	if m := frm.Validate(ctx, h.dao, instId); m != nil {
 		// 数据验证未通过
-		log.WarnWithFields(m.LogFields())
-		m.WriteRest(c)
+		h.logger.WarnWithFields(m.ToLoggerFields(), m.GetMsg())
+		m.Write2GinCtx(c)
 		return
 	}
 
-	tc := c.GetStringMap("TokenContent")
-	l := dao.NewLog(insId, lgFrm.Result, *lgFrm.Content, tc["Username"].(string))
-	if l == nil {
-		m := msg.UndefinedError
-		log.WarnWithFields(m.LogFields())
-		m.WriteRest(c)
+	log, err := h.dao.NewLog(ctx, instId, frm.Result, *frm.Content, perm.MustGetTokenContent(c).Username)
+	if err != nil {
+		m := msg.MsgFlowDaoErr.SetError(err)
+		h.logger.ErrorWithFields(m.ToLoggerFields(), m.GetMsg())
+		m.Write2GinCtx(c)
 		return
 	}
 
-	w.WriteSuccessPayload(c, "log", l)
+	ext.WriteSuccessPayload(c, "log", log)
 }
 
 // ListLogs 列出指定流程实例的所有审批日志
-func ListLogs(c *gin.Context) {
+func (h *FlowHandler) ListLogs(c *gin.Context) {
 	// 获得流程实例ID
-	insId, err := strconv.Atoi(c.Param("instance_id"))
+	instId, err := ext.ParamUint32(c, "instance_id")
 	if err != nil {
-		m := msg.InvalidUriFailed.SetError(err, "instance_id")
-		log.WarnWithFields(m.LogFields())
-		m.WriteRest(c)
+		m := cMsg.MsgInvalidUriFailed.SetError(err, "instance_id")
+		h.logger.WarnWithFields(m.ToLoggerFields(), m.GetMsg())
+		m.Write2GinCtx(c)
 		return
 	}
 
-	var lgFrm dto.ListLog
+	ctx := tracer.ExtractTraceCtxFromGin(c)
+
+	frm := form.ListLogForm{}
 	// 验证数据
-	if m := lgFrm.Validate(insId); m != nil {
+	if m := frm.Validate(ctx, h.dao, instId); m != nil {
 		// 数据验证未通过
-		log.WarnWithFields(m.LogFields())
-		m.WriteRest(c)
+		h.logger.WarnWithFields(m.ToLoggerFields(), m.GetMsg())
+		m.Write2GinCtx(c)
 		return
 	}
 
-	logs, ok := dao.ListLogs(dao.Query{"instance_id=?": insId})
-	if !ok {
-		m := msg.UndefinedError
-		log.WarnWithFields(m.LogFields())
-		m.WriteRest(c)
+	logs, err := h.dao.ListLogs(ctx, orm.Query{"instance_id=?": instId})
+	if err != nil {
+		m := msg.MsgFlowDaoErr.SetError(err)
+		h.logger.ErrorWithFields(m.ToLoggerFields(), m.GetMsg())
+		m.Write2GinCtx(c)
 		return
 	}
 
-	w.WriteSuccessPayload(c, "logs", logs)
+	ext.WriteSuccessPayload(c, "logs", logs)
 }

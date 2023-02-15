@@ -1,61 +1,33 @@
 package main
 
 import (
-	"context"
-	perm "eago/common/api-suite/permission"
-	"eago/common/log"
+	"eago/common/logger"
 	"eago/common/orm"
-	"eago/common/tracer"
-	"eago/task/cli"
+	"eago/common/service"
 	"eago/task/conf"
 	"eago/task/dao"
 	"fmt"
-	"github.com/micro/go-micro/v2/registry"
-	"github.com/micro/go-micro/v2/web"
-	"github.com/micro/go-plugins/registry/etcdv3/v2"
-	"github.com/opentracing/opentracing-go"
 	"os"
 	"os/signal"
 	"runtime"
 	"syscall"
 )
 
+var (
+	task service.EagoSrv
+
+	taskDao *dao.Dao
+
+	taskConf *conf.Conf
+	taskLg   *logger.Logger
+)
+
 func main() {
-	// 初始化Tracer
-	t, c := tracer.NewTracer(conf.API_REGISTER_KEY, conf.Conf.JaegerAddress)
-	defer func() {
-		_ = c.Close()
-	}()
-
-	opentracing.SetGlobalTracer(t)
-
-	cli.InitAuthCli()
-	cli.InitTaskCli()
-
-	perm.SetAuthClient(cli.AuthClient)
-
-	ctx, cancel := context.WithCancel(context.Background())
-	etcdReg := etcdv3.NewRegistry(
-		registry.Addrs(conf.Conf.EtcdAddresses...),
-		etcdv3.Auth(conf.Conf.EtcdUsername, conf.Conf.EtcdPassword),
-	)
-	apiV1 := web.NewService(
-		web.Name(conf.API_REGISTER_KEY),
-		web.Address(conf.Conf.ApiListen),
-		web.Version("v1"),
-		web.Handler(NewGinEngine()),
-		web.Registry(etcdReg),
-		web.RegisterTTL(conf.Conf.MicroRegisterTtl),
-		web.RegisterInterval(conf.Conf.MicroRegisterInterval),
-		web.Context(ctx),
-	)
-
-	// 初始化WorkerCli
-	cli.InitWorkerCli()
+	task = NewTaskApi(taskDao, taskConf, taskLg)
 
 	e := make(chan error)
 	go func() {
-		e <- apiV1.Run()
+		e <- task.Start()
 	}()
 
 	// 等待退出信号
@@ -66,46 +38,57 @@ func main() {
 		select {
 		case err := <-e:
 			if err != nil {
-				log.ErrorWithFields(log.Fields{
+				taskLg.ErrorWithFields(logger.Fields{
 					"error": err,
-				}, "An error occurred while srv.Run.")
+				}, "An error occurred while Start.")
 			}
 			closeAll()
 			return
 		case sig := <-quit:
-			log.InfoWithFields(log.Fields{
+			taskLg.InfoWithFields(logger.Fields{
 				"signal": sig.String(),
 			}, "Got quit signal.")
-			cancel()
+			closeAll()
+			return
 		}
 	}
 }
 
-// closeAll 关闭全部
+// closeAll
 func closeAll() {
-	orm.Close()
-	log.Close()
+	if task != nil {
+		task.Stop()
+	}
+	if taskLg != nil {
+		taskLg.Close()
+	}
 }
 
 func init() {
 	runtime.GOMAXPROCS(runtime.NumCPU())
 
-	// 加载日志设置
-	err := log.InitLog(
-		conf.Conf.LogPath,
-		conf.SERVICE_NAME,
-		conf.Conf.LogLevel,
+	// 初始化配置
+	taskConf = conf.NewConfig()
+
+	// 生成Logger
+	lg, err := logger.NewLogger(
+		logger.LogLevel(taskConf.LogLevel),
+		logger.LogPath(taskConf.LogPath),
+		logger.Filename(taskConf.Const.ServiceName, "api"),
 	)
 	if err != nil {
-		fmt.Println("Failed to init logging, error:", err.Error())
+		fmt.Println("An error occurred while logger.NewLogger, error:", err.Error())
 		panic(err)
 	}
+	taskLg = lg
 
-	// 初始化DAO
-	dao.Init(orm.InitMysql(
-		conf.Conf.MysqlAddress,
-		conf.Conf.MysqlUser,
-		conf.Conf.MysqlPassword,
-		conf.Conf.MysqlDbName,
-	))
+	taskDao = dao.NewDao(orm.NewMysqlGorm(
+		taskConf.MysqlAddress,
+		taskConf.MysqlUser,
+		taskConf.MysqlPassword,
+		taskConf.MysqlDbName,
+		orm.MysqlMaxIdleConns(taskConf.MysqlMaxIdleConns),
+		orm.MysqlMaxOpenConns(taskConf.MysqlMaxOpenConns),
+		orm.UsingOpentracingPlugin(),
+	), taskConf, taskLg)
 }

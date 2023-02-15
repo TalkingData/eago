@@ -1,64 +1,65 @@
 package handler
 
 import (
-	w "eago/common/api-suite/writter"
-	"eago/common/log"
+	"eago/common/api/ext"
+	cMsg "eago/common/code_msg"
+	"eago/common/logger"
+	"eago/common/tracer"
+	"eago/task/api/form"
 	"eago/task/conf/msg"
-	"eago/task/dao"
-	"eago/task/dto"
 	"github.com/gin-gonic/gin"
 )
 
 // NewResultPartitionsWithCreateTables 新增结果分区并建立结果表和日志表
 // 仅测试用，不对外开放的方法
-func NewResultPartitionsWithCreateTables(c *gin.Context) {
-	var rpForm dto.NewResultPartition
+func (th *TaskHandler) NewResultPartitionsWithCreateTables(c *gin.Context) {
+	frm := form.NewResultPartitionForm{}
 
 	// 序列化request body
-	if err := c.ShouldBindJSON(&rpForm); err != nil {
-		m := msg.SerializeFailed.SetError(err)
-		log.WarnWithFields(m.LogFields())
-		m.WriteRest(c)
+	if err := c.ShouldBindJSON(&frm); err != nil {
+		m := cMsg.MsgSerializeFailed.SetError(err)
+		th.logger.WarnWithFields(m.ToLoggerFields(), m.GetMsg())
+		m.Write2GinCtx(c)
 		return
 	}
 	// 验证数据
-	if m := rpForm.Validate(); m != nil {
+	if m := frm.Validate(); m != nil {
 		// 数据验证未通过
-		log.WarnWithFields(m.LogFields())
-		m.WriteRest(c)
+		th.logger.WarnWithFields(m.ToLoggerFields(), m.GetMsg())
+		m.Write2GinCtx(c)
 		return
 	}
 
 	// 新建
-	rp := dao.NewResultPartitionWithCreateTables(rpForm.Partition)
-	// 新建失败
-	if rp == nil {
-		m := msg.UndefinedError
-		log.WarnWithFields(m.LogFields())
-		m.WriteRest(c)
+	resPart, err := th.dao.NewResultPartitionWithCreateTables(tracer.ExtractTraceCtxFromGin(c), frm.Partition)
+	if err != nil {
+		m := msg.MsgTaskDaoErr.SetError(err)
+		th.logger.ErrorWithFields(m.ToLoggerFields(), m.GetMsg())
+		m.Write2GinCtx(c)
 		return
 	}
 
-	w.WriteSuccessPayload(c, "result_partition", rp)
+	ext.WriteSuccessPayload(c, "result_partition", resPart)
 }
 
 // ListResultPartitions 列出所有结果分区
-func ListResultPartitions(c *gin.Context) {
-	query := dao.Query{}
-	// 设置查询filter
-	lrp := dto.ListResultPartitionsQuery{}
-	if c.ShouldBindQuery(&lrp) == nil {
-		_ = lrp.UpdateQuery(query)
+func (th *TaskHandler) ListResultPartitions(c *gin.Context) {
+	pFrm := form.ListResultPartitionsParamsForm{}
+	if err := c.ShouldBindQuery(&pFrm); err != nil {
+		th.logger.WarnWithFields(logger.Fields{
+			"params": c.Params,
+			"error":  err,
+		}, "An error occurred while c.ShouldBindQuery in TaskHandler.ListResultPartitions, skipped it.")
 	}
 
 	// 列出所有分区
-	rp, ok := dao.ListResultPartitions(query)
-	if !ok {
-		m := msg.UndefinedError
-		log.WarnWithFields(m.LogFields())
-		m.WriteRest(c)
+	rp, err := th.dao.ListResultPartitions(tracer.ExtractTraceCtxFromGin(c), pFrm.GenQuery())
+	if err != nil {
+		m := msg.MsgTaskDaoErr.SetError(err)
+		th.logger.ErrorWithFields(m.ToLoggerFields(), m.GetMsg())
+		m.Write2GinCtx(c)
 		return
 	}
 
-	w.WriteSuccessPayload(c, "result_partitions", rp)
+	ext.WriteSuccessPayload(c, "result_partitions", rp)
 }

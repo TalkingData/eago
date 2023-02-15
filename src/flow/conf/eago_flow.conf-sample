@@ -22,8 +22,11 @@ address = 127.0.0.1:3306
 db_name = eago_flow
 user = root
 password = root
-max_open_connections = 5
-max_idle_connections = 20
+max_idle_conns = 5
+max_open_conns = 20
+
+[kafka]
+addresses = 127.0.0.1:9092,127.0.0.1:9092,127.0.0.1:9092
 
 [tracer]
 jaeger_address = 127.0.0.1:5775

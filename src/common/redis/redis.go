@@ -6,18 +6,18 @@ import (
 	"time"
 )
 
-const prefix = "/td/eago"
-
-var Redis *RedisTool
+const (
+	defaultKeyPrefix = "/td/eago"
+)
 
 type RedisTool struct {
 	client      *redis.Client
 	serviceName string
 }
 
-// InitRedis 初始化Redis
-func InitRedis(address, password, srvName string, db int) {
-	Redis = &RedisTool{
+// NewRedisTool 新建RedisTool
+func NewRedisTool(address, password, srvName string, db int, opts ...Option) *RedisTool {
+	cli := &RedisTool{
 		client: redis.NewClient(&redis.Options{
 			Addr:     address,
 			Password: password,
@@ -25,40 +25,54 @@ func InitRedis(address, password, srvName string, db int) {
 		}),
 		serviceName: srvName,
 	}
+
+	for _, o := range opts {
+		o(cli.client)
+	}
+
+	return cli
 }
 
 // Close 关闭Redis
-func Close() {
-	if Redis == nil {
+func (rt *RedisTool) Close() {
+	if rt.client == nil {
 		return
 	}
-	_ = Redis.client.Close()
+	_ = rt.client.Close()
 }
 
-func (rt *RedisTool) Set(key string, value interface{}, expiration time.Duration) error {
-	return rt.client.Set(context.Background(), rt.getFinalKey(key), value, expiration).Err()
+func (rt *RedisTool) Set(ctx context.Context, key string, value interface{}, expiration time.Duration) error {
+	return rt.client.Set(ctx, rt.getFinalKey(key), value, expiration).Err()
 }
 
-func (rt *RedisTool) Del(key string) error {
-	return rt.client.Del(context.Background(), rt.getFinalKey(key)).Err()
+func (rt *RedisTool) Del(ctx context.Context, key string) error {
+	return rt.client.Del(ctx, rt.getFinalKey(key)).Err()
 }
 
-func (rt *RedisTool) Expire(key string, expiration time.Duration) error {
-	return rt.client.PExpire(context.Background(), rt.getFinalKey(key), expiration).Err()
+func (rt *RedisTool) Expire(ctx context.Context, key string, expiration time.Duration) error {
+	return rt.client.PExpire(ctx, rt.getFinalKey(key), expiration).Err()
 }
 
-func (rt *RedisTool) Get(key string) (string, error) {
-	return rt.client.Get(context.Background(), rt.getFinalKey(key)).Result()
+func (rt *RedisTool) Get(ctx context.Context, key string) (string, error) {
+	return rt.client.Get(ctx, rt.getFinalKey(key)).Result()
 }
 
-func (rt *RedisTool) HasKey(key string) bool {
-	if err := rt.client.Get(context.Background(), rt.getFinalKey(key)).Err(); err == nil {
-		return true
-	}
-	return false
+func (rt *RedisTool) Exist(ctx context.Context, key string) bool {
+	return 0 < rt.client.Exists(ctx, rt.getFinalKey(key)).Val()
+}
+
+// DirectGet 直接获取redis中的值
+func (rt *RedisTool) DirectGet(ctx context.Context, key string) (string, error) {
+	return rt.client.Get(ctx, key).Result()
+}
+
+// DirectExist 直接判断redis中是否存在key
+func (rt *RedisTool) DirectExist(ctx context.Context, key string) (bool, error) {
+	count, err := rt.client.Exists(ctx, key).Result()
+	return count > 0, err
 }
 
 // getFinalKey 生成KeyName
 func (rt *RedisTool) getFinalKey(key string) string {
-	return prefix + "/" + rt.serviceName + "/" + key
+	return defaultKeyPrefix + "/" + rt.serviceName + "/" + key
 }

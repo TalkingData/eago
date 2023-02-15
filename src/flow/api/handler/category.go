@@ -1,166 +1,179 @@
 package handler
 
 import (
-	w "eago/common/api-suite/writter"
-	"eago/common/log"
+	"eago/common/api/ext"
+	perm "eago/common/api/permission"
+	cMsg "eago/common/code_msg"
+	"eago/common/tracer"
+	"eago/flow/api/form"
 	"eago/flow/conf/msg"
-	"eago/flow/dao"
-	"eago/flow/dto"
 	"github.com/gin-gonic/gin"
-	"strconv"
 )
 
 // NewCategory 新建类别
-func NewCategory(c *gin.Context) {
-	var cFrm dto.NewCategory
-
+func (h *FlowHandler) NewCategory(c *gin.Context) {
+	frm := form.NewCategoryForm{}
 	// 序列化request body
-	if err := c.ShouldBindJSON(&cFrm); err != nil {
-		m := msg.SerializeFailed.SetError(err)
-		log.WarnWithFields(m.LogFields())
-		m.WriteRest(c)
+	if err := c.ShouldBindJSON(&frm); err != nil {
+		m := cMsg.MsgSerializeFailed.SetError(err)
+		h.logger.WarnWithFields(m.ToLoggerFields(), m.GetMsg())
+		m.Write2GinCtx(c)
 		return
 	}
+
+	ctx := tracer.ExtractTraceCtxFromGin(c)
+
 	// 验证数据
-	if m := cFrm.Validate(); m != nil {
+	if m := frm.Validate(ctx, h.dao); m != nil {
 		// 数据验证未通过
-		log.WarnWithFields(m.LogFields())
-		m.WriteRest(c)
+		h.logger.WarnWithFields(m.ToLoggerFields(), m.GetMsg())
+		m.Write2GinCtx(c)
 		return
 	}
 
 	// 新建
-	tc := c.GetStringMap("TokenContent")
-	cat := dao.NewCategory(cFrm.Name, tc["Username"].(string))
+	cat, err := h.dao.NewCategory(ctx, frm.Name, perm.MustGetTokenContent(c).Username)
 	// 新建失败
-	if cat == nil {
-		m := msg.UndefinedError
-		log.WarnWithFields(m.LogFields())
-		m.WriteRest(c)
+	if err != nil {
+		m := msg.MsgFlowDaoErr.SetError(err)
+		h.logger.ErrorWithFields(m.ToLoggerFields(), m.GetMsg())
+		m.Write2GinCtx(c)
 		return
 	}
 
-	w.WriteSuccessPayload(c, "category", cat)
+	ext.WriteSuccessPayload(c, "category", cat)
 }
 
 // RemoveCategory 删除类别
-func RemoveCategory(c *gin.Context) {
-	cId, err := strconv.Atoi(c.Param("category_id"))
+func (h *FlowHandler) RemoveCategory(c *gin.Context) {
+	catId, err := ext.ParamUint32(c, "category_id")
 	if err != nil {
-		m := msg.InvalidUriFailed.SetError(err, "category_id")
-		log.WarnWithFields(m.LogFields())
-		m.WriteRest(c)
+		m := cMsg.MsgInvalidUriFailed.SetError(err, "category_id")
+		h.logger.WarnWithFields(m.ToLoggerFields(), m.GetMsg())
+		m.Write2GinCtx(c)
 		return
 	}
 
-	var rcFrm dto.RemoveCategory
+	ctx := tracer.ExtractTraceCtxFromGin(c)
+
+	frm := form.RemoveCategoryForm{}
 	// 验证数据
-	if m := rcFrm.Validate(cId); m != nil {
+	if m := frm.Validate(ctx, h.dao, catId); m != nil {
 		// 数据验证未通过
-		log.WarnWithFields(m.LogFields())
-		m.WriteRest(c)
+		h.logger.WarnWithFields(m.ToLoggerFields(), m.GetMsg())
+		m.Write2GinCtx(c)
 		return
 	}
 
-	if !dao.RemoveCategory(cId) {
-		m := msg.UndefinedError
-		log.WarnWithFields(m.LogFields())
-		m.WriteRest(c)
+	if err = h.dao.RemoveCategory(ctx, catId); err != nil {
+		m := msg.MsgFlowDaoErr.SetError(err)
+		h.logger.ErrorWithFields(m.ToLoggerFields(), m.GetMsg())
+		m.Write2GinCtx(c)
 		return
 	}
 
-	w.WriteSuccess(c)
+	ext.WriteSuccess(c)
 }
 
 // SetCategory 更新类别
-func SetCategory(c *gin.Context) {
-	cId, err := strconv.Atoi(c.Param("category_id"))
+func (h *FlowHandler) SetCategory(c *gin.Context) {
+	catId, err := ext.ParamUint32(c, "category_id")
 	if err != nil {
-		m := msg.InvalidUriFailed.SetError(err, "category_id")
-		log.WarnWithFields(m.LogFields())
-		m.WriteRest(c)
+		m := cMsg.MsgInvalidUriFailed.SetError(err, "category_id")
+		h.logger.WarnWithFields(m.ToLoggerFields(), m.GetMsg())
+		m.Write2GinCtx(c)
 		return
 	}
 
-	var cFrm dto.SetCategory
+	frm := form.SetCategoryForm{}
 	// 序列化request body
-	if err = c.ShouldBindJSON(&cFrm); err != nil {
-		m := msg.SerializeFailed.SetError(err)
-		log.WarnWithFields(m.LogFields())
-		m.WriteRest(c)
+	if err = c.ShouldBindJSON(&frm); err != nil {
+		m := cMsg.MsgSerializeFailed.SetError(err)
+		h.logger.WarnWithFields(m.ToLoggerFields(), m.GetMsg())
+		m.Write2GinCtx(c)
 		return
 	}
+
+	ctx := tracer.ExtractTraceCtxFromGin(c)
+
 	// 验证数据
-	if m := cFrm.Validate(cId); m != nil {
+	if m := frm.Validate(ctx, h.dao, catId); m != nil {
 		// 数据验证未通过
-		log.WarnWithFields(m.LogFields())
-		m.WriteRest(c)
+		h.logger.WarnWithFields(m.ToLoggerFields(), m.GetMsg())
+		m.Write2GinCtx(c)
 		return
 	}
 
-	tc := c.GetStringMap("TokenContent")
-	cat, ok := dao.SetCategory(cId, cFrm.Name, tc["Username"].(string))
-	if !ok {
-		m := msg.UndefinedError
-		log.WarnWithFields(m.LogFields())
-		m.WriteRest(c)
+	cat, err := h.dao.SetCategory(ctx, catId, frm.Name, perm.MustGetTokenContent(c).Username)
+	if err != nil {
+		m := msg.MsgFlowDaoErr.SetError(err)
+		h.logger.ErrorWithFields(m.ToLoggerFields(), m.GetMsg())
+		m.Write2GinCtx(c)
 		return
 	}
 
-	w.WriteSuccessPayload(c, "category", cat)
+	ext.WriteSuccessPayload(c, "category", cat)
 }
 
 // ListCategories 列出所有类别
-func ListCategories(c *gin.Context) {
-	query := dao.Query{}
-	// 设置查询filter
-	lcq := dto.ListCategoriesQuery{}
-	if c.ShouldBindQuery(&lcq) == nil {
-		_ = lcq.UpdateQuery(query)
-	}
-
-	cs, ok := dao.ListCategories(query)
-	if !ok {
-		m := msg.UndefinedError
-		log.WarnWithFields(m.LogFields())
-		m.WriteRest(c)
+func (h *FlowHandler) ListCategories(c *gin.Context) {
+	pFrm := form.ListCategoriesParamsForm{}
+	if err := c.ShouldBindQuery(&pFrm); err != nil {
+		m := cMsg.MsgSerializeFailed.SetError(err)
+		h.logger.WarnWithFields(m.ToLoggerFields(), m.GetMsg())
+		m.Write2GinCtx(c)
 		return
 	}
 
-	w.WriteSuccessPayload(c, "categories", cs)
+	cats, err := h.dao.ListCategories(tracer.ExtractTraceCtxFromGin(c), pFrm.GenQuery())
+	if err != nil {
+		m := msg.MsgFlowDaoErr.SetError(err)
+		h.logger.ErrorWithFields(m.ToLoggerFields(), m.GetMsg())
+		m.Write2GinCtx(c)
+		return
+	}
+
+	ext.WriteSuccessPayload(c, "categories", cats)
 }
 
 // ListCategoryFlows 列出指定类别中所关联流程
-func ListCategoryFlows(c *gin.Context) {
-	cId, err := strconv.Atoi(c.Param("category_id"))
+func (h *FlowHandler) ListCategoryFlows(c *gin.Context) {
+	catId, err := ext.ParamUint32(c, "category_id")
 	if err != nil {
-		m := msg.InvalidUriFailed.SetError(err, "category_id")
-		log.WarnWithFields(m.LogFields())
-		m.WriteRest(c)
+		m := cMsg.MsgInvalidUriFailed.SetError(err, "category_id")
+		h.logger.WarnWithFields(m.ToLoggerFields(), m.GetMsg())
+		m.Write2GinCtx(c)
 		return
 	}
 
-	lcfFrm := dto.ListCategoriesRelations{}
+	ctx := tracer.ExtractTraceCtxFromGin(c)
+
+	frm := form.ListCategoriesRelations{}
 	// 设置查询filter
-	if m := lcfFrm.Validate(cId); m != nil {
+	if m := frm.Validate(ctx, h.dao, catId); m != nil {
 		// 数据验证未通过
-		log.WarnWithFields(m.LogFields())
-		m.WriteRest(c)
-		return
-	}
-	// 设置查询filter
-	query := dao.Query{"categories_id=?": cId}
-	if c.ShouldBindQuery(&lcfFrm) == nil {
-		_ = lcfFrm.UpdateQuery(query)
-	}
-
-	fl, ok := dao.ListFlows(query)
-	if !ok {
-		m := msg.UndefinedError
-		log.WarnWithFields(m.LogFields())
-		m.WriteRest(c)
+		h.logger.WarnWithFields(m.ToLoggerFields(), m.GetMsg())
+		m.Write2GinCtx(c)
 		return
 	}
 
-	w.WriteSuccessPayload(c, "flows", fl)
+	if err = c.ShouldBindQuery(&frm); err != nil {
+		m := cMsg.MsgSerializeFailed.SetError(err)
+		h.logger.WarnWithFields(m.ToLoggerFields(), m.GetMsg())
+		m.Write2GinCtx(c)
+		return
+	}
+
+	query := frm.GenQuery()
+	query["categories_id=?"] = catId
+
+	flows, err := h.dao.ListFlows(ctx, query)
+	if err != nil {
+		m := msg.MsgFlowDaoErr.SetError(err)
+		h.logger.ErrorWithFields(m.ToLoggerFields(), m.GetMsg())
+		m.Write2GinCtx(c)
+		return
+	}
+
+	ext.WriteSuccessPayload(c, "flows", flows)
 }

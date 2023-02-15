@@ -1,17 +1,16 @@
 package dao
 
 import (
-	"eago/common/api-suite/pagination"
-	"eago/common/log"
+	"context"
+	"eago/common/orm"
 	"eago/flow/model"
-	"errors"
-	"fmt"
-	"gorm.io/gorm"
 )
 
 // NewForm 创建表单
-func NewForm(name string, disabled bool, description, body, createdBy string) *model.Form {
-	f := model.Form{
+func (d *Dao) NewForm(
+	ctx context.Context, name string, disabled bool, description, body, createdBy string,
+) (*model.Form, error) {
+	f := &model.Form{
 		Name:        name,
 		Disabled:    &disabled,
 		Description: &description,
@@ -19,39 +18,21 @@ func NewForm(name string, disabled bool, description, body, createdBy string) *m
 		CreatedBy:   createdBy,
 	}
 
-	if res := db.Create(&f); res.Error != nil {
-		log.ErrorWithFields(log.Fields{
-			"name":        name,
-			"disabled":    disabled,
-			"description": description,
-			"body_length": len(body),
-			"error":       res.Error,
-		}, "An error occurred while db.Create.")
-		return nil
-	}
-
-	return &f
+	res := d.getDbWithCtx(ctx).Create(&f)
+	return f, res.Error
 }
 
 // RemoveForm 删除表单
-func RemoveForm(frmId int) bool {
-	res := db.Delete(model.Form{}, "id=?", frmId)
-	if res.Error != nil {
-		log.ErrorWithFields(log.Fields{
-			"id":    frmId,
-			"error": res.Error,
-		}, "An error occurred while db.Delete.")
-		return false
-	}
-
-	return true
+func (d *Dao) RemoveForm(ctx context.Context, frmId uint32) error {
+	res := d.getDbWithCtx(ctx).Delete(model.Form{}, "id=?", frmId)
+	return res.Error
 }
 
 // SetForm 更新表单
-func SetForm(id int, name string, disabled bool, description, updatedBy string) (*model.Form, bool) {
-	var f model.Form
-
-	res := db.Model(&model.Form{}).
+func (d *Dao) SetForm(
+	ctx context.Context, id uint32, name string, disabled bool, description, updatedBy string,
+) (f *model.Form, err error) {
+	res := d.getDbWithCtx(ctx).Model(&model.Form{}).
 		Where("id=?", id).
 		Updates(map[string]interface{}{
 			"name":        name,
@@ -59,117 +40,39 @@ func SetForm(id int, name string, disabled bool, description, updatedBy string) 
 			"description": description,
 			"updated_by":  updatedBy,
 		}).
-		First(&f)
-	if res.Error != nil {
-		log.ErrorWithFields(log.Fields{
-			"id":          id,
-			"name":        name,
-			"disabled":    disabled,
-			"description": description,
-			"updated_by":  updatedBy,
-			"error":       res.Error,
-		}, "An error occurred while db.Model.Where.Updates.First.")
-		return nil, false
-	}
-
-	return &f, true
+		Limit(1).Find(&f)
+	return f, res.Error
 }
 
 // GetForm 查询单个表单
-func GetForm(query Query) (*model.Form, bool) {
-	var (
-		d = db
-		f = model.Form{}
-	)
-
-	for k, v := range query {
-		d = d.Where(k, v)
-	}
-	if res := d.First(&f); res.Error != nil {
-		if errors.Is(res.Error, gorm.ErrRecordNotFound) {
-			log.WarnWithFields(log.Fields{
-				"query": fmt.Sprintf("%v", query),
-				"error": res.Error,
-			}, "Record not found in db.Where.First.")
-			return nil, true
-		}
-		log.ErrorWithFields(log.Fields{
-			"query": fmt.Sprintf("%v", query),
-			"error": res.Error,
-		}, "An error occurred while b.Where.First.")
-		return nil, false
-	}
-
-	return &f, true
+func (d *Dao) GetForm(ctx context.Context, q orm.Query) (f *model.Form, err error) {
+	res := q.Where(d.getDbWithCtx(ctx)).Limit(1).Find(&f)
+	return f, res.Error
 }
 
 // GetFormCount 查询表单数量
-func GetFormCount(query Query) (count int64, ok bool) {
-	d := db.Model(&model.Form{})
+func (d *Dao) GetFormCount(ctx context.Context, q orm.Query) (count int64, err error) {
+	res := q.Where(d.getDbWithCtx(ctx).Model(&model.Form{})).Count(&count)
+	return count, res.Error
+}
 
-	for k, v := range query {
-		d = d.Where(k, v)
-	}
-	if res := d.Count(&count); res.Error != nil {
-		if errors.Is(res.Error, gorm.ErrRecordNotFound) {
-			return count, true
-		}
-		log.ErrorWithFields(log.Fields{
-			"query": fmt.Sprintf("%v", query),
-			"error": res.Error,
-		}, "An error occurred while db.Where.Count.")
-		return count, false
-	}
-	return count, true
+// IsFormExist 查询表单是否存在
+func (d *Dao) IsFormExist(ctx context.Context, q orm.Query) (bool, error) {
+	count, err := d.GetFormCount(ctx, q)
+	return count > 0, err
 }
 
 // ListForms 查询表单
-func ListForms(query Query) ([]model.Form, bool) {
-	var d = db
-	fs := make([]model.Form, 0)
-
-	for k, v := range query {
-		d = d.Where(k, v)
-	}
-	if res := d.Find(&fs); res.Error != nil {
-		if errors.Is(res.Error, gorm.ErrRecordNotFound) {
-			log.WarnWithFields(log.Fields{
-				"query": fmt.Sprintf("%v", query),
-				"error": res.Error,
-			}, "Record not found in db.Where.Find.")
-			return fs, true
-		}
-		log.ErrorWithFields(log.Fields{
-			"query": fmt.Sprintf("%v", query),
-			"error": res.Error,
-		}, "An error occurred while db.Where.Find.")
-		return nil, false
-	}
-
-	return fs, true
+func (d *Dao) ListForms(ctx context.Context, q orm.Query) (fs []*model.Form, err error) {
+	res := q.Where(d.getDbWithCtx(ctx)).Find(&fs)
+	return fs, res.Error
 }
 
 // PagedListForms 查询表单-分页
-func PagedListForms(query Query, page, pageSize int, orderBy ...string) (*pagination.Paginator, bool) {
-	var d = db.Model(&model.Form{})
-	fs := make([]model.FormWithoutBody, pageSize)
-
-	for k, v := range query {
-		d = d.Where(k, v)
-	}
-	pg, err := pagination.GormPaging(&pagination.GormParams{
-		Db:       d,
-		Page:     page,
-		PageSize: pageSize,
-		OrderBy:  orderBy,
-	}, &fs)
-	if err != nil {
-		log.ErrorWithFields(log.Fields{
-			"query": fmt.Sprintf("%v", query),
-			"error": err,
-		}, "An error occurred while pagination.GormPaging.")
-		return nil, false
-	}
-
-	return pg, true
+func (d *Dao) PagedListForms(
+	ctx context.Context, q orm.Query, page, pageSize int, orderBy ...string,
+) (*orm.Paginator, error) {
+	fs := make([]*model.Form, pageSize)
+	db := q.Where(d.getDbWithCtx(ctx).Model(&model.Form{}))
+	return orm.PagingQuery(db, page, pageSize, &fs, orderBy...)
 }

@@ -4,21 +4,27 @@ import (
 	"eago/common/utils"
 )
 
+// Role 角色-数据库模型
 type Role struct {
-	Id          int     `json:"id"`
+	Id uint32 `json:"id"`
+
 	Name        string  `json:"name"`
 	Description *string `json:"description"`
 }
 
-type RoleUser struct {
-	Id       int              `json:"id"`
-	Username string           `json:"username"`
-	JoinedAt *utils.LocalTime `json:"joined_at"`
+// UserRole 用户角色关联-数据库模型
+type UserRole struct {
+	Id uint32 `json:"id"`
+
+	UserId   uint32            `json:"user_id"`
+	RoleId   uint32            `json:"role_id"`
+	JoinedAt *utils.CustomTime `json:"joined_at" gorm:"type:datetime;not null;autoCreateTime"`
 }
 
-type UserRole struct {
-	Id       int              `json:"id"`
-	UserId   int              `json:"user_id"`
-	RoleId   int              `json:"role_id"`
-	JoinedAt *utils.LocalTime `json:"joined_at" gorm:"type:datetime;not null;autoCreateTime"`
+// RolesUser 用户所属角色的信息
+type RolesUser struct {
+	Id uint32 `json:"id"`
+
+	Username string            `json:"username"`
+	JoinedAt *utils.CustomTime `json:"joined_at"`
 }

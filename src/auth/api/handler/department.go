@@ -1,358 +1,386 @@
 package handler
 
 import (
+	"eago/auth/api/form"
 	"eago/auth/conf/msg"
-	"eago/auth/dao"
 	"eago/auth/dto"
-	w "eago/common/api-suite/writter"
-	"eago/common/log"
+	"eago/common/api/ext"
+	cMsg "eago/common/code_msg"
+	"eago/common/global"
+	"eago/common/logger"
+	"eago/common/orm"
+	"eago/common/tracer"
 	"github.com/gin-gonic/gin"
-	"strconv"
 )
 
 // NewDepartment 新建部门
-func NewDepartment(c *gin.Context) {
-	var deptFrm dto.NewDepartment
+func (ah *AuthHandler) NewDepartment(c *gin.Context) {
+	frm := form.NewDepartmentForm{}
 	// 序列化request body
-	if err := c.ShouldBindJSON(&deptFrm); err != nil {
-		m := msg.SerializeFailed.SetError(err)
-		log.WarnWithFields(m.LogFields())
-		m.WriteRest(c)
+	if err := c.ShouldBindJSON(&frm); err != nil {
+		m := cMsg.MsgSerializeFailed.SetError(err)
+		ah.logger.WarnWithFields(m.ToLoggerFields(), m.GetMsg())
+		m.Write2GinCtx(c)
 		return
 	}
+
+	ctx := tracer.ExtractTraceCtxFromGin(c)
+
 	// 验证数据
-	if m := deptFrm.Validate(); m != nil {
+	if m := frm.Validate(ctx, ah.dao); m != nil {
 		// 数据验证未通过
-		log.WarnWithFields(m.LogFields())
-		m.WriteRest(c)
+		ah.logger.WarnWithFields(m.ToLoggerFields(), m.GetMsg())
+		m.Write2GinCtx(c)
 		return
 	}
 
 	// 新建
-	dept, err := dao.NewDepartment(deptFrm.Name, deptFrm.ParentId)
-	// 新建失败
+	dept, err := ah.dao.NewDepartment(ctx, frm.Name, frm.ParentId)
 	if dept == nil {
-		m := msg.UndefinedError.SetError(err)
-		log.WarnWithFields(m.LogFields())
-		m.WriteRest(c)
+		m := msg.MsgAuthDaoErr.SetError(err)
+		ah.logger.ErrorWithFields(m.ToLoggerFields(), m.GetMsg())
+		m.Write2GinCtx(c)
 		return
 	}
 
-	w.WriteSuccessPayload(c, "department", dept)
+	ext.WriteSuccessPayload(c, "department", dept)
 }
 
 // RemoveDepartment 删除部门
-func RemoveDepartment(c *gin.Context) {
-	deptId, err := strconv.Atoi(c.Param("department_id"))
+func (ah *AuthHandler) RemoveDepartment(c *gin.Context) {
+	deptId, err := ext.ParamUint32(c, "department_id")
 	if err != nil {
-		m := msg.InvalidUriFailed.SetError(err, "department_id")
-		log.WarnWithFields(m.LogFields())
-		m.WriteRest(c)
+		m := cMsg.MsgInvalidUriFailed.SetError(err, "department_id")
+		ah.logger.WarnWithFields(m.ToLoggerFields(), m.GetMsg())
+		m.Write2GinCtx(c)
 		return
 	}
 
-	var rdFrm dto.RemoveDepartment
+	ctx := tracer.ExtractTraceCtxFromGin(c)
+
+	frm := form.RemoveDepartmentForm{}
 	// 验证数据
-	if m := rdFrm.Validate(deptId); m != nil {
+	if m := frm.Validate(ctx, ah.dao, deptId); m != nil {
 		// 数据验证未通过
-		log.WarnWithFields(m.LogFields())
-		m.WriteRest(c)
+		ah.logger.WarnWithFields(m.ToLoggerFields(), m.GetMsg())
+		m.Write2GinCtx(c)
 		return
 	}
 
-	if !dao.RemoveDepartment(deptId) {
-		m := msg.UndefinedError
-		log.WarnWithFields(m.LogFields())
-		m.WriteRest(c)
+	if err = ah.dao.RemoveDepartment(ctx, deptId); err != nil {
+		m := msg.MsgAuthDaoErr.SetError(err)
+		ah.logger.ErrorWithFields(m.ToLoggerFields(), m.GetMsg())
+		m.Write2GinCtx(c)
 		return
 	}
 
-	w.WriteSuccess(c)
+	ext.WriteSuccess(c)
 }
 
 // SetDepartment 更新部门
-func SetDepartment(c *gin.Context) {
-	deptId, err := strconv.Atoi(c.Param("department_id"))
+func (ah *AuthHandler) SetDepartment(c *gin.Context) {
+	deptId, err := ext.ParamUint32(c, "department_id")
 	if err != nil {
-		m := msg.InvalidUriFailed.SetError(err, "department_id")
-		log.WarnWithFields(m.LogFields())
-		m.WriteRest(c)
+		m := cMsg.MsgInvalidUriFailed.SetError(err, "department_id")
+		ah.logger.WarnWithFields(m.ToLoggerFields(), m.GetMsg())
+		m.Write2GinCtx(c)
 		return
 	}
 
-	var deptFrm dto.SetDepartment
+	frm := form.SetDepartmentForm{}
 	// 序列化request body
-	if err = c.ShouldBindJSON(&deptFrm); err != nil {
-		m := msg.SerializeFailed.SetError(err)
-		log.WarnWithFields(m.LogFields())
-		m.WriteRest(c)
+	if err = c.ShouldBindJSON(&frm); err != nil {
+		m := cMsg.MsgSerializeFailed.SetError(err)
+		ah.logger.WarnWithFields(m.ToLoggerFields(), m.GetMsg())
+		m.Write2GinCtx(c)
 		return
 	}
+
+	ctx := tracer.ExtractTraceCtxFromGin(c)
+
 	// 验证数据
-	if m := deptFrm.Validate(deptId); m != nil {
+	if m := frm.Validate(ctx, ah.dao, deptId); m != nil {
 		// 数据验证未通过
-		log.WarnWithFields(m.LogFields())
-		m.WriteRest(c)
+		ah.logger.WarnWithFields(m.ToLoggerFields(), m.GetMsg())
+		m.Write2GinCtx(c)
 		return
 	}
 
-	dept, err := dao.SetDepartment(deptId, deptFrm.Name, deptFrm.ParentId)
+	dept, err := ah.dao.SetDepartment(ctx, deptId, frm.Name, frm.ParentId)
 	if err != nil {
-		m := msg.UndefinedError.SetError(err)
-		log.WarnWithFields(m.LogFields())
-		m.WriteRest(c)
+		m := msg.MsgAuthDaoErr.SetError(err)
+		ah.logger.ErrorWithFields(m.ToLoggerFields(), m.GetMsg())
+		m.Write2GinCtx(c)
 		return
 	}
 
-	w.WriteSuccessPayload(c, "department", dept)
+	ext.WriteSuccessPayload(c, "department", dept)
 }
 
 // PagedListDepartments 列出所有部门-分页
-func PagedListDepartments(c *gin.Context) {
-	query := dao.Query{}
+func (ah *AuthHandler) PagedListDepartments(c *gin.Context) {
 	// 设置查询filter
-	ldq := dto.PagedListDepartmentsQuery{}
-	if c.ShouldBindQuery(&ldq) == nil {
-		_ = ldq.UpdateQuery(query)
+	pFrm := form.PagedListDepartmentsParamsForm{}
+	if err := c.ShouldBindQuery(&pFrm); err != nil {
+		ah.logger.WarnWithFields(logger.Fields{
+			"params": c.Params,
+			"error":  err,
+		}, "An error occurred while c.ShouldBindQuery in AuthHandler.PagedListDepartments, skipped it.")
 	}
 
-	paged, ok := dao.PagedListDepartments(
-		query,
-		c.GetInt("Page"),
-		c.GetInt("PageSize"),
-		c.GetStringSlice("OrderBy")...,
+	paged, err := ah.dao.PagedListDepartments(
+		tracer.ExtractTraceCtxFromGin(c),
+		pFrm.GenQuery(),
+		c.GetInt(global.GinCtxPageKey),
+		c.GetInt(global.GinCtxPageSizeKey),
+		c.GetStringSlice(global.GinCtxOrderByKey)...,
 	)
-	if !ok {
-		m := msg.UndefinedError
-		log.WarnWithFields(m.LogFields())
-		m.WriteRest(c)
+	if err != nil {
+		m := msg.MsgAuthDaoErr.SetError(err)
+		ah.logger.ErrorWithFields(m.ToLoggerFields(), m.GetMsg())
+		m.Write2GinCtx(c)
 		return
 	}
 
-	w.WriteSuccessPayload(c, "departments", paged)
+	ext.WriteSuccessPayload(c, "departments", paged)
 }
 
-// ListDepartmentsTree 以树结构列出所有部门
-func ListDepartmentsTree(c *gin.Context) {
+// ListDepartmentFullTree 以树结构列出所有部门
+func (ah *AuthHandler) ListDepartmentFullTree(c *gin.Context) {
+	ctx := tracer.ExtractTraceCtxFromGin(c)
+
 	// 查找根部门
-	dept, ok := dao.GetDepartment(dao.Query{"parent_id": nil})
-	if !ok {
-		m := msg.UndefinedError
-		log.WarnWithFields(m.LogFields())
-		m.WriteRest(c)
+	dept, err := ah.dao.GetDepartment(ctx, orm.Query{"parent_id": nil})
+	if err != nil {
+		m := msg.MsgAuthDaoErr.SetError(err)
+		ah.logger.ErrorWithFields(m.ToLoggerFields(), m.GetMsg())
+		m.Write2GinCtx(c)
 		return
 	}
 	// 找不到根部门则直接返回空
 	if dept == nil {
-		w.WriteSuccessPayload(c, "tree", make(map[string]interface{}))
+		ext.WriteSuccessPayload(c, "tree", make(map[string]interface{}))
 		return
 	}
 
 	// 列出所有部门
-	deptList, ok := dao.ListDepartments(dao.Query{})
-	if !ok {
-		m := msg.UndefinedError
-		log.WarnWithFields(m.LogFields())
-		m.WriteRest(c)
+	deptList, err := ah.dao.ListDepartments(ctx, orm.Query{})
+	if err != nil {
+		m := msg.MsgAuthDaoErr.SetError(err)
+		ah.logger.ErrorWithFields(m.ToLoggerFields(), m.GetMsg())
+		m.Write2GinCtx(c)
 		return
 	}
 
 	// 将根部门转化为树结构
-	root := dao.Department2Tree(dept)
-	dao.ListDepartment2Tree(root, deptList)
+	root := dto.TransDepartment2Tree(dept)
+	ah.dao.ListDepartmentTree(root, deptList)
 
-	w.WriteSuccessPayload(c, "tree", root)
+	ext.WriteSuccessPayload(c, "tree", root)
 }
 
 // ListDepartmentTree 列出指定部门子树
-func ListDepartmentTree(c *gin.Context) {
-	deptId, err := strconv.Atoi(c.Param("department_id"))
+func (ah *AuthHandler) ListDepartmentTree(c *gin.Context) {
+	deptId, err := ext.ParamUint32(c, "department_id")
 	if err != nil {
-		m := msg.InvalidUriFailed.SetError(err, "department_id")
-		log.WarnWithFields(m.LogFields())
-		m.WriteRest(c)
+		m := cMsg.MsgInvalidUriFailed.SetError(err, "department_id")
+		ah.logger.WarnWithFields(m.ToLoggerFields(), m.GetMsg())
+		m.Write2GinCtx(c)
 		return
 	}
 
-	// 查找根部门
-	dept, ok := dao.GetDepartment(dao.Query{"id=?": deptId})
-	if !ok {
-		m := msg.UndefinedError
-		log.WarnWithFields(m.LogFields())
-		m.WriteRest(c)
+	ctx := tracer.ExtractTraceCtxFromGin(c)
+
+	// 查找指定部门
+	dept, err := ah.dao.GetDepartment(ctx, orm.Query{"id=?": deptId})
+	if err != nil {
+		m := msg.MsgAuthDaoErr.SetError(err)
+		ah.logger.ErrorWithFields(m.ToLoggerFields(), m.GetMsg())
+		m.Write2GinCtx(c)
 		return
 	}
 	// 找不到根部门则直接返回空
 	if dept == nil {
-		w.WriteSuccessPayload(c, "tree", make(map[string]interface{}))
+		ext.WriteSuccessPayload(c, "tree", make(map[string]interface{}))
 		return
 	}
 
 	// 列出所有部门
-	deptList, ok := dao.ListDepartments(dao.Query{})
-	if !ok {
-		m := msg.UndefinedError
-		log.WarnWithFields(m.LogFields())
-		m.WriteRest(c)
+	deptList, err := ah.dao.ListDepartments(ctx, orm.Query{})
+	if err != nil {
+		m := msg.MsgAuthDaoErr.SetError(err)
+		ah.logger.ErrorWithFields(m.ToLoggerFields(), m.GetMsg())
+		m.Write2GinCtx(c)
 		return
 	}
 
 	// 将根部门转化为树结构
-	root := dao.Department2Tree(dept)
-	dao.ListDepartment2Tree(root, deptList)
+	root := dto.TransDepartment2Tree(dept)
+	ah.dao.ListDepartmentTree(root, deptList)
 
-	w.WriteSuccessPayload(c, "tree", root)
+	ext.WriteSuccessPayload(c, "tree", root)
 }
 
 // AddUser2Department 添加用户至部门
-func AddUser2Department(c *gin.Context) {
-	deptId, err := strconv.Atoi(c.Param("department_id"))
+func (ah *AuthHandler) AddUser2Department(c *gin.Context) {
+	deptId, err := ext.ParamUint32(c, "department_id")
 	if err != nil {
-		m := msg.InvalidUriFailed.SetError(err, "department_id")
-		log.WarnWithFields(m.LogFields())
-		m.WriteRest(c)
+		m := cMsg.MsgInvalidUriFailed.SetError(err, "department_id")
+		ah.logger.WarnWithFields(m.ToLoggerFields(), m.GetMsg())
+		m.Write2GinCtx(c)
 		return
 	}
 
-	var audFrm dto.AddUser2Department
+	frm := form.AddUser2DepartmentForm{}
 	// 序列化request body
-	if err = c.ShouldBindJSON(&audFrm); err != nil {
-		m := msg.SerializeFailed
-		log.WarnWithFields(m.LogFields())
-		m.WriteRest(c)
+	if err = c.ShouldBindJSON(&frm); err != nil {
+		m := cMsg.MsgSerializeFailed.SetError(err)
+		ah.logger.WarnWithFields(m.ToLoggerFields(), m.GetMsg())
+		m.Write2GinCtx(c)
 		return
 	}
+
+	ctx := tracer.ExtractTraceCtxFromGin(c)
 
 	// 验证数据
-	if m := audFrm.Validate(deptId); m != nil {
+	if m := frm.Validate(ctx, ah.dao, deptId); m != nil {
 		// 数据验证未通过
-		log.WarnWithFields(m.LogFields())
-		m.WriteRest(c)
+		ah.logger.WarnWithFields(m.ToLoggerFields(), m.GetMsg())
+		m.Write2GinCtx(c)
 		return
 	}
 
-	if !dao.AddDepartmentUser(audFrm.UserId, deptId, audFrm.IsOwner) {
-		m := msg.UndefinedError
-		log.WarnWithFields(m.LogFields())
-		m.WriteRest(c)
+	if err = ah.dao.AddUser2Department(ctx, frm.UserId, deptId, frm.IsOwner); err != nil {
+		m := msg.MsgAuthDaoErr.SetError(err)
+		ah.logger.ErrorWithFields(m.ToLoggerFields(), m.GetMsg())
+		m.Write2GinCtx(c)
 		return
 	}
 
-	w.WriteSuccess(c)
+	ext.WriteSuccess(c)
 }
 
-// RemoveDepartmentUser 移除部门中用户
-func RemoveDepartmentUser(c *gin.Context) {
-	deptId, err := strconv.Atoi(c.Param("department_id"))
+// RemoveDepartmentsUser 移除部门中用户
+func (ah *AuthHandler) RemoveDepartmentsUser(c *gin.Context) {
+	deptId, err := ext.ParamUint32(c, "department_id")
 	if err != nil {
-		m := msg.InvalidUriFailed.SetError(err, "department_id")
-		log.WarnWithFields(m.LogFields())
-		m.WriteRest(c)
+		m := cMsg.MsgInvalidUriFailed.SetError(err, "department_id")
+		ah.logger.WarnWithFields(m.ToLoggerFields(), m.GetMsg())
+		m.Write2GinCtx(c)
 		return
 	}
 
-	userId, err := strconv.Atoi(c.Param("user_id"))
+	userId, err := ext.ParamUint32(c, "user_id")
 	if err != nil {
-		m := msg.InvalidUriFailed.SetError(err, "user_id")
-		log.WarnWithFields(m.LogFields())
-		m.WriteRest(c)
+		m := cMsg.MsgInvalidUriFailed.SetError(err, "user_id")
+		ah.logger.WarnWithFields(m.ToLoggerFields(), m.GetMsg())
+		m.Write2GinCtx(c)
 		return
 	}
 
-	var rduFrm dto.RemoveDepartmentUser
+	ctx := tracer.ExtractTraceCtxFromGin(c)
+
+	frm := form.RemoveDepartmentsUserForm{}
 	// 验证数据
-	if m := rduFrm.Validate(deptId, userId); m != nil {
+	if m := frm.Validate(ctx, ah.dao, deptId, userId); m != nil {
 		// 数据验证未通过
-		log.WarnWithFields(m.LogFields())
-		m.WriteRest(c)
+		ah.logger.WarnWithFields(m.ToLoggerFields(), m.GetMsg())
+		m.Write2GinCtx(c)
 		return
 	}
 
-	if !dao.RemoveDepartmentUser(userId, deptId) {
-		m := msg.UndefinedError
-		log.WarnWithFields(m.LogFields())
-		m.WriteRest(c)
+	if err = ah.dao.RemoveDepartmentsUser(ctx, userId, deptId); err != nil {
+		m := msg.MsgAuthDaoErr.SetError(err)
+		ah.logger.ErrorWithFields(m.ToLoggerFields(), m.GetMsg())
+		m.Write2GinCtx(c)
 		return
 	}
 
-	w.WriteSuccess(c)
+	ext.WriteSuccess(c)
 }
 
-// SetUserIsDepartmentOwner 设置用户是否是部门Owner
-func SetUserIsDepartmentOwner(c *gin.Context) {
-	deptId, err := strconv.Atoi(c.Param("department_id"))
+// SetDepartmentsOwner 设置用户是否是部门Owner
+func (ah *AuthHandler) SetDepartmentsOwner(c *gin.Context) {
+	deptId, err := ext.ParamUint32(c, "department_id")
 	if err != nil {
-		m := msg.InvalidUriFailed.SetError(err, "department_id")
-		log.WarnWithFields(m.LogFields())
-		m.WriteRest(c)
+		m := cMsg.MsgInvalidUriFailed.SetError(err, "department_id")
+		ah.logger.WarnWithFields(m.ToLoggerFields(), m.GetMsg())
+		m.Write2GinCtx(c)
 		return
 	}
 
-	userId, err := strconv.Atoi(c.Param("user_id"))
+	userId, err := ext.ParamUint32(c, "user_id")
 	if err != nil {
-		m := msg.InvalidUriFailed.SetError(err, "user_id")
-		log.WarnWithFields(m.LogFields())
-		m.WriteRest(c)
+		m := cMsg.MsgInvalidUriFailed.SetError(err, "user_id")
+		ah.logger.WarnWithFields(m.ToLoggerFields(), m.GetMsg())
+		m.Write2GinCtx(c)
 		return
 	}
 
-	var suoFrm dto.SetUserIsDepartmentOwner
+	frm := form.SetDepartmentsOwnerForm{}
 	// 序列化request body
-	if err = c.ShouldBindJSON(&suoFrm); err != nil {
-		m := msg.SerializeFailed.SetError(err)
-		log.WarnWithFields(m.LogFields())
-		m.WriteRest(c)
+	if err = c.ShouldBindJSON(&frm); err != nil {
+		m := cMsg.MsgSerializeFailed.SetError(err)
+		ah.logger.WarnWithFields(m.ToLoggerFields(), m.GetMsg())
+		m.Write2GinCtx(c)
 		return
 	}
+
+	ctx := tracer.ExtractTraceCtxFromGin(c)
+
 	// 验证数据
-	if m := suoFrm.Validate(deptId, userId); m != nil {
+	if m := frm.Validate(ctx, ah.dao, deptId, userId); m != nil {
 		// 数据验证未通过
-		log.WarnWithFields(m.LogFields())
-		m.WriteRest(c)
+		ah.logger.WarnWithFields(m.ToLoggerFields(), m.GetMsg())
+		m.Write2GinCtx(c)
 		return
 	}
 
-	if !dao.SetDepartmentUserIsOwner(deptId, userId, suoFrm.IsOwner) {
-		m := msg.UndefinedError
-		log.WarnWithFields(m.LogFields())
-		m.WriteRest(c)
+	if err = ah.dao.SetDepartmentsOwner(ctx, deptId, userId, frm.IsOwner); err != nil {
+		m := msg.MsgAuthDaoErr.SetError(err)
+		ah.logger.ErrorWithFields(m.ToLoggerFields(), m.GetMsg())
+		m.Write2GinCtx(c)
 		return
 	}
 
-	w.WriteSuccess(c)
+	ext.WriteSuccess(c)
 }
 
-// ListDepartmentUsers 列出部门中所有用户
-func ListDepartmentUsers(c *gin.Context) {
-	deptId, err := strconv.Atoi(c.Param("department_id"))
+// ListDepartmentsUsers 列出部门中所有用户
+func (ah *AuthHandler) ListDepartmentsUsers(c *gin.Context) {
+	deptId, err := ext.ParamUint32(c, "department_id")
 	if err != nil {
-		m := msg.InvalidUriFailed.SetError(err, "department_id")
-		log.WarnWithFields(m.LogFields())
-		m.WriteRest(c)
+		m := cMsg.MsgInvalidUriFailed.SetError(err, "department_id")
+		ah.logger.WarnWithFields(m.ToLoggerFields(), m.GetMsg())
+		m.Write2GinCtx(c)
 		return
 	}
 
-	var lduFrm dto.ListDepartmentUsersQuery
+	ctx := tracer.ExtractTraceCtxFromGin(c)
+
+	pFrm := form.ListDepartmentsUsersParamsForm{}
 	// 序列化request body
-	_ = c.ShouldBindQuery(&lduFrm)
-	if m := lduFrm.Validate(deptId); m != nil {
+	if err = c.ShouldBindQuery(&pFrm); err != nil {
+		ah.logger.WarnWithFields(logger.Fields{
+			"params": c.Params,
+			"error":  err,
+		}, "An error occurred while c.ShouldBindQuery in AuthHandler.ListDepartmentsUsers, skipped it.")
+	}
+
+	if m := pFrm.Validate(ctx, ah.dao, deptId); m != nil {
 		// 数据验证未通过
-		log.WarnWithFields(m.LogFields())
-		m.WriteRest(c)
+		ah.logger.WarnWithFields(m.ToLoggerFields(), m.GetMsg())
+		m.Write2GinCtx(c)
 		return
 	}
 
-	query := dao.Query{}
-	// 设置查询filter
-	_ = lduFrm.UpdateQuery(query)
-
-	u, ok := dao.ListDepartmentUsers(deptId, query)
-	if !ok {
-		m := msg.UndefinedError
-		log.WarnWithFields(m.LogFields())
-		m.WriteRest(c)
+	u, err := ah.dao.ListDepartmentsUsers(ctx, deptId, pFrm.GenQuery())
+	if err != nil {
+		m := msg.MsgAuthDaoErr.SetError(err)
+		ah.logger.ErrorWithFields(m.ToLoggerFields(), m.GetMsg())
+		m.Write2GinCtx(c)
 		return
 	}
 
-	w.WriteSuccessPayload(c, "users", u)
+	ext.WriteSuccessPayload(c, "users", u)
 }

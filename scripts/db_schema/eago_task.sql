@@ -23,7 +23,7 @@
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `result_partitions`
 (
-    `id`        int(11) NOT NULL AUTO_INCREMENT,
+    `id`        int(11) unsigned NOT NULL AUTO_INCREMENT,
     `partition` varchar(10) NOT NULL,
     PRIMARY KEY (`id`),
     UNIQUE KEY `result_partitions_id_uindex` (`id`),
@@ -39,10 +39,10 @@ CREATE TABLE `result_partitions`
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `schedules`
 (
-    `id`            int(11) NOT NULL AUTO_INCREMENT,
+    `id`            int(11) unsigned NOT NULL AUTO_INCREMENT,
     `task_codename` varchar(100) NOT NULL,
     `expression`    varchar(50)  NOT NULL,
-    `timeout`       int(11) NOT NULL DEFAULT '0',
+    `timeout`       bigint(20) NOT NULL DEFAULT '0',
     `arguments`     json         NOT NULL,
     `disabled`      tinyint(1) NOT NULL DEFAULT '0',
     `description`   varchar(500) NOT NULL DEFAULT '',
@@ -63,7 +63,7 @@ CREATE TABLE `schedules`
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `tasks`
 (
-    `id`            int(11) NOT NULL AUTO_INCREMENT,
+    `id`            int(11) unsigned NOT NULL AUTO_INCREMENT,
     `category`      int(11) NOT NULL,
     `codename`      varchar(100) NOT NULL,
     `description`   varchar(500) NOT NULL DEFAULT '',
@@ -76,7 +76,7 @@ CREATE TABLE `tasks`
     PRIMARY KEY (`id`),
     UNIQUE KEY `tasks_id_uindex` (`id`),
     UNIQUE KEY `tasks_codename_uindex` (`codename`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 

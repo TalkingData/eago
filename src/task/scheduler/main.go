@@ -1,7 +1,9 @@
 package main
 
 import (
-	"eago/common/log"
+	"context"
+	"eago/common/logger"
+	"eago/common/service"
 	"eago/task/conf"
 	"fmt"
 	"os"
@@ -10,16 +12,28 @@ import (
 	"syscall"
 )
 
+var (
+	schSrv service.EagoSrv
+
+	schConf *conf.Conf
+	schLg   *logger.Logger
+)
+
 func main() {
-	scheduler := NewScheduler(
-		EtcdAddresses(conf.Conf.EtcdAddresses),
-		EtcdUsername(conf.Conf.EtcdUsername),
-		EtcdPassword(conf.Conf.EtcdPassword),
-		RegisterTtl(conf.Conf.SchedulerRegisterTtl),
-		TaskRpcRegisterKey(conf.RPC_REGISTER_KEY),
+	schSrv = NewScheduler(
+		context.Background(),
+		EtcdAddresses(schConf.EtcdAddresses),
+		EtcdUsername(schConf.EtcdUsername),
+		EtcdPassword(schConf.EtcdPassword),
+		RegisterTtl(schConf.SchedulerRegisterTtl),
+		TaskRpcRegisterKey(schConf.Const.RpcRegisterKey),
+		Logger(schLg),
 	)
 
-	go scheduler.Start()
+	e := make(chan error)
+	go func() {
+		e <- schSrv.Start()
+	}()
 
 	// 等待退出信号
 	quit := make(chan os.Signal)
@@ -27,27 +41,49 @@ func main() {
 
 	for {
 		select {
+		case err := <-e:
+			if err != nil {
+				schLg.ErrorWithFields(logger.Fields{
+					"error": err,
+				}, "An error occurred while Start.")
+			}
+			closeAll()
+			return
 		case sig := <-quit:
-			log.InfoWithFields(log.Fields{
+			schLg.InfoWithFields(logger.Fields{
 				"signal": sig.String(),
 			}, "Got quit signal.")
-			scheduler.Stop()
+			closeAll()
 			return
 		}
+	}
+}
+
+// closeAll
+func closeAll() {
+	if schSrv != nil {
+		schSrv.Stop()
+	}
+	if schLg != nil {
+		schLg.Close()
 	}
 }
 
 func init() {
 	runtime.GOMAXPROCS(runtime.NumCPU())
 
-	// 加载日志设置
-	err := log.InitLog(
-		conf.Conf.LogPath,
-		conf.SERVICE_NAME,
-		conf.Conf.LogLevel,
+	// 初始化配置
+	schConf = conf.NewConfig()
+
+	// 生成Logger
+	lg, err := logger.NewLogger(
+		logger.LogLevel(schConf.LogLevel),
+		logger.LogPath(schConf.LogPath),
+		logger.Filename(schConf.Const.ServiceName, "scheduler"),
 	)
 	if err != nil {
-		fmt.Println("Failed to init logging, error:", err.Error())
+		fmt.Println("An error occurred while logger.NewLogger, error:", err.Error())
 		panic(err)
 	}
+	schLg = lg
 }

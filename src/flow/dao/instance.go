@@ -1,26 +1,23 @@
 package dao
 
 import (
-	"eago/common/api-suite/pagination"
-	"eago/common/log"
-	"eago/flow/conf"
+	"context"
+	"eago/common/orm"
 	"eago/flow/model"
-	"errors"
-	"fmt"
-	"gorm.io/gorm"
 )
 
 // NewInstance 创建流程实例
-func NewInstance(formId, status int, name, formData, flowChain, createdBy string) *model.Instance {
-	log.Info("dao.NewInstance called.")
-	defer log.Info("dao.NewInstance end.")
-
+func (d *Dao) NewInstance(
+	ctx context.Context,
+	formId uint32, status int32,
+	name, formData, flowChain, createdBy string,
+) (*model.Instance, error) {
 	// 保证流程实例名称不超过表最大长度
-	if len(name) > conf.INSTANCE_NAME_MAX_LENGTH {
-		name = name[:conf.INSTANCE_NAME_MAX_LENGTH]
+	if len(name) > d.conf.Const.InstanceNameMaxLength {
+		name = name[:d.conf.Const.InstanceNameMaxLength]
 	}
 
-	i := model.Instance{
+	i := &model.Instance{
 		Name:      name,
 		Status:    status,
 		FormId:    formId,
@@ -29,165 +26,76 @@ func NewInstance(formId, status int, name, formData, flowChain, createdBy string
 		CreatedBy: createdBy,
 	}
 
-	if res := db.Create(&i); res.Error != nil {
-		log.ErrorWithFields(log.Fields{
-			"name":       name,
-			"status":     status,
-			"form_id":    formId,
-			"form_data":  formData,
-			"flow_chain": flowChain,
-			"created_by": createdBy,
-			"error":      res.Error,
-		}, "An error occurred while db.Create.")
-		return nil
-	}
-
-	return &i
+	res := d.getDbWithCtx(ctx).Create(&i)
+	return i, res.Error
 }
 
 // SetInstance 设置流程实例
-func SetInstance(id, status, step, assReq int, flowChain, currAss, passedAss, updatedBy string) bool {
-	log.Info("dao.SetInstance called.")
-	defer log.Info("dao.SetInstance end.")
-
-	res := db.Model(&model.Instance{}).
+func (d *Dao) SetInstance(
+	ctx context.Context,
+	id uint32, status, currStep, assigneesReq int32,
+	flowChain, currAssignees, passedAssignees, updatedBy string,
+) (ins *model.Instance, err error) {
+	res := d.getDbWithCtx(ctx).Model(&model.Instance{}).
 		Where("id=?", id).
 		Updates(map[string]interface{}{
 			"status":             status,
-			"current_step":       step,
+			"current_step":       currStep,
 			"flow_chain":         flowChain,
-			"assignees_required": assReq,
-			"current_assignees":  currAss,
-			"passed_assignees":   passedAss,
+			"assignees_required": assigneesReq,
+			"current_assignees":  currAssignees,
+			"passed_assignees":   passedAssignees,
 			"updated_by":         updatedBy,
-		})
-	if res.Error != nil {
-		log.ErrorWithFields(log.Fields{
-			"id":                 id,
-			"status":             status,
-			"current_step":       step,
-			"flow_chain":         flowChain,
-			"assignees_required": assReq,
-			"current_assignees":  currAss,
-			"passed_assignees":   passedAss,
-			"updated_by":         updatedBy,
-			"error":              res.Error,
-		}, "An error occurred while db.Where.Updates.")
-		return false
-	}
+		}).
+		Limit(1).Find(&ins)
 
-	return true
+	return ins, res.Error
 }
 
 // SetHandleInstance 设置流程实例
-func SetHandleInstance(id, status, step, assReq int, formData, currAss, passedAss, updatedBy string) bool {
-	log.Info("dao.SetInstance called.")
-	defer log.Info("dao.SetInstance end.")
-
-	res := db.Model(&model.Instance{}).
+func (d *Dao) SetHandleInstance(
+	ctx context.Context,
+	id uint32, status, step, assigneesReq int32,
+	formData, currAssignees, passedAssignees, updatedBy string,
+) error {
+	res := d.getDbWithCtx(ctx).Model(&model.Instance{}).
 		Where("id=?", id).
 		Updates(map[string]interface{}{
 			"status":             status,
 			"current_step":       step,
 			"form_data":          formData,
-			"assignees_required": assReq,
-			"current_assignees":  currAss,
-			"passed_assignees":   passedAss,
+			"assignees_required": assigneesReq,
+			"current_assignees":  currAssignees,
+			"passed_assignees":   passedAssignees,
 			"updated_by":         updatedBy,
 		})
-	if res.Error != nil {
-		log.ErrorWithFields(log.Fields{
-			"id":                 id,
-			"status":             status,
-			"current_step":       step,
-			"form_data":          formData,
-			"assignees_required": assReq,
-			"current_assignees":  currAss,
-			"passed_assignees":   passedAss,
-			"updated_by":         updatedBy,
-			"error":              res.Error,
-		}, "An error occurred while db.Where.Updates.")
-		return false
-	}
 
-	return true
+	return res.Error
 }
 
 // GetInstance 查询单个流程实例
-func GetInstance(query Query) (*model.Instance, error) {
-	log.Info("dao.GetInstance called.")
-	defer log.Info("dao.GetInstance end.")
-
-	var (
-		ins = model.Instance{}
-		d   = db
-	)
-
-	for k, v := range query {
-		d = d.Where(k, v)
-	}
-	if res := d.First(&ins); res.Error != nil {
-		if errors.Is(res.Error, gorm.ErrRecordNotFound) {
-			log.WarnWithFields(log.Fields{
-				"query": fmt.Sprintf("%v", query),
-				"error": res.Error,
-			}, "Record not found in db.Where.First.")
-			return nil, nil
-		}
-		log.ErrorWithFields(log.Fields{
-			"query": fmt.Sprintf("%v", query),
-			"error": res.Error,
-		}, "An error occurred while db.Where.First.")
-		return nil, res.Error
-	}
-
-	return &ins, nil
+func (d *Dao) GetInstance(ctx context.Context, q orm.Query) (inst *model.Instance, err error) {
+	res := q.Where(d.getDbWithCtx(ctx)).Limit(1).Find(&inst)
+	return inst, res.Error
 }
 
-// GetInstancesCount 查询实例数量
-func GetInstancesCount(query Query) (count int64, ok bool) {
-	d := db.Model(&model.Instance{})
+// GetInstanceCount 查询流程实例数量
+func (d *Dao) GetInstanceCount(ctx context.Context, q orm.Query) (count int64, err error) {
+	res := q.Where(d.getDbWithCtx(ctx).Model(&model.Instance{})).Count(&count)
+	return count, res.Error
+}
 
-	for k, v := range query {
-		d = d.Where(k, v)
-	}
-	if res := d.Count(&count); res.Error != nil {
-		if errors.Is(res.Error, gorm.ErrRecordNotFound) {
-			return count, true
-		}
-		log.ErrorWithFields(log.Fields{
-			"query": fmt.Sprintf("%v", query),
-			"error": res.Error,
-		}, "An error occurred while db.Where.Count.")
-		return count, false
-	}
-	return count, true
+// IsInstanceExist 查询流程实例是否存在
+func (d *Dao) IsInstanceExist(ctx context.Context, q orm.Query) (bool, error) {
+	count, err := d.GetInstanceCount(ctx, q)
+	return count > 0, err
 }
 
 // PagedListInstances 查询流程实例-分页
-func PagedListInstances(query Query, page, pageSize int, orderBy ...string) (*pagination.Paginator, bool) {
-	log.Info("dao.PagedListInstances called.")
-	defer log.Info("dao.PagedListInstances end.")
-
-	var d = db.Model(&model.Instance{})
-	ins := make([]model.Instance, pageSize)
-
-	for k, v := range query {
-		d = d.Where(k, v)
-	}
-	pg, err := pagination.GormPaging(&pagination.GormParams{
-		Db:       d,
-		Page:     page,
-		PageSize: pageSize,
-		OrderBy:  orderBy,
-	}, &ins)
-	if err != nil {
-		log.ErrorWithFields(log.Fields{
-			"query": fmt.Sprintf("%v", query),
-			"error": err,
-		}, "An error occurred while pagination.GormPaging.")
-		return nil, false
-	}
-
-	return pg, true
+func (d *Dao) PagedListInstances(
+	ctx context.Context, q orm.Query, page, pageSize int, orderBy ...string,
+) (*orm.Paginator, error) {
+	insts := make([]*model.Instance, pageSize)
+	db := q.Where(d.getDbWithCtx(ctx).Model(&model.Instance{}))
+	return orm.PagingQuery(db, page, pageSize, &insts, orderBy...)
 }

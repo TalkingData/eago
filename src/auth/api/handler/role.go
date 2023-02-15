@@ -1,225 +1,243 @@
 package handler
 
 import (
+	"eago/auth/api/form"
 	"eago/auth/conf/msg"
-	"eago/auth/dao"
-	"eago/auth/dto"
-	w "eago/common/api-suite/writter"
-	"eago/common/log"
+	"eago/common/api/ext"
+	cMsg "eago/common/code_msg"
+	"eago/common/global"
+	"eago/common/logger"
+	"eago/common/tracer"
 	"github.com/gin-gonic/gin"
-	"strconv"
 )
 
 // NewRole 新建角
-func NewRole(c *gin.Context) {
-	var newRoleFrm dto.NewRole
+func (ah *AuthHandler) NewRole(c *gin.Context) {
+	frm := form.NewRoleForm{}
 	// 序列化request body
-	if err := c.ShouldBindJSON(&newRoleFrm); err != nil {
-		m := msg.SerializeFailed.SetError(err)
-		log.WarnWithFields(m.LogFields())
-		m.WriteRest(c)
+	if err := c.ShouldBindJSON(&frm); err != nil {
+		m := cMsg.MsgSerializeFailed.SetError(err)
+		ah.logger.WarnWithFields(m.ToLoggerFields(), m.GetMsg())
+		m.Write2GinCtx(c)
 		return
 	}
+
+	ctx := tracer.ExtractTraceCtxFromGin(c)
+
 	// 验证数据
-	if m := newRoleFrm.Validate(); m != nil {
+	if m := frm.Validate(ctx, ah.dao); m != nil {
 		// 数据验证未通过
-		log.WarnWithFields(m.LogFields())
-		m.WriteRest(c)
+		ah.logger.WarnWithFields(m.ToLoggerFields(), m.GetMsg())
+		m.Write2GinCtx(c)
 		return
 	}
 
-	r, err := dao.NewRole(newRoleFrm.Name, *newRoleFrm.Description)
+	r, err := ah.dao.NewRole(ctx, frm.Name, *frm.Description)
 	if err != nil {
-		m := msg.UndefinedError.SetError(err)
-		log.WarnWithFields(m.LogFields())
-		m.WriteRest(c)
+		m := msg.MsgAuthDaoErr.SetError(err)
+		ah.logger.ErrorWithFields(m.ToLoggerFields(), m.GetMsg())
+		m.Write2GinCtx(c)
 		return
 	}
 
-	w.WriteSuccessPayload(c, "role", r)
+	ext.WriteSuccessPayload(c, "role", r)
 }
 
 // RemoveRole 删除角色
-func RemoveRole(c *gin.Context) {
-	roleId, err := strconv.Atoi(c.Param("role_id"))
+func (ah *AuthHandler) RemoveRole(c *gin.Context) {
+	roleId, err := ext.ParamUint32(c, "role_id")
 	if err != nil {
-		m := msg.InvalidUriFailed.SetError(err, "role_id")
-		log.WarnWithFields(m.LogFields())
-		m.WriteRest(c)
+		m := cMsg.MsgInvalidUriFailed.SetError(err, "role_id")
+		ah.logger.WarnWithFields(m.ToLoggerFields(), m.GetMsg())
+		m.Write2GinCtx(c)
 		return
 	}
 
+	ctx := tracer.ExtractTraceCtxFromGin(c)
+
 	// 验证数据
-	var removeRoleFrm dto.RemoveRole
-	if m := removeRoleFrm.Validate(roleId); m != nil {
+	frm := form.RemoveRoleForm{}
+	if m := frm.Validate(ctx, ah.dao, roleId); m != nil {
 		// 数据验证未通过
-		m.WriteRest(c)
+		ah.logger.WarnWithFields(m.ToLoggerFields(), m.GetMsg())
+		m.Write2GinCtx(c)
 		return
 	}
 
 	// 删除
-	if dbErr := dao.RemoveRole(roleId); dbErr != nil {
-		m := msg.UndefinedError
-		log.WarnWithFields(m.LogFields())
-		m.WriteRest(c)
+	if err = ah.dao.RemoveRole(ctx, roleId); err != nil {
+		m := msg.MsgAuthDaoErr.SetError(err)
+		ah.logger.ErrorWithFields(m.ToLoggerFields(), m.GetMsg())
+		m.Write2GinCtx(c)
 		return
 	}
 
-	w.WriteSuccess(c)
+	ext.WriteSuccess(c)
 }
 
 // SetRole 更新角色
-func SetRole(c *gin.Context) {
-	roleId, err := strconv.Atoi(c.Param("role_id"))
+func (ah *AuthHandler) SetRole(c *gin.Context) {
+	roleId, err := ext.ParamUint32(c, "role_id")
 	if err != nil {
-		m := msg.InvalidUriFailed
-		log.WarnWithFields(m.LogFields())
-		m.WriteRest(c)
+		m := cMsg.MsgInvalidUriFailed.SetError(err, "role_id")
+		ah.logger.WarnWithFields(m.ToLoggerFields(), m.GetMsg())
+		m.Write2GinCtx(c)
 		return
 	}
 
-	var setRoleFrm dto.SetRole
+	frm := form.SetRoleForm{}
 	// 序列化request body
-	if err = c.ShouldBindJSON(&setRoleFrm); err != nil {
-		m := msg.SerializeFailed.SetError(err)
-		log.WarnWithFields(m.LogFields())
-		m.WriteRest(c)
+	if err = c.ShouldBindJSON(&frm); err != nil {
+		m := cMsg.MsgSerializeFailed.SetError(err)
+		ah.logger.WarnWithFields(m.ToLoggerFields(), m.GetMsg())
+		m.Write2GinCtx(c)
 		return
 	}
+
+	ctx := tracer.ExtractTraceCtxFromGin(c)
+
 	// 验证数据
-	if m := setRoleFrm.Validate(roleId); m != nil {
+	if m := frm.Validate(ctx, ah.dao, roleId); m != nil {
 		// 数据验证未通过
-		log.WarnWithFields(m.LogFields())
-		m.WriteRest(c)
+		ah.logger.WarnWithFields(m.ToLoggerFields(), m.GetMsg())
+		m.Write2GinCtx(c)
 		return
 	}
 
-	role, err := dao.SetRole(roleId, setRoleFrm.Name, *setRoleFrm.Description)
+	role, err := ah.dao.SetRole(ctx, roleId, frm.Name, *frm.Description)
 	if err != nil {
-		m := msg.UndefinedError
-		log.WarnWithFields(m.LogFields())
-		m.WriteRest(c)
+		m := msg.MsgAuthDaoErr.SetError(err)
+		ah.logger.ErrorWithFields(m.ToLoggerFields(), m.GetMsg())
+		m.Write2GinCtx(c)
 		return
 	}
 
-	w.WriteSuccessPayload(c, "role", role)
+	ext.WriteSuccessPayload(c, "role", role)
 }
 
 // PagedListRoles 列出所有角色-分页
-func PagedListRoles(c *gin.Context) {
-	query := dao.Query{}
+func (ah *AuthHandler) PagedListRoles(c *gin.Context) {
 	// 设置查询filter
-	lrq := dto.PagedListRolesQuery{}
-	if c.ShouldBindQuery(&lrq) == nil {
-		_ = lrq.UpdateQuery(query)
+	pFrm := new(form.PagedListRolesParamsForm)
+	if err := c.ShouldBindQuery(&pFrm); err != nil {
+		ah.logger.WarnWithFields(logger.Fields{
+			"params": c.Params,
+			"error":  err,
+		}, "An error occurred while c.ShouldBindQuery in AuthHandler.PagedListRoles, skipped it.")
 	}
 
-	paged, ok := dao.PagedListRoles(
-		query,
-		c.GetInt("Page"),
-		c.GetInt("PageSize"),
-		c.GetStringSlice("OrderBy")...,
+	paged, err := ah.dao.PagedListRoles(
+		tracer.ExtractTraceCtxFromGin(c),
+		pFrm.GenQuery(),
+		c.GetInt(global.GinCtxPageKey),
+		c.GetInt(global.GinCtxPageSizeKey),
+		c.GetStringSlice(global.GinCtxOrderByKey)...,
 	)
-	if !ok {
-		m := msg.UndefinedError
-		log.WarnWithFields(m.LogFields())
-		m.WriteRest(c)
+	if err != nil {
+		m := msg.MsgAuthDaoErr.SetError(err)
+		ah.logger.ErrorWithFields(m.ToLoggerFields(), m.GetMsg())
+		m.Write2GinCtx(c)
 		return
 	}
 
-	w.WriteSuccessPayload(c, "roles", paged)
+	ext.WriteSuccessPayload(c, "roles", paged)
 }
 
 // AddUser2Role 添加用户至角色
-func AddUser2Role(c *gin.Context) {
-	roleId, err := strconv.Atoi(c.Param("role_id"))
+func (ah *AuthHandler) AddUser2Role(c *gin.Context) {
+	roleId, err := ext.ParamUint32(c, "role_id")
 	if err != nil {
-		m := msg.InvalidUriFailed.SetError(err, "role_id")
-		log.WarnWithFields(m.LogFields())
-		m.WriteRest(c)
+		m := cMsg.MsgInvalidUriFailed.SetError(err, "role_id")
+		ah.logger.WarnWithFields(m.ToLoggerFields(), m.GetMsg())
+		m.Write2GinCtx(c)
 		return
 	}
 
-	var aurFrm dto.AddUser2Role
+	frm := form.AddUser2RoleForm{}
 	// 序列化request body
-	if err = c.ShouldBindJSON(&aurFrm); err != nil {
-		m := msg.SerializeFailed.SetError(err)
-		log.WarnWithFields(m.LogFields())
-		m.WriteRest(c)
+	if err = c.ShouldBindJSON(&frm); err != nil {
+		m := cMsg.MsgSerializeFailed.SetError(err)
+		ah.logger.WarnWithFields(m.ToLoggerFields(), m.GetMsg())
+		m.Write2GinCtx(c)
 		return
 	}
+
+	ctx := tracer.ExtractTraceCtxFromGin(c)
+
 	// 验证数据
-	if m := aurFrm.Validate(roleId); m != nil {
+	if m := frm.Validate(ctx, ah.dao, roleId); m != nil {
 		// 数据验证未通过
-		log.WarnWithFields(m.LogFields())
-		m.WriteRest(c)
+		ah.logger.WarnWithFields(m.ToLoggerFields(), m.GetMsg())
+		m.Write2GinCtx(c)
 		return
 	}
 
-	if !dao.AddRoleUser(roleId, aurFrm.UserId) {
-		m := msg.UndefinedError
-		log.WarnWithFields(m.LogFields())
-		m.WriteRest(c)
+	if err = ah.dao.AddUser2Role(ctx, roleId, frm.UserId); err != nil {
+		m := msg.MsgAuthDaoErr.SetError(err)
+		ah.logger.ErrorWithFields(m.ToLoggerFields(), m.GetMsg())
+		m.Write2GinCtx(c)
 		return
 	}
 
-	w.WriteSuccess(c)
+	ext.WriteSuccess(c)
 }
 
-// RemoveRoleUser 移除角色中用户
-func RemoveRoleUser(c *gin.Context) {
-	roleId, err := strconv.Atoi(c.Param("role_id"))
+// RemoveRolesUser 移除角色中用户
+func (ah *AuthHandler) RemoveRolesUser(c *gin.Context) {
+	roleId, err := ext.ParamUint32(c, "role_id")
 	if err != nil {
-		m := msg.InvalidUriFailed.SetError(err, "role_id")
-		log.WarnWithFields(m.LogFields())
-		m.WriteRest(c)
+		m := cMsg.MsgInvalidUriFailed.SetError(err, "role_id")
+		ah.logger.WarnWithFields(m.ToLoggerFields(), m.GetMsg())
+		m.Write2GinCtx(c)
 		return
 	}
 
-	userId, err := strconv.Atoi(c.Param("user_id"))
+	userId, err := ext.ParamUint32(c, "user_id")
 	if err != nil {
-		m := msg.InvalidUriFailed.SetError(err, "user_id")
-		log.WarnWithFields(m.LogFields())
-		m.WriteRest(c)
+		m := cMsg.MsgInvalidUriFailed.SetError(err, "user_id")
+		ah.logger.WarnWithFields(m.ToLoggerFields(), m.GetMsg())
+		m.Write2GinCtx(c)
 		return
 	}
 
-	var rruFrm dto.RemoveRoleUser
+	ctx := tracer.ExtractTraceCtxFromGin(c)
+
+	frm := form.RemoveRolesUserForm{}
 	// 验证数据
-	if m := rruFrm.Validate(roleId, userId); m != nil {
+	if m := frm.Validate(ctx, ah.dao, roleId, userId); m != nil {
 		// 数据验证未通过
-		log.WarnWithFields(m.LogFields())
-		m.WriteRest(c)
+		ah.logger.WarnWithFields(m.ToLoggerFields(), m.GetMsg())
+		m.Write2GinCtx(c)
 		return
 	}
 
-	if !dao.RemoveRoleUser(roleId, userId) {
-		m := msg.UndefinedError
-		log.WarnWithFields(m.LogFields())
-		m.WriteRest(c)
+	if err = ah.dao.RemoveRolesUser(ctx, roleId, userId); err != nil {
+		m := msg.MsgAuthDaoErr.SetError(err)
+		ah.logger.ErrorWithFields(m.ToLoggerFields(), m.GetMsg())
+		m.Write2GinCtx(c)
 		return
 	}
 
-	w.WriteSuccess(c)
+	ext.WriteSuccess(c)
 }
 
-// ListRoleUsers 列出角色所有用户
-func ListRoleUsers(c *gin.Context) {
-	roleId, err := strconv.Atoi(c.Param("role_id"))
+// ListRolesUsers 列出角色所有用户
+func (ah *AuthHandler) ListRolesUsers(c *gin.Context) {
+	roleId, err := ext.ParamUint32(c, "role_id")
 	if err != nil {
-		m := msg.InvalidUriFailed.SetError(err, "role_id")
-		log.WarnWithFields(m.LogFields())
-		m.WriteRest(c)
+		m := cMsg.MsgInvalidUriFailed.SetError(err, "role_id")
+		ah.logger.WarnWithFields(m.ToLoggerFields(), m.GetMsg())
+		m.Write2GinCtx(c)
 		return
 	}
 
-	u, ok := dao.ListRoleUsers(roleId)
-	if !ok {
-		m := msg.UndefinedError
-		log.WarnWithFields(m.LogFields())
-		m.WriteRest(c)
+	u, err := ah.dao.ListRolesUsers(tracer.ExtractTraceCtxFromGin(c), roleId)
+	if err != nil {
+		m := msg.MsgAuthDaoErr.SetError(err)
+		ah.logger.ErrorWithFields(m.ToLoggerFields(), m.GetMsg())
+		m.Write2GinCtx(c)
 		return
 	}
 
-	w.WriteSuccessPayload(c, "users", u)
+	ext.WriteSuccessPayload(c, "users", u)
 }

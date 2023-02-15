@@ -1,55 +1,35 @@
 package main
 
 import (
-	"context"
-	"eago/common/log"
+	"eago/common/logger"
 	"eago/common/orm"
-	"eago/common/tracer"
-	"eago/task/cli"
+	"eago/common/redis"
+	"eago/common/service"
 	"eago/task/conf"
 	"eago/task/dao"
-	task "eago/task/srv/proto"
 	"fmt"
-	"github.com/micro/go-micro/v2"
-	"github.com/micro/go-micro/v2/registry"
-	"github.com/micro/go-plugins/registry/etcdv3/v2"
-	"github.com/micro/go-plugins/wrapper/trace/opentracing/v2"
 	"os"
 	"os/signal"
 	"runtime"
 	"syscall"
 )
 
-type TaskService struct{}
+var (
+	task service.EagoSrv
+
+	taskDao   *dao.Dao
+	taskRedis *redis.RedisTool
+
+	taskConf *conf.Conf
+	taskLg   *logger.Logger
+)
 
 func main() {
-	t, c := tracer.NewTracer(conf.RPC_REGISTER_KEY, conf.Conf.JaegerAddress)
-	defer func() {
-		_ = c.Close()
-	}()
-
-	ctx, cancel := context.WithCancel(context.Background())
-	etcdReg := etcdv3.NewRegistry(
-		registry.Addrs(conf.Conf.EtcdAddresses...),
-		etcdv3.Auth(conf.Conf.EtcdUsername, conf.Conf.EtcdPassword),
-	)
-	srv := micro.NewService(
-		micro.Name(conf.RPC_REGISTER_KEY),
-		micro.Registry(etcdReg),
-		micro.WrapHandler(opentracing.NewHandlerWrapper(t)),
-		micro.RegisterTTL(conf.Conf.MicroRegisterTtl),
-		micro.RegisterInterval(conf.Conf.MicroRegisterInterval),
-		micro.Context(ctx),
-		micro.Version("v1"),
-	)
-
-	_ = task.RegisterTaskServiceHandler(srv.Server(), &TaskService{})
-
-	cli.InitWorkerCli()
+	task = NewTaskSrv(taskDao, taskRedis, taskConf, taskLg)
 
 	e := make(chan error)
 	go func() {
-		e <- srv.Run()
+		e <- task.Start()
 	}()
 
 	// 等待退出信号
@@ -60,46 +40,65 @@ func main() {
 		select {
 		case err := <-e:
 			if err != nil {
-				log.ErrorWithFields(log.Fields{
+				taskLg.ErrorWithFields(logger.Fields{
 					"error": err,
-				}, "An error occurred while srv.Run.")
+				}, "An error occurred while Start.")
 			}
 			closeAll()
 			return
 		case sig := <-quit:
-			log.InfoWithFields(log.Fields{
+			taskLg.InfoWithFields(logger.Fields{
 				"signal": sig.String(),
 			}, "Got quit signal.")
-			cancel()
+			closeAll()
+			return
 		}
 	}
 }
 
-// closeAll 关闭全部
+// closeAll
 func closeAll() {
-	orm.Close()
-	log.Close()
+	if task != nil {
+		task.Stop()
+	}
+	if taskLg != nil {
+		taskLg.Close()
+	}
 }
 
 func init() {
 	runtime.GOMAXPROCS(runtime.NumCPU())
 
-	// 加载日志设置
-	err := log.InitLog(
-		conf.Conf.LogPath,
-		conf.SERVICE_NAME,
-		conf.Conf.LogLevel,
+	// 初始化配置
+	taskConf = conf.NewConfig()
+
+	// 生成Logger
+	lg, err := logger.NewLogger(
+		logger.LogLevel(taskConf.LogLevel),
+		logger.LogPath(taskConf.LogPath),
+		logger.Filename(taskConf.Const.ServiceName, "srv"),
 	)
 	if err != nil {
-		fmt.Println("Failed to init logging, error:", err.Error())
+		fmt.Println("An error occurred while logger.NewLogger, error:", err.Error())
 		panic(err)
 	}
+	taskLg = lg
 
-	// 初始化DAO
-	dao.Init(orm.InitMysql(
-		conf.Conf.MysqlAddress,
-		conf.Conf.MysqlUser,
-		conf.Conf.MysqlPassword,
-		conf.Conf.MysqlDbName,
-	))
+	taskDao = dao.NewDao(orm.NewMysqlGorm(
+		taskConf.MysqlAddress,
+		taskConf.MysqlUser,
+		taskConf.MysqlPassword,
+		taskConf.MysqlDbName,
+		orm.MysqlMaxIdleConns(taskConf.MysqlMaxIdleConns),
+		orm.MysqlMaxOpenConns(taskConf.MysqlMaxOpenConns),
+		orm.UsingOpentracingPlugin(),
+	), taskConf, taskLg)
+
+	taskRedis = redis.NewRedisTool(
+		taskConf.RedisAddress,
+		taskConf.RedisPassword,
+		taskConf.Const.ServiceName,
+		taskConf.RedisDb,
+		redis.UsingOpentracingHook(),
+	)
 }

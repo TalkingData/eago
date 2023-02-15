@@ -1,19 +1,25 @@
 package dao
 
 import (
-	"eago/common/api-suite/pagination"
-	"eago/common/log"
+	"context"
+	"eago/common/orm"
+	"eago/flow/dto"
 	"eago/flow/model"
-	"errors"
-	"fmt"
-	"gorm.io/gorm"
 )
 
 // NewFlow 创建流程
-func NewFlow(name, insTit string, catId *int, description string, disabled bool, frmID, firstNodeID int, createdBy string) *model.Flow {
-	f := model.Flow{
+func (d *Dao) NewFlow(
+	ctx context.Context,
+	name, instanceTitle string,
+	catId *uint32,
+	description string,
+	disabled bool,
+	frmID, firstNodeID uint32,
+	createdBy string,
+) (*model.Flow, error) {
+	f := &model.Flow{
 		Name:          name,
-		InstanceTitle: insTit,
+		InstanceTitle: instanceTitle,
 		CategoriesId:  catId,
 		Disabled:      &disabled,
 		Description:   &description,
@@ -22,46 +28,32 @@ func NewFlow(name, insTit string, catId *int, description string, disabled bool,
 		CreatedBy:     createdBy,
 	}
 
-	if res := db.Create(&f); res.Error != nil {
-		log.ErrorWithFields(log.Fields{
-			"name":           name,
-			"instance_title": insTit,
-			"categories_id":  catId,
-			"disabled":       disabled,
-			"description":    description,
-			"form_id":        frmID,
-			"first_node_id":  firstNodeID,
-			"error":          res.Error,
-		}, "An error occurred while db.Create.")
-		return nil
-	}
-
-	return &f
+	res := d.getDbWithCtx(ctx).Create(&f)
+	return f, res.Error
 }
 
 // RemoveFlow 删除流程
-func RemoveFlow(fID int) bool {
-	res := db.Delete(model.Flow{}, "id=?", fID)
-	if res.Error != nil {
-		log.ErrorWithFields(log.Fields{
-			"id":    fID,
-			"error": res.Error,
-		}, "An error occurred while db.Delete.")
-		return false
-	}
-
-	return true
+func (d *Dao) RemoveFlow(ctx context.Context, flowId uint32) error {
+	res := d.getDbWithCtx(ctx).Delete(model.Flow{}, "id=?", flowId)
+	return res.Error
 }
 
 // SetFlow 更新流程
-func SetFlow(id int, name, insTit string, catId *int, description string, disabled bool, frmID, firstNodeID int, updatedBy string) (*model.Flow, bool) {
-	var f model.Flow
-
-	res := db.Model(&model.Flow{}).
+func (d *Dao) SetFlow(
+	ctx context.Context,
+	id uint32,
+	name, instanceTitle string,
+	catId *uint32,
+	description string,
+	disabled bool,
+	frmID, firstNodeID uint32,
+	updatedBy string,
+) (f *model.Flow, err error) {
+	res := d.getDbWithCtx(ctx).Model(&model.Flow{}).
 		Where("id=?", id).
 		Updates(map[string]interface{}{
 			"name":           name,
-			"instance_title": insTit,
+			"instance_title": instanceTitle,
 			"categories_id":  catId,
 			"disabled":       disabled,
 			"description":    description,
@@ -70,104 +62,39 @@ func SetFlow(id int, name, insTit string, catId *int, description string, disabl
 			"updated_by":     updatedBy,
 		}).
 		First(&f)
-	if res.Error != nil {
-		log.ErrorWithFields(log.Fields{
-			"id":            id,
-			"name":          name,
-			"categories_id": catId,
-			"disabled":      disabled,
-			"description":   description,
-			"form_id":       frmID,
-			"first_node_id": firstNodeID,
-			"updated_by":    updatedBy,
-			"error":         res.Error,
-		}, "An error occurred while db.Model.Where.Updates.First.")
-		return nil, false
-	}
 
-	return &f, true
+	return f, res.Error
 }
 
 // GetFlow 查询单个流程
-func GetFlow(query Query) (*model.Flow, bool) {
-	log.Info("dao.GetFlow called.")
-	defer log.Info("dao.GetFlow end.")
-
-	var (
-		d = db
-		f model.Flow
-	)
-
-	for k, v := range query {
-		d = d.Where(k, v)
-	}
-	if res := d.First(&f); res.Error != nil {
-		if errors.Is(res.Error, gorm.ErrRecordNotFound) {
-			log.WarnWithFields(log.Fields{
-				"query": fmt.Sprintf("%v", query),
-				"error": res.Error,
-			}, "Record not found in db.Where.First.")
-			return nil, true
-		}
-		log.ErrorWithFields(log.Fields{
-			"query": fmt.Sprintf("%v", query),
-			"error": res.Error,
-		}, "An error occurred while db.Where.First.")
-		return nil, false
-	}
-
-	return &f, true
+func (d *Dao) GetFlow(ctx context.Context, q orm.Query) (f *model.Flow, err error) {
+	res := q.Where(d.getDbWithCtx(ctx)).Limit(1).Find(&f)
+	return f, res.Error
 }
 
 // GetFlowCount 查询流程数量
-func GetFlowCount(query Query) (count int64, ok bool) {
-	d := db.Model(&model.Flow{})
+func (d *Dao) GetFlowCount(ctx context.Context, q orm.Query) (count int64, err error) {
+	res := q.Where(d.getDbWithCtx(ctx).Model(&model.Flow{})).Count(&count)
+	return count, res.Error
+}
 
-	for k, v := range query {
-		d = d.Where(k, v)
-	}
-	if res := d.Count(&count); res.Error != nil {
-		if errors.Is(res.Error, gorm.ErrRecordNotFound) {
-			return count, true
-		}
-		log.ErrorWithFields(log.Fields{
-			"query": fmt.Sprintf("%v", query),
-			"error": res.Error,
-		}, "An error occurred while db.Where.Count.")
-		return count, false
-	}
-	return count, true
+// IsFlowExist 查询流程是否存在
+func (d *Dao) IsFlowExist(ctx context.Context, q orm.Query) (bool, error) {
+	count, err := d.GetFlowCount(ctx, q)
+	return count > 0, err
 }
 
 // ListFlows 查询流程
-func ListFlows(query Query) ([]model.Flow, bool) {
-	var d = db
-	fs := make([]model.Flow, 0)
-
-	for k, v := range query {
-		d = d.Where(k, v)
-	}
-	if res := d.Find(&fs); res.Error != nil {
-		if errors.Is(res.Error, gorm.ErrRecordNotFound) {
-			log.WarnWithFields(log.Fields{
-				"query": fmt.Sprintf("%v", query),
-				"error": res.Error,
-			}, "Record not found in db.Where.Find.")
-			return fs, true
-		}
-		log.ErrorWithFields(log.Fields{
-			"query": fmt.Sprintf("%v", query),
-			"error": res.Error,
-		}, "An error occurred while db.Where.Find.")
-		return nil, false
-	}
-
-	return fs, true
+func (d *Dao) ListFlows(ctx context.Context, q orm.Query) (flows []*model.Flow, err error) {
+	res := q.Where(d.getDbWithCtx(ctx)).Find(&flows)
+	return flows, res.Error
 }
 
 // PagedListFlows 查询流程-分页
-func PagedListFlows(query Query, page, pageSize int, orderBy ...string) (*pagination.Paginator, bool) {
-	var d = db.Model(&model.Flow{}).
+func (d *Dao) PagedListFlows(
+	ctx context.Context, q orm.Query, page, pageSize int, orderBy ...string,
+) (*orm.Paginator, error) {
+	db := q.Where(d.getDbWithCtx(ctx)).Model(&model.Flow{}).
 		Select("flows.id AS id, " +
 			"flows.name AS name, " +
 			"flows.instance_title AS instance_title, " +
@@ -186,24 +113,8 @@ func PagedListFlows(query Query, page, pageSize int, orderBy ...string) (*pagina
 		Joins("LEFT JOIN categories AS c ON c.id = flows.categories_id").
 		Joins("LEFT JOIN forms AS f ON f.id = flows.form_id").
 		Joins("LEFT JOIN nodes AS n ON n.id = flows.first_node_id")
-	fs := make([]model.ListFlows, pageSize)
 
-	for k, v := range query {
-		d = d.Where(k, v)
-	}
-	pg, err := pagination.GormPaging(&pagination.GormParams{
-		Db:       d,
-		Page:     page,
-		PageSize: pageSize,
-		OrderBy:  orderBy,
-	}, &fs)
-	if err != nil {
-		log.ErrorWithFields(log.Fields{
-			"query": fmt.Sprintf("%v", query),
-			"error": err,
-		}, "An error occurred while pagination.GormPaging.")
-		return nil, false
-	}
+	flows := make([]*dto.ListFlows, pageSize)
 
-	return pg, true
+	return orm.PagingQuery(db, page, pageSize, &flows, orderBy...)
 }

@@ -1,260 +1,119 @@
 package dao
 
 import (
+	"context"
 	"eago/auth/model"
-	"eago/common/api-suite/pagination"
-	"eago/common/log"
-	"errors"
-	"fmt"
-	"gorm.io/gorm"
+	"eago/common/orm"
 )
 
 // NewRole 新建角色
-func NewRole(name, description string) (*model.Role, error) {
-	r := model.Role{
+func (d *Dao) NewRole(ctx context.Context, name, description string) (*model.Role, error) {
+	r := &model.Role{
 		Name:        name,
 		Description: &description,
 	}
-
-	if res := db.Create(&r); res.Error != nil {
-		log.ErrorWithFields(log.Fields{
-			"name":        name,
-			"description": description,
-			"error":       res.Error,
-		}, "An error occurred while db.Create.")
-		return nil, res.Error
-	}
-
-	return &r, nil
+	res := d.getDbWithCtx(ctx).Create(&r)
+	return r, res.Error
 }
 
 // RemoveRole 删除角色
-func RemoveRole(roleId int) error {
-	res := db.Delete(model.Role{}, "id=?", roleId)
-	if res.RowsAffected < 1 {
-		return gorm.ErrRecordNotFound
-	}
-
+func (d *Dao) RemoveRole(ctx context.Context, roleId uint32) error {
+	res := d.getDbWithCtx(ctx).Delete(model.Role{}, "id=?", roleId)
 	return res.Error
 }
 
 // SetRole 更新角色
-func SetRole(id int, name, description string) (*model.Role, error) {
-	var r = model.Role{}
-
-	res := db.Model(&model.Role{}).
+func (d *Dao) SetRole(ctx context.Context, id uint32, name, description string) (r *model.Role, err error) {
+	res := d.getDbWithCtx(ctx).Model(&model.Role{}).
 		Where("id=?", id).
-		Updates(map[string]interface{}{"name": name, "description": description}).
-		First(&r)
-	if res.Error != nil {
-		log.ErrorWithFields(log.Fields{
-			"id":          id,
+		Updates(map[string]interface{}{
 			"name":        name,
 			"description": description,
-			"error":       res.Error,
-		}, "An error occurred while db.Model.Where.Updates.First.")
-		return nil, res.Error
-	}
-
-	return &r, res.Error
+		}).
+		Limit(1).Find(&r)
+	return r, res.Error
 }
 
 // GetRole 查询单个角色
-func GetRole(query Query) (*model.Role, bool) {
-	var (
-		r = model.Role{}
-		d = db
-	)
-
-	for k, v := range query {
-		d = d.Where(k, v)
-	}
-	if res := d.First(&r); res.Error != nil {
-		if errors.Is(res.Error, gorm.ErrRecordNotFound) {
-			log.WarnWithFields(log.Fields{
-				"query": fmt.Sprintf("%v", query),
-				"error": res.Error,
-			}, "Record not found.")
-			return nil, true
-		}
-		log.ErrorWithFields(log.Fields{
-			"query": fmt.Sprintf("%v", query),
-			"error": res.Error,
-		}, "An error occurred while db.Where.First.")
-		return nil, false
-	}
-
-	return &r, true
+func (d *Dao) GetRole(ctx context.Context, q orm.Query) (r *model.Role, err error) {
+	res := q.Where(d.getDbWithCtx(ctx)).Limit(1).Find(&r)
+	return r, res.Error
 }
 
 // GetRoleCount 查询角色数量
-func GetRoleCount(query Query) (count int64, ok bool) {
-	d := db.Model(&model.Role{})
+func (d *Dao) GetRoleCount(ctx context.Context, q orm.Query) (count int64, err error) {
+	res := q.Where(d.getDbWithCtx(ctx).Model(&model.Role{})).Count(&count)
+	return count, res.Error
+}
 
-	for k, v := range query {
-		d = d.Where(k, v)
-	}
-	if res := d.Count(&count); res.Error != nil {
-		if errors.Is(res.Error, gorm.ErrRecordNotFound) {
-			return count, true
-		}
-		log.ErrorWithFields(log.Fields{
-			"query": fmt.Sprintf("%v", query),
-			"error": res.Error,
-		}, "An error occurred while db.Where.Count.")
-		return count, false
-	}
-	return count, true
+// IsRoleExist 查询角色是否存在
+func (d *Dao) IsRoleExist(ctx context.Context, q orm.Query) (bool, error) {
+	count, err := d.GetRoleCount(ctx, q)
+	return count > 0, err
 }
 
 // ListRoles 查询角色
-func ListRoles(query Query) (*[]model.Role, bool) {
-	var d = db
-	rs := make([]model.Role, 0)
-
-	for k, v := range query {
-		d = d.Where(k, v)
-	}
-
-	if res := d.Find(&rs); res.Error != nil {
-		if errors.Is(res.Error, gorm.ErrRecordNotFound) {
-			log.WarnWithFields(log.Fields{
-				"query": fmt.Sprintf("%v", query),
-				"error": res.Error,
-			}, "Record not found.")
-			return &rs, true
-		}
-		log.ErrorWithFields(log.Fields{
-			"query": fmt.Sprintf("%v", query),
-			"error": res.Error,
-		}, "An error occurred while db.Where.Find.")
-		return nil, false
-	}
-
-	return &rs, true
+func (d *Dao) ListRoles(ctx context.Context, q orm.Query) (rs []*model.Role, err error) {
+	res := q.Where(d.getDbWithCtx(ctx)).Find(&rs)
+	return rs, res.Error
 }
 
-// PagedListRoles 查询角色-分页
-func PagedListRoles(query Query, page, pageSize int, orderBy ...string) (*pagination.Paginator, bool) {
-	var d = db.Model(&model.Role{})
-	rs := make([]model.Role, pageSize)
-
-	for k, v := range query {
-		d = d.Where(k, v)
-	}
-	pg, err := pagination.GormPaging(&pagination.GormParams{
-		Db:       d,
-		Page:     page,
-		PageSize: pageSize,
-		OrderBy:  orderBy,
-	}, &rs)
-	if err != nil {
-		log.ErrorWithFields(log.Fields{
-			"query": fmt.Sprintf("%v", query),
-			"error": err,
-		}, "An error occurred while pagination.GormPaging.")
-		return nil, false
-	}
-
-	return pg, true
+// PagedListRoles 分页查询角色
+func (d *Dao) PagedListRoles(
+	ctx context.Context, q orm.Query, page, pageSize int, orderBy ...string,
+) (*orm.Paginator, error) {
+	rs := make([]*model.Role, pageSize)
+	db := q.Where(d.getDbWithCtx(ctx).Model(&model.Role{}))
+	return orm.PagingQuery(db, page, pageSize, &rs, orderBy...)
 }
 
-// AddRoleUser 关联表操作::添加用户至角色
-func AddRoleUser(roleId, userId int) bool {
-	ur := model.UserRole{
+// AddUser2Role 关联表操作::添加用户至指定角色
+func (d *Dao) AddUser2Role(ctx context.Context, roleId, userId uint32) error {
+	res := d.getDbWithCtx(ctx).Create(&model.UserRole{
 		RoleId: roleId,
 		UserId: userId,
-	}
-
-	if res := db.Create(&ur); res.Error != nil {
-		log.ErrorWithFields(log.Fields{
-			"role_id":   roleId,
-			"user_id":   userId,
-			"joined_at": ur.JoinedAt,
-			"error":     res.Error,
-		}, "An error occurred while db.Create.")
-		return false
-	}
-
-	return true
+	})
+	return res.Error
 }
 
-// RemoveRoleUser 关联表操作::移除角色中用户
-func RemoveRoleUser(roleId, userId int) bool {
-	res := db.Delete(model.UserRole{}, "role_id=? AND user_id=?", roleId, userId)
-	if res.Error != nil {
-		log.ErrorWithFields(log.Fields{
-			"role_id": roleId,
-			"user_id": userId,
-			"error":   res.Error,
-		}, "An error occurred while db.Delete.")
-		return false
-	}
-
-	return true
+// RemoveRolesUser 关联表操作::移除指定角色中指定用户
+func (d *Dao) RemoveRolesUser(ctx context.Context, roleId, userId uint32) error {
+	res := d.getDbWithCtx(ctx).Delete(model.UserRole{}, "role_id=? AND user_id=?", roleId, userId)
+	return res.Error
 }
 
-// RemoveUserRoles 关联表操作::移除用户所有角色
-func RemoveUserRoles(userId int) bool {
-	res := db.Delete(model.UserRole{}, "user_id=?", userId)
-	if res.Error != nil {
-		log.ErrorWithFields(log.Fields{
-			"user_id": userId,
-			"error":   res.Error,
-		}, "An error occurred while db.Delete.")
-		return false
-	}
-
-	return true
+// RemoveUsersRoles 关联表操作::移除指定用户所有角色
+func (d *Dao) RemoveUsersRoles(ctx context.Context, userId uint32) error {
+	res := d.getDbWithCtx(ctx).Delete(model.UserRole{}, "user_id=?", userId)
+	return res.Error
 }
 
-// GetRoleUserCount 关联表操作::列出角色中用户数量
-func GetRoleUserCount(query Query) (count int64, ok bool) {
-	d := db.Model(&model.User{}).
+// GetRolesUserCount 关联表操作::获得指定角色中用户数量
+func (d *Dao) GetRolesUserCount(ctx context.Context, q orm.Query) (count int64, err error) {
+	_db := d.getDbWithCtx(ctx).Model(&model.User{}).
 		Select("users.id AS id, " +
 			"users.username AS username, " +
 			"ur.joined_at AS joined_at").
 		Joins("LEFT JOIN user_roles AS ur ON users.id = ur.user_id")
 
-	for k, v := range query {
-		d = d.Where(k, v)
-	}
-
-	if res := d.Count(&count); res.Error != nil {
-		if errors.Is(res.Error, gorm.ErrRecordNotFound) {
-			return count, true
-		}
-		log.ErrorWithFields(log.Fields{
-			"error": res.Error,
-		}, "An error occurred while db.Select.Joins.Where.Count.")
-		return count, false
-	}
-	return count, true
+	res := q.Where(_db).Count(&count)
+	return count, res.Error
 }
 
-// ListRoleUsers 关联表操作::列出角色中用户
-func ListRoleUsers(roleId int) (*[]model.RoleUser, bool) {
-	rus := make([]model.RoleUser, 0)
+// IsEmptyRole 关联表操作::指定角色是否为空，不包含用户则为空
+func (d *Dao) IsEmptyRole(ctx context.Context, rId uint32) (bool, error) {
+	count, err := d.GetRolesUserCount(ctx, orm.Query{"role_id=?": rId})
+	return count == 0, err
+}
 
-	res := db.Model(&model.User{}).
+// ListRolesUsers 关联表操作::列出指定角色中用户
+func (d *Dao) ListRolesUsers(ctx context.Context, roleId uint32) (rUsers []*model.RolesUser, err error) {
+	res := d.getDbWithCtx(ctx).Model(&model.User{}).
 		Select("users.id AS id, "+
 			"users.username AS username, "+
 			"ur.joined_at AS joined_at").
 		Joins("LEFT JOIN user_roles AS ur ON users.id = ur.user_id").
 		Where("role_id=?", roleId).
-		Find(&rus)
-	if res.Error != nil {
-		if errors.Is(res.Error, gorm.ErrRecordNotFound) {
-			log.WarnWithFields(log.Fields{
-				"error": res.Error,
-			}, "Record not found.")
-			return &rus, true
-		}
-		log.ErrorWithFields(log.Fields{
-			"error": res.Error,
-		}, "An error occurred while db.Select.Joins.Where.Find.")
-		return nil, false
-	}
-
-	return &rus, true
+		Find(&rUsers)
+	return rUsers, res.Error
 }

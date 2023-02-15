@@ -1,6 +1,6 @@
 package model
 
 type ResultPartition struct {
-	Id        int    `json:"id"`
+	Id        uint32 `json:"id"`
 	Partition string `json:"partition"`
 }

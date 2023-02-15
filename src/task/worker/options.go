@@ -1,10 +1,11 @@
 package worker
 
 import (
+	"eago/common/logger"
 	"github.com/go-basic/ipv4"
 )
 
-const WORKER_REGISTER_KEY_PREFFIX = "/td/eago/workers"
+const WorkerRegisterKeyPrefix = "/td/eago/workers"
 
 // Options struct
 type Options struct {
@@ -18,8 +19,12 @@ type Options struct {
 
 	MultiInstance bool
 
-	RegisterTtl   int64
-	LogBufferSize uint
+	RegisterTtl int64
+
+	PrintResultLog      bool
+	ResultLogBufferSize uint
+
+	Logger *logger.Logger
 }
 
 // newOptions
@@ -35,12 +40,18 @@ func newOptions(opts ...Option) Options {
 
 		MultiInstance: true,
 
-		RegisterTtl:   WORKER_REGISTER_TTL,
-		LogBufferSize: WORKER_LOGGER_BUFFER_SIZE,
+		RegisterTtl: defaultWorkerRegisterTtl,
+
+		PrintResultLog:      false,
+		ResultLogBufferSize: defaultWorkerResultLogBufferSize,
 	}
 
 	for _, o := range opts {
 		o(&opt)
+	}
+
+	if opt.Logger == nil {
+		opt.Logger = logger.NewDefaultLogger()
 	}
 
 	return opt
@@ -104,9 +115,23 @@ func RegisterTtl(ttl int64) Option {
 	}
 }
 
-// LogBufferSize 设置Worker的LogBufferSize
-func LogBufferSize(size uint) Option {
+// PrintResultLog 设置Worker在执行中是否在本地TTY打印ResultLog
+func PrintResultLog(in bool) Option {
 	return func(o *Options) {
-		o.LogBufferSize = size
+		o.PrintResultLog = in
+	}
+}
+
+// ResultLogBufferSize 设置Worker的ResultLogBufferSize
+func ResultLogBufferSize(size uint) Option {
+	return func(o *Options) {
+		o.ResultLogBufferSize = size
+	}
+}
+
+// Logger 设置Logger
+func Logger(in *logger.Logger) Option {
+	return func(o *Options) {
+		o.Logger = in
 	}
 }

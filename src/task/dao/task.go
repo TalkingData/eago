@@ -1,17 +1,16 @@
 package dao
 
 import (
-	"eago/common/api-suite/pagination"
-	"eago/common/log"
+	"context"
+	"eago/common/orm"
 	"eago/task/model"
-	"errors"
-	"fmt"
-	"gorm.io/gorm"
 )
 
 // NewTask 新建任务
-func NewTask(disabled bool, category int, codename, description, fParams, createdBy string) *model.Task {
-	var t = model.Task{
+func (d *Dao) NewTask(
+	ctx context.Context, disabled bool, category int32, codename, description, fParams, createdBy string,
+) (*model.Task, error) {
+	t := &model.Task{
 		Category:     &category,
 		Codename:     codename,
 		Description:  &description,
@@ -20,40 +19,21 @@ func NewTask(disabled bool, category int, codename, description, fParams, create
 		CreatedBy:    createdBy,
 	}
 
-	if res := db.Create(&t); res.Error != nil {
-		log.ErrorWithFields(log.Fields{
-			"category":      category,
-			"codename":      codename,
-			"formal_params": fParams,
-			"disabled":      disabled,
-			"description":   description,
-			"error":         res.Error,
-		}, "An error occurred while db.Create.")
-		return nil
-	}
-
-	return &t
+	res := d.getDbWithCtx(ctx).Create(&t)
+	return t, res.Error
 }
 
 // RemoveTask 删除任务
-func RemoveTask(taskId int) bool {
-	res := db.Delete(model.Task{}, "id=?", taskId)
-	if res.Error != nil {
-		log.ErrorWithFields(log.Fields{
-			"id":    taskId,
-			"error": res.Error,
-		}, "An error occurred while db.Delete.")
-		return false
-	}
-
-	return true
+func (d *Dao) RemoveTask(ctx context.Context, taskId uint32) error {
+	res := d.getDbWithCtx(ctx).Delete(model.Task{}, "id=?", taskId)
+	return res.Error
 }
 
 // SetTask 更新任务
-func SetTask(id int, disabled bool, category int, codename, description, fParams, updatedBy string) (*model.Task, bool) {
-	var t = model.Task{}
-
-	res := db.Model(&model.Task{}).
+func (d *Dao) SetTask(
+	ctx context.Context, id uint32, disabled bool, category int32, codename, description, fParams, updatedBy string,
+) (t *model.Task, err error) {
+	res := d.getDbWithCtx(ctx).Model(&model.Task{}).
 		Where("id=?", id).
 		Updates(map[string]interface{}{
 			"category":      category,
@@ -63,119 +43,39 @@ func SetTask(id int, disabled bool, category int, codename, description, fParams
 			"description":   description,
 			"updated_by":    updatedBy,
 		}).
-		First(&t)
-	if res.Error != nil {
-		log.ErrorWithFields(log.Fields{
-			"id":            id,
-			"category":      category,
-			"codename":      codename,
-			"formal_params": fParams,
-			"disabled":      disabled,
-			"description":   description,
-			"updated_by":    updatedBy,
-			"error":         res.Error,
-		}, "An error occurred while db.Model.Where.Updates.First.")
-		return nil, false
-	}
-
-	return &t, true
+		Limit(1).Find(&t)
+	return t, res.Error
 }
 
 // GetTask 查询单个任务
-func GetTask(query Query) (*model.Task, bool) {
-	var (
-		d = db
-		t = model.Task{}
-	)
-
-	for k, v := range query {
-		d = d.Where(k, v)
-	}
-	if res := d.First(&t); res.Error != nil {
-		if errors.Is(res.Error, gorm.ErrRecordNotFound) {
-			log.WarnWithFields(log.Fields{
-				"query": fmt.Sprintf("%v", query),
-				"error": res.Error,
-			}, "Record not found.")
-			return nil, true
-		}
-		log.ErrorWithFields(log.Fields{
-			"query": fmt.Sprintf("%v", query),
-			"error": res.Error,
-		}, "An error occurred while db.Where.First.")
-		return nil, false
-	}
-
-	return &t, true
+func (d *Dao) GetTask(ctx context.Context, q orm.Query) (t *model.Task, err error) {
+	res := q.Where(d.getDbWithCtx(ctx)).Limit(1).Find(&t)
+	return t, res.Error
 }
 
 // GetTaskCount 查询任务数量
-func GetTaskCount(query Query) (count int64, ok bool) {
-	d := db.Model(&model.Task{})
+func (d *Dao) GetTaskCount(ctx context.Context, q orm.Query) (count int64, err error) {
+	res := q.Where(d.getDbWithCtx(ctx).Model(&model.Task{})).Count(&count)
+	return count, res.Error
+}
 
-	for k, v := range query {
-		d = d.Where(k, v)
-	}
-	if res := d.Count(&count); res.Error != nil {
-		if errors.Is(res.Error, gorm.ErrRecordNotFound) {
-			return count, true
-		}
-		log.ErrorWithFields(log.Fields{
-			"query": fmt.Sprintf("%v", query),
-			"error": res.Error,
-		}, "An error occurred while db.Where.Count.")
-		return count, false
-	}
-	return count, true
+// IsTaskExist 查询任务是否存在
+func (d *Dao) IsTaskExist(ctx context.Context, q orm.Query) (bool, error) {
+	count, err := d.GetTaskCount(ctx, q)
+	return count > 0, err
 }
 
 // ListTasks 查询任务
-func ListTasks(query Query) (*[]model.Task, bool) {
-	var d = db
-	ts := make([]model.Task, 0)
-
-	for k, v := range query {
-		d = d.Where(k, v)
-	}
-	if res := d.Find(&ts); res.Error != nil {
-		if errors.Is(res.Error, gorm.ErrRecordNotFound) {
-			log.WarnWithFields(log.Fields{
-				"query": fmt.Sprintf("%v", query),
-				"error": res.Error,
-			}, "Record not found.")
-			return &ts, true
-		}
-		log.ErrorWithFields(log.Fields{
-			"query": fmt.Sprintf("%v", query),
-			"error": res.Error,
-		}, "An error occurred while db.Where.Find.")
-		return nil, false
-	}
-
-	return &ts, true
+func (d *Dao) ListTasks(ctx context.Context, q orm.Query) (ts []*model.Task, err error) {
+	res := q.Where(d.getDbWithCtx(ctx)).Find(&ts)
+	return ts, res.Error
 }
 
 // PagedListTasks 查询任务-分页
-func PagedListTasks(query Query, page, pageSize int, orderBy ...string) (*pagination.Paginator, bool) {
-	var d = db.Model(&model.Task{})
-	ts := make([]model.Task, pageSize)
-
-	for k, v := range query {
-		d = d.Where(k, v)
-	}
-	pg, err := pagination.GormPaging(&pagination.GormParams{
-		Db:       d,
-		Page:     page,
-		PageSize: pageSize,
-		OrderBy:  orderBy,
-	}, &ts)
-	if err != nil {
-		log.ErrorWithFields(log.Fields{
-			"query": fmt.Sprintf("%v", query),
-			"error": err,
-		}, "An error occurred while pagination.GormPaging.")
-		return nil, false
-	}
-
-	return pg, true
+func (d *Dao) PagedListTasks(
+	ctx context.Context, q orm.Query, page, pageSize int, orderBy ...string,
+) (*orm.Paginator, error) {
+	ts := make([]*model.Task, pageSize)
+	db := q.Where(d.getDbWithCtx(ctx).Model(&model.Task{}))
+	return orm.PagingQuery(db, page, pageSize, &ts, orderBy...)
 }

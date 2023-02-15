@@ -1,0 +1,30 @@
+syntax = "proto3";
+
+package eago.common;
+option go_package = "eago/common/proto";
+
+message IdQuery {
+  uint32 value = 1;
+}
+
+message Id64Query {
+  uint64 value = 1;
+}
+
+message NameQuery {
+  string value = 1;
+}
+
+message UuidQuery {
+  string value = 1;
+}
+
+message IpQuery {
+  string value = 1;
+}
+
+message QueryWithPage {
+  map<string, string> query = 1;
+  uint32 page = 2;
+  uint32 page_size = 3;
+}
